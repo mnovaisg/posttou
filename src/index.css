@@ -1,0 +1,105 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* POSTTOU brand (identidade v2) — violeta como cor primária de interação,
+     rosa/laranja reservados para o gradiente da marca (logo, destaques
+     pontuais), extraídos diretamente da logo oficial. Tokens globais só —
+     a revisão completa de UX/UI fica para depois do Editor Visual + IA. */
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+
+  --color-accent-pink-400: #f472b6;
+  --color-accent-pink-500: #ec4899;
+  --color-accent-pink-600: #db2777;
+
+  --color-signal-400: #fb923c;
+  --color-signal-500: #f97316;
+  --color-signal-600: #ea580c;
+
+  /* Gradiente oficial da marca (ícone/wordmark) — uso pontual apenas
+     (destaques, não para preenchimento geral da UI). */
+  --gradient-posttou: linear-gradient(135deg, #6748fa 0%, #c026d3 45%, #f97316 100%);
+
+  --color-ink-50: oklch(0.98 0.002 260);
+  --color-ink-100: oklch(0.95 0.004 260);
+  --color-ink-200: oklch(0.89 0.006 260);
+  --color-ink-300: oklch(0.78 0.008 260);
+  --color-ink-400: oklch(0.62 0.01 260);
+  --color-ink-500: oklch(0.48 0.012 260);
+  --color-ink-600: oklch(0.38 0.012 260);
+  --color-ink-700: oklch(0.29 0.012 260);
+  --color-ink-800: oklch(0.2 0.012 260);
+  --color-ink-900: oklch(0.14 0.01 260);
+  --color-ink-950: oklch(0.1 0.008 260);
+
+  --color-danger-500: oklch(0.58 0.22 25);
+  --color-success-500: oklch(0.65 0.16 155);
+  --color-warning-500: oklch(0.78 0.15 85);
+}
+
+:root {
+  --background: var(--color-ink-50);
+  --foreground: var(--color-ink-900);
+  --surface: #ffffff;
+  --border: var(--color-ink-200);
+  --muted: var(--color-ink-500);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --background: var(--color-ink-950);
+  --foreground: var(--color-ink-50);
+  --surface: var(--color-ink-900);
+  --border: var(--color-ink-700);
+  --muted: var(--color-ink-400);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --background: var(--color-ink-950);
+    --foreground: var(--color-ink-50);
+    --surface: var(--color-ink-900);
+    --border: var(--color-ink-700);
+    --muted: var(--color-ink-400);
+    color-scheme: dark;
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Uso pontual do gradiente oficial da marca — ex.: destaque em telas de
+   autenticação ou headers de features com IA. Não usar como padrão geral. */
+.brand-gradient-text {
+  background: var(--gradient-posttou);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
