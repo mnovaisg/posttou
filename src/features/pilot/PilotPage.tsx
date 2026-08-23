@@ -1,0 +1,506 @@
+import * as React from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
+import { fetchInstagramAccounts } from '@/features/instagram/api'
+import {
+  activatePilot,
+  approvePilotPlan,
+  cancelPilotPlan,
+  checkPilotActivationReadiness,
+  disablePilot,
+  fetchCurrentPilotPlan,
+  fetchLatestPilotRuns,
+  fetchPilotSettings,
+  generatePilotContent,
+  generatePilotPlan,
+  pausePilot,
+  resumePilot,
+  skipPilotPlanItem,
+  upsertPilotSettings,
+} from '@/features/pilot/api'
+import { EDITORIAL_ROLE_LABEL, ITEM_STATUS_LABEL, PLAN_STATUS_LABEL, WEEKDAY_LABEL } from '@/features/pilot/types'
+import type { PilotEditorialRole, PilotMode, PilotSettingsInput } from '@/features/pilot/types'
+import { cancelExperiment, fetchActiveExperiment, fetchActiveRecommendations } from '@/features/strategy/api'
+import { EXPERIMENT_STATUS_LABEL } from '@/features/strategy/types'
+import { Link } from 'react-router-dom'
+import { formatInTimeZone } from '@/lib/timezone'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+
+const MISSING_LABEL: Record<string, string> = {
+  settings_not_created: 'Configure o Piloto (frequência, dias, formatos).',
+  brand_dna_incomplete: 'Complete o DNA da marca.',
+  weekdays_not_set: 'Selecione ao menos um dia da semana.',
+  formats_not_set: 'Selecione ao menos um formato.',
+  frequency_not_set: 'Defina quantos posts por janela.',
+  insufficient_credits: 'Créditos insuficientes para a primeira operação.',
+}
+
+function defaultSettingsInput(): PilotSettingsInput {
+  return {
+    mode: 'assisted',
+    planningWindowDays: 7,
+    maxPostsPerWindow: 3,
+    allowedWeekdays: [1, 3, 5],
+    preferredTimes: { default: '18:00' },
+    allowedFormats: ['post', 'carrossel'],
+    editorialMix: { educativo: 40, autoridade: 20, relacionamento: 20, venda: 20 },
+    useRadar: false,
+    maxRadarPerWindow: 1,
+    radarMinOpportunityScore: 60,
+    radarMinConfidence: 'medium',
+    temporaryObjective: null,
+    temporaryObjectiveExpiresAt: null,
+    defaultInstagramAccountId: null,
+    maxCreditsPerWindow: null,
+  }
+}
+
+export function PilotPage() {
+  const { activeWorkspace, hasRole } = useWorkspace()
+  const queryClient = useQueryClient()
+  const workspaceId = activeWorkspace?.id ?? ''
+  const canConfigure = hasRole(['owner', 'admin'])
+  const canApprove = hasRole(['owner', 'admin', 'approver'])
+  const canEditItems = hasRole(['owner', 'admin', 'editor'])
+
+  const [form, setForm] = React.useState<PilotSettingsInput>(defaultSettingsInput())
+  const [formLoaded, setFormLoaded] = React.useState(false)
+
+  const settingsQuery = useQuery({ queryKey: ['pilot-settings', workspaceId], enabled: !!workspaceId, queryFn: () => fetchPilotSettings(workspaceId) })
+  const readinessQuery = useQuery({ queryKey: ['pilot-readiness', workspaceId], enabled: !!workspaceId, queryFn: () => checkPilotActivationReadiness(workspaceId) })
+  const accountsQuery = useQuery({ queryKey: ['instagram-accounts', workspaceId], enabled: !!workspaceId, queryFn: () => fetchInstagramAccounts(workspaceId) })
+  const planQuery = useQuery({ queryKey: ['pilot-plan', workspaceId], enabled: !!workspaceId, queryFn: () => fetchCurrentPilotPlan(workspaceId), refetchInterval: 4000 })
+  const runsQuery = useQuery({ queryKey: ['pilot-runs', workspaceId], enabled: !!workspaceId, queryFn: () => fetchLatestPilotRuns(workspaceId) })
+
+  React.useEffect(() => {
+    if (settingsQuery.data && !formLoaded) {
+      const s = settingsQuery.data
+      setForm({
+        mode: s.mode,
+        planningWindowDays: s.planning_window_days,
+        maxPostsPerWindow: s.max_posts_per_window,
+        allowedWeekdays: s.allowed_weekdays,
+        preferredTimes: s.preferred_times as PilotSettingsInput['preferredTimes'],
+        allowedFormats: s.allowed_formats as PilotSettingsInput['allowedFormats'],
+        editorialMix: s.editorial_mix as Record<string, number>,
+        useRadar: s.use_radar,
+        maxRadarPerWindow: s.max_radar_per_window,
+        radarMinOpportunityScore: Number(s.radar_min_opportunity_score),
+        radarMinConfidence: s.radar_min_confidence as 'medium' | 'high',
+        temporaryObjective: s.temporary_objective,
+        temporaryObjectiveExpiresAt: s.temporary_objective_expires_at,
+        defaultInstagramAccountId: s.default_instagram_account_id,
+        maxCreditsPerWindow: s.max_credits_per_window,
+      })
+      setFormLoaded(true)
+    }
+  }, [settingsQuery.data, formLoaded])
+
+  const saveMutation = useMutation({
+    mutationFn: () => upsertPilotSettings(workspaceId, form),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pilot-settings', workspaceId] })
+      queryClient.invalidateQueries({ queryKey: ['pilot-readiness', workspaceId] })
+    },
+  })
+
+  const activateMutation = useMutation({
+    mutationFn: () => activatePilot(workspaceId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-settings', workspaceId] }),
+  })
+  const pauseMutation = useMutation({ mutationFn: () => pausePilot(workspaceId), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-settings', workspaceId] }) })
+  const resumeMutation = useMutation({ mutationFn: () => resumePilot(workspaceId), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-settings', workspaceId] }) })
+  const disableMutation = useMutation({ mutationFn: () => disablePilot(workspaceId), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-settings', workspaceId] }) })
+
+  const generatePlanMutation = useMutation({
+    mutationFn: () => generatePilotPlan(workspaceId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-plan', workspaceId] }),
+  })
+  const approvePlanMutation = useMutation({
+    mutationFn: (planId: string) => approvePilotPlan(planId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-plan', workspaceId] }),
+  })
+  const cancelPlanMutation = useMutation({
+    mutationFn: (planId: string) => cancelPilotPlan(planId, 'regenerated_by_user'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-plan', workspaceId] }),
+  })
+  const generateContentMutation = useMutation({
+    mutationFn: (planId: string) => generatePilotContent(planId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-plan', workspaceId] }),
+  })
+  const skipItemMutation = useMutation({
+    mutationFn: (itemId: string) => skipPilotPlanItem(itemId, 'user_removed'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pilot-plan', workspaceId] }),
+  })
+
+  const recommendationsQuery = useQuery({ queryKey: ['strategy-recommendations', workspaceId], enabled: !!workspaceId, queryFn: () => fetchActiveRecommendations(workspaceId) })
+  const experimentQuery = useQuery({ queryKey: ['strategy-experiment', workspaceId], enabled: !!workspaceId, queryFn: () => fetchActiveExperiment(workspaceId) })
+  const cancelExperimentMutation = useMutation({
+    mutationFn: (experimentId: string) => cancelExperiment(experimentId, 'cancelled_by_user'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['strategy-experiment', workspaceId] }),
+  })
+
+  if (!activeWorkspace) return null
+
+  const settings = settingsQuery.data
+  const timezone = activeWorkspace.timezone
+  const plan = planQuery.data
+  const readiness = readinessQuery.data
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900 dark:text-ink-50">Piloto Automático</h1>
+          <p className="mt-1 text-sm text-ink-500">Seu planejamento de conteúdo trabalhando com você — a decisão final de publicar continua sempre sua.</p>
+        </div>
+        {settings && (
+          <div className="flex items-center gap-2">
+            <Badge variant={settings.status === 'active' ? 'success' : settings.status === 'paused' ? 'warning' : 'neutral'}>
+              {settings.status === 'active' ? 'Ativo 🟢' : settings.status === 'paused' ? 'Pausado ⏸️' : 'Desativado'}
+            </Badge>
+            {canConfigure && settings.status === 'active' && (
+              <Button size="sm" variant="outline" onClick={() => pauseMutation.mutate()}>
+                Pausar
+              </Button>
+            )}
+            {canConfigure && settings.status === 'paused' && (
+              <Button size="sm" onClick={() => resumeMutation.mutate()}>
+                Reativar
+              </Button>
+            )}
+            {canConfigure && settings.status !== 'disabled' && (
+              <Button size="sm" variant="ghost" onClick={() => disableMutation.mutate()}>
+                Desativar
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {((recommendationsQuery.data?.length ?? 0) > 0 || experimentQuery.data) && (
+        <Card>
+          <CardContent className="space-y-2 p-4">
+            <h2 className="font-medium text-ink-900 dark:text-ink-50">Otimizações</h2>
+            <p className="text-sm text-ink-500">
+              {recommendationsQuery.data?.length ?? 0} recomendação(ões) disponível(is)
+              {experimentQuery.data ? ` · 1 experimento ${EXPERIMENT_STATUS_LABEL[experimentQuery.data.status].toLowerCase()}` : ''}
+            </p>
+            {experimentQuery.data && (
+              <div className="flex items-center justify-between rounded bg-slate-50 p-2 text-sm">
+                <span>{experimentQuery.data.hypothesis}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral">
+                    {experimentQuery.data.actual_sample_size}/{experimentQuery.data.target_sample_size}
+                  </Badge>
+                  {canConfigure && experimentQuery.data.status === 'active' && (
+                    <Button size="sm" variant="ghost" onClick={() => cancelExperimentMutation.mutate(experimentQuery.data!.id)}>
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+            {(recommendationsQuery.data?.length ?? 0) > 0 && (
+              <Link to="/relatorios" className="text-sm text-blue-600 underline">
+                Ver recomendações em Performance
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Configurações ── */}
+      <Card>
+        <CardContent className="flex flex-col gap-4 py-5">
+          <h2 className="font-medium text-ink-900 dark:text-ink-50">Configurações</h2>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label>Modo</Label>
+              <Select disabled={!canConfigure} value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value as PilotMode })}>
+                <option value="assisted">Assistido (você aprova o plano e o conteúdo)</option>
+                <option value="semi_auto">Semi-automático (cron gera, você só aprova o conteúdo)</option>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Janela de planejamento (dias)</Label>
+              <Input
+                disabled={!canConfigure}
+                type="number"
+                min={3}
+                max={14}
+                value={form.planningWindowDays}
+                onChange={(e) => setForm({ ...form, planningWindowDays: Number(e.target.value) })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Máximo de posts na janela</Label>
+              <Input
+                disabled={!canConfigure}
+                type="number"
+                min={1}
+                max={14}
+                value={form.maxPostsPerWindow}
+                onChange={(e) => setForm({ ...form, maxPostsPerWindow: Number(e.target.value) })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Horário padrão</Label>
+              <Input
+                disabled={!canConfigure}
+                type="time"
+                value={form.preferredTimes.default}
+                onChange={(e) => setForm({ ...form, preferredTimes: { ...form.preferredTimes, default: e.target.value } })}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Dias de publicação</Label>
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAY_LABEL.map((label, wd) => (
+                <button
+                  key={wd}
+                  type="button"
+                  disabled={!canConfigure}
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      allowedWeekdays: f.allowedWeekdays.includes(wd) ? f.allowedWeekdays.filter((d) => d !== wd) : [...f.allowedWeekdays, wd].sort(),
+                    }))
+                  }
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${form.allowedWeekdays.includes(wd) ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 dark:bg-ink-800'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Formatos permitidos</Label>
+            <div className="flex gap-2">
+              {(['post', 'carrossel'] as const).map((fmt) => (
+                <button
+                  key={fmt}
+                  type="button"
+                  disabled={!canConfigure}
+                  onClick={() =>
+                    setForm((f) => ({ ...f, allowedFormats: f.allowedFormats.includes(fmt) ? f.allowedFormats.filter((x) => x !== fmt) : [...f.allowedFormats, fmt] }))
+                  }
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${form.allowedFormats.includes(fmt) ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 dark:bg-ink-800'}`}
+                >
+                  {fmt === 'post' ? 'Post' : 'Carrossel'}
+                </button>
+              ))}
+              <Badge variant="neutral">Reel — em breve</Badge>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Mix editorial (%)</Label>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {(['educativo', 'autoridade', 'relacionamento', 'venda'] as const).map((role) => (
+                <div key={role} className="flex flex-col gap-1">
+                  <span className="text-xs text-ink-500">{EDITORIAL_ROLE_LABEL[role as PilotEditorialRole]}</span>
+                  <Input
+                    disabled={!canConfigure}
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.editorialMix[role] ?? 0}
+                    onChange={(e) => setForm({ ...form, editorialMix: { ...form.editorialMix, [role]: Number(e.target.value) } })}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border border-ink-200 p-3 dark:border-ink-700">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" disabled={!canConfigure} checked={form.useRadar} onChange={(e) => setForm({ ...form, useRadar: e.target.checked })} />
+              Usar oportunidades do Radar Viral
+            </label>
+            {form.useRadar && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-ink-500">Máx. por janela</span>
+                  <Input disabled={!canConfigure} type="number" min={0} value={form.maxRadarPerWindow} onChange={(e) => setForm({ ...form, maxRadarPerWindow: Number(e.target.value) })} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-ink-500">Score mínimo</span>
+                  <Input
+                    disabled={!canConfigure}
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.radarMinOpportunityScore}
+                    onChange={(e) => setForm({ ...form, radarMinOpportunityScore: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-ink-500">Confiança mínima</span>
+                  <Select disabled={!canConfigure} value={form.radarMinConfidence} onChange={(e) => setForm({ ...form, radarMinConfidence: e.target.value as 'medium' | 'high' })}>
+                    <option value="medium">Média</option>
+                    <option value="high">Alta</option>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label>Conta do Instagram padrão</Label>
+              <Select
+                disabled={!canConfigure}
+                value={form.defaultInstagramAccountId ?? ''}
+                onChange={(e) => setForm({ ...form, defaultInstagramAccountId: e.target.value || null })}
+              >
+                <option value="">Nenhuma (não vai conseguir agendar)</option>
+                {(accountsQuery.data ?? []).map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    @{acc.username}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Orçamento máximo de créditos na janela</Label>
+              <Input
+                disabled={!canConfigure}
+                type="number"
+                min={1}
+                placeholder="Sem limite além do saldo"
+                value={form.maxCreditsPerWindow ?? ''}
+                onChange={(e) => setForm({ ...form, maxCreditsPerWindow: e.target.value ? Number(e.target.value) : null })}
+              />
+            </div>
+          </div>
+
+          {canConfigure && (
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? 'Salvando…' : 'Salvar configurações'}
+            </Button>
+          )}
+          {saveMutation.isError && <p className="text-sm text-danger-500">{(saveMutation.error as Error).message}</p>}
+
+          {readiness && !readiness.ready && (
+            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <p className="font-medium">Falta para ativar:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {readiness.missing.map((m) => (
+                  <li key={m}>{MISSING_LABEL[m] ?? m}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {canConfigure && settings?.status === 'disabled' && (
+            <Button onClick={() => activateMutation.mutate()} disabled={activateMutation.isPending || !readiness?.ready}>
+              Ativar Piloto
+            </Button>
+          )}
+          {activateMutation.isError && <p className="text-sm text-danger-500">{(activateMutation.error as Error).message}</p>}
+        </CardContent>
+      </Card>
+
+      {/* ── Plano atual ── */}
+      {settings?.status === 'active' && (
+        <Card>
+          <CardContent className="flex flex-col gap-4 py-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-ink-900 dark:text-ink-50">Plano atual</h2>
+              {!plan || plan.status === 'cancelled' || plan.status === 'completed' ? (
+                <Button size="sm" onClick={() => generatePlanMutation.mutate()} disabled={generatePlanMutation.isPending}>
+                  {generatePlanMutation.isPending ? 'Gerando plano…' : 'Gerar plano'}
+                </Button>
+              ) : (
+                canConfigure && (
+                  <Button size="sm" variant="outline" onClick={() => cancelPlanMutation.mutate(plan.id)} disabled={cancelPlanMutation.isPending}>
+                    Regenerar
+                  </Button>
+                )
+              )}
+            </div>
+            {generatePlanMutation.isError && <p className="text-sm text-danger-500">{(generatePlanMutation.error as Error).message}</p>}
+
+            {plan && plan.status !== 'cancelled' && (
+              <>
+                <div className="flex items-center gap-2 text-sm text-ink-500">
+                  <Badge variant="brand">{PLAN_STATUS_LABEL[plan.status]}</Badge>
+                  <span>
+                    {plan.period_start} → {plan.period_end}
+                  </span>
+                </div>
+
+                {plan.status === 'awaiting_approval' && canApprove && (
+                  <Button onClick={() => approvePlanMutation.mutate(plan.id)} disabled={approvePlanMutation.isPending}>
+                    Aprovar plano
+                  </Button>
+                )}
+                {plan.status === 'approved' && canConfigure && (
+                  <Button onClick={() => generateContentMutation.mutate(plan.id)} disabled={generateContentMutation.isPending}>
+                    {generateContentMutation.isPending ? 'Gerando conteúdos…' : 'Gerar conteúdos'}
+                  </Button>
+                )}
+                {generateContentMutation.isError && <p className="text-sm text-danger-500">{(generateContentMutation.error as Error).message}</p>}
+                {generateContentMutation.data?.error === 'insufficient_credits' && (
+                  <p className="text-sm text-danger-500">Créditos insuficientes para este lote.</p>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  {(plan.pilot_plan_items ?? [])
+                    .filter((i) => i.status !== 'skipped')
+                    .sort((a, b) => a.scheduled_for.localeCompare(b.scheduled_for))
+                    .map((item) => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-200 p-3 text-sm dark:border-ink-700">
+                        <div>
+                          <p className="font-medium text-ink-900 dark:text-ink-50">
+                            {formatInTimeZone(item.scheduled_for, timezone, { dateStyle: 'short', timeStyle: 'short' })} — {item.topic}
+                          </p>
+                          <p className="text-xs text-ink-500">
+                            {EDITORIAL_ROLE_LABEL[item.editorial_role]} · {item.format} {item.brand_pillar ? `· ${item.brand_pillar}` : ''} {item.radar_opportunity_id ? '· 🔥 Radar' : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={item.status === 'generated' ? 'success' : item.status === 'failed' ? 'danger' : 'neutral'}>{ITEM_STATUS_LABEL[item.status]}</Badge>
+                          {canEditItems && ['planned', 'approved'].includes(item.status) && (
+                            <Button size="sm" variant="ghost" onClick={() => skipItemMutation.mutate(item.id)}>
+                              Remover
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+            {(!plan || plan.status === 'cancelled') && <p className="text-sm text-ink-500">Nenhum plano ativo — gere um plano para começar.</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Histórico de execuções ── */}
+      {(runsQuery.data?.length ?? 0) > 0 && (
+        <Card>
+          <CardContent className="flex flex-col gap-2 py-5">
+            <h2 className="font-medium text-ink-900 dark:text-ink-50">Histórico</h2>
+            {runsQuery.data!.map((run) => (
+              <p key={run.id} className="text-xs text-ink-500">
+                {formatInTimeZone(run.started_at, timezone, { dateStyle: 'short', timeStyle: 'short' })} · {run.run_type} · {run.status}
+                {run.error_summary ? ` · ${run.error_summary}` : ''}
+              </p>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

@@ -1,7 +1,9 @@
+import { Link } from 'react-router-dom'
 import type { BrandDnaDraft } from '@/features/brand-dna/state'
 import { useBrandAssetUrl } from '@/features/brand-dna/useBrandAssetUrl'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   if (!value) return null
@@ -81,6 +83,19 @@ export function StepReview({ draft }: { draft: BrandDnaDraft }) {
         <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Identidade visual</h4>
         <SummaryTags label="Cores" values={draft.visualIdentity.colors} />
         <SummaryRow label="Estilo visual" value={draft.visualIdentity.visual_style} />
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-xl border border-ink-200 p-4 dark:border-ink-700">
+        <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">DNA visual & referências</h4>
+        <p className="text-sm text-ink-500">
+          Defina 3 direções visuais reais para sua marca e adicione perfis de referência que representam a direção
+          que você admira.
+        </p>
+        <div>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/dna-da-marca/visual">Refinar meu DNA visual</Link>
+          </Button>
+        </div>
       </section>
     </div>
   )

@@ -53,7 +53,12 @@ export async function fetchOperationCosts(): Promise<Record<GenerationType, numb
   const { data, error } = await supabase.from('ai_operation_costs').select('generation_type, credit_cost')
   if (error) throw error
   const map = {} as Record<GenerationType, number>
-  for (const row of data ?? []) map[row.generation_type] = row.credit_cost
+  // performance_insight (Fase 10) não é um tipo selecionável em "Criar com
+  // IA" — nunca aparece neste mapa de preços exibido ao usuário aqui.
+  for (const row of data ?? []) {
+    if (row.generation_type === 'performance_insight') continue
+    map[row.generation_type] = row.credit_cost
+  }
   return map
 }
 

@@ -20,11 +20,18 @@ const GRAPH_VERSION = 'v25.0'
 
 // Fase 6: instagram_business_basic (perfil + mídia própria).
 // Fase 7: + instagram_business_content_publish (publicar posts/carrosséis).
+// Fase 10: + instagram_business_manage_insights (ler métricas reais de
+// posts publicados) — confirmado como o nome exato do scope direto em
+// developers.facebook.com/docs/instagram-platform/insights/ no momento da
+// implementação (Instagram API with Instagram Login; a variante
+// instagram_manage_insights é só do fluxo com Facebook Login, que o
+// POSTTOU não usa). Requer Advanced Access + App Review para contas de
+// terceiros — funciona com Standard Access só em contas próprias/testers
+// do app (ex.: @posttou.app) enquanto o review não é aprovado.
 // Contas conectadas antes deste scope não têm a permissão — precisam
-// reconectar explicitamente (nunca assumimos que um token antigo já a tem).
-// Escopos adicionais (mensagens, comentários) continuam para fases futuras,
-// um de cada vez — princípio de menor privilégio para o App Review.
-export const INSTAGRAM_OAUTH_SCOPE = 'instagram_business_basic,instagram_business_content_publish'
+// reconectar explicitamente (nunca assumimos que um token antigo já a tem;
+// ver instagram_accounts.insights_status).
+export const INSTAGRAM_OAUTH_SCOPE = 'instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights'
 
 export function buildAuthorizeUrl(params: { appId: string; redirectUri: string; state: string }): string {
   const url = new URL(AUTHORIZE_URL)
@@ -275,6 +282,64 @@ export async function fetchMediaPermalink(params: { igMediaId: string; accessTok
   const data = await res.json().catch(() => null)
   if (!res.ok) return null
   return data?.permalink ?? null
+}
+
+// ── Insights (Fase 10) ───────────────────────────────────────────────
+// developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights
+// GET /<ig-media-id>/insights?metric=reach,likes,comments,saved,shares,views,total_interactions
+// impressions foi depreciada para mídia em 02/jul/2024 — nunca usada aqui.
+// views/total_interactions estão marcadas "em desenvolvimento" pela Meta —
+// tratamos ausência como métrica não suportada, nunca como zero.
+export const MEDIA_INSIGHTS_METRICS = ['reach', 'likes', 'comments', 'saved', 'shares', 'views', 'total_interactions'] as const
+export type MediaInsightsMetric = (typeof MEDIA_INSIGHTS_METRICS)[number]
+
+export interface MediaInsightsResult {
+  values: Partial<Record<MediaInsightsMetric, number>>
+  unsupportedMetrics: MediaInsightsMetric[]
+  raw: unknown
+}
+
+/** Erro de permissão da Meta (token sem o escopo de insights) — nunca tratado como falha genérica. */
+export class InstagramPermissionError extends InstagramApiError {}
+/** Mídia apagada/indisponível na Meta — terminal, nunca retry. */
+export class InstagramMediaUnavailableError extends InstagramApiError {}
+
+const PERMISSION_ERROR_CODES = new Set([10, 200, 190, 294])
+
+export async function fetchMediaInsights(params: { igMediaId: string; accessToken: string }): Promise<MediaInsightsResult> {
+  const url = new URL(`${GRAPH_BASE_URL}/${GRAPH_VERSION}/${encodeURIComponent(params.igMediaId)}/insights`)
+  url.searchParams.set('metric', MEDIA_INSIGHTS_METRICS.join(','))
+  url.searchParams.set('access_token', params.accessToken)
+
+  const res = await fetch(url, { method: 'GET' })
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    const errorCode = data?.error?.code
+    const errorSubcode = data?.error?.error_subcode
+    const detail = data?.error?.message || JSON.stringify(data).slice(0, 300)
+    // Erro 10/190/200/294: permissão ausente/token sem escopo — nunca confundir com "métrica indisponível".
+    if (typeof errorCode === 'number' && PERMISSION_ERROR_CODES.has(errorCode)) {
+      throw new InstagramPermissionError(`Permissão de insights ausente: ${detail}`, res.status)
+    }
+    // Mídia inexistente/apagada.
+    if (errorCode === 100 && (errorSubcode === 33 || /does not exist|cannot be loaded/i.test(String(detail)))) {
+      throw new InstagramMediaUnavailableError(`Mídia indisponível: ${detail}`, res.status)
+    }
+    throw new InstagramApiError(`Falha ao buscar insights da mídia: ${detail}`, res.status)
+  }
+
+  const values: Partial<Record<MediaInsightsMetric, number>> = {}
+  const returned = new Set<string>()
+  for (const entry of (data?.data ?? []) as Array<{ name: string; values?: Array<{ value: number }>; total_value?: { value: number } }>) {
+    const metric = entry.name as MediaInsightsMetric
+    returned.add(metric)
+    const value = entry.total_value?.value ?? entry.values?.[0]?.value
+    if (typeof value === 'number') values[metric] = value
+  }
+  const unsupportedMetrics = MEDIA_INSIGHTS_METRICS.filter((m) => !returned.has(m))
+
+  return { values, unsupportedMetrics, raw: data }
 }
 
 export interface ContentPublishingLimit {

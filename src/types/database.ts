@@ -315,6 +315,136 @@ export type Database = {
           },
         ]
       }
+      brand_reference_profiles: {
+        Row: {
+          analysis: Json | null
+          analysis_error_code: string | null
+          analyzed_at: string | null
+          created_at: string
+          created_by: string | null
+          handle: string
+          id: string
+          ig_user_id: string | null
+          liked_aspects: string[]
+          notes: string | null
+          reference_type: string | null
+          removed_at: string | null
+          status: Database["public"]["Enums"]["brand_reference_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          analysis?: Json | null
+          analysis_error_code?: string | null
+          analyzed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          handle: string
+          id?: string
+          ig_user_id?: string | null
+          liked_aspects?: string[]
+          notes?: string | null
+          reference_type?: string | null
+          removed_at?: string | null
+          status?: Database["public"]["Enums"]["brand_reference_status"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          analysis?: Json | null
+          analysis_error_code?: string | null
+          analyzed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          handle?: string
+          id?: string
+          ig_user_id?: string | null
+          liked_aspects?: string[]
+          notes?: string | null
+          reference_type?: string | null
+          removed_at?: string | null
+          status?: Database["public"]["Enums"]["brand_reference_status"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_reference_profiles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_reference_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_visual_dna: {
+        Row: {
+          attributes: Json
+          based_on_option_id: string | null
+          confirmed_at: string
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          reference_ids: string[]
+          status: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          attributes: Json
+          based_on_option_id?: string | null
+          confirmed_at?: string
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          reference_ids?: string[]
+          status?: string
+          version: number
+          workspace_id: string
+        }
+        Update: {
+          attributes?: Json
+          based_on_option_id?: string | null
+          confirmed_at?: string
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          reference_ids?: string[]
+          status?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_visual_dna_based_on_option_id_fkey"
+            columns: ["based_on_option_id"]
+            isOneToOne: false
+            referencedRelation: "visual_dna_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_visual_dna_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_visual_dna_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_elements: {
         Row: {
           content: Json
@@ -418,6 +548,219 @@ export type Database = {
           },
         ]
       }
+      content_performance_scores: {
+        Row: {
+          baseline_sample_size: number
+          baseline_scope:
+            | Database["public"]["Enums"]["performance_baseline_scope"]
+            | null
+          baseline_tier: Database["public"]["Enums"]["performance_baseline_tier"]
+          computed_at: string
+          content_id: string
+          created_at: string
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          instagram_publication_id: string
+          latest_age_bucket: string | null
+          maturity_stage: Database["public"]["Enums"]["performance_maturity_stage"]
+          relative_engagement: number | null
+          relative_reach: number | null
+          relative_saves: number | null
+          relative_shares: number | null
+          score: number | null
+          scoring_config_snapshot: Json
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          baseline_sample_size?: number
+          baseline_scope?:
+            | Database["public"]["Enums"]["performance_baseline_scope"]
+            | null
+          baseline_tier?: Database["public"]["Enums"]["performance_baseline_tier"]
+          computed_at?: string
+          content_id: string
+          created_at?: string
+          format: Database["public"]["Enums"]["content_type"]
+          id?: string
+          instagram_publication_id: string
+          latest_age_bucket?: string | null
+          maturity_stage?: Database["public"]["Enums"]["performance_maturity_stage"]
+          relative_engagement?: number | null
+          relative_reach?: number | null
+          relative_saves?: number | null
+          relative_shares?: number | null
+          score?: number | null
+          scoring_config_snapshot?: Json
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          baseline_sample_size?: number
+          baseline_scope?:
+            | Database["public"]["Enums"]["performance_baseline_scope"]
+            | null
+          baseline_tier?: Database["public"]["Enums"]["performance_baseline_tier"]
+          computed_at?: string
+          content_id?: string
+          created_at?: string
+          format?: Database["public"]["Enums"]["content_type"]
+          id?: string
+          instagram_publication_id?: string
+          latest_age_bucket?: string | null
+          maturity_stage?: Database["public"]["Enums"]["performance_maturity_stage"]
+          relative_engagement?: number | null
+          relative_reach?: number | null
+          relative_saves?: number | null
+          relative_shares?: number | null
+          score?: number | null
+          scoring_config_snapshot?: Json
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_performance_scores_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_performance_scores_instagram_publication_id_fkey"
+            columns: ["instagram_publication_id"]
+            isOneToOne: true
+            referencedRelation: "instagram_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_performance_scores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_performance_snapshots: {
+        Row: {
+          age_bucket: string
+          api_version: string | null
+          attempt_count: number
+          captured_at: string | null
+          claimed_at: string | null
+          collector_status: Database["public"]["Enums"]["performance_snapshot_status"]
+          comments: number | null
+          content_id: string
+          created_at: string
+          id: string
+          instagram_account_id: string
+          instagram_publication_id: string
+          last_attempt_at: string | null
+          last_error_code: string | null
+          last_error_message: string | null
+          likes: number | null
+          next_retry_at: string | null
+          raw_metrics: Json
+          reach: number | null
+          saved: number | null
+          shares: number | null
+          target_at: string
+          total_interactions: number | null
+          unsupported_metrics: string[]
+          updated_at: string
+          views: number | null
+          workspace_id: string
+        }
+        Insert: {
+          age_bucket: string
+          api_version?: string | null
+          attempt_count?: number
+          captured_at?: string | null
+          claimed_at?: string | null
+          collector_status?: Database["public"]["Enums"]["performance_snapshot_status"]
+          comments?: number | null
+          content_id: string
+          created_at?: string
+          id?: string
+          instagram_account_id: string
+          instagram_publication_id: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          last_error_message?: string | null
+          likes?: number | null
+          next_retry_at?: string | null
+          raw_metrics?: Json
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          target_at: string
+          total_interactions?: number | null
+          unsupported_metrics?: string[]
+          updated_at?: string
+          views?: number | null
+          workspace_id: string
+        }
+        Update: {
+          age_bucket?: string
+          api_version?: string | null
+          attempt_count?: number
+          captured_at?: string | null
+          claimed_at?: string | null
+          collector_status?: Database["public"]["Enums"]["performance_snapshot_status"]
+          comments?: number | null
+          content_id?: string
+          created_at?: string
+          id?: string
+          instagram_account_id?: string
+          instagram_publication_id?: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          last_error_message?: string | null
+          likes?: number | null
+          next_retry_at?: string | null
+          raw_metrics?: Json
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          target_at?: string
+          total_interactions?: number | null
+          unsupported_metrics?: string[]
+          updated_at?: string
+          views?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_performance_snapshots_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_performance_snapshots_instagram_account_id_fkey"
+            columns: ["instagram_account_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_performance_snapshots_instagram_publication_id_fkey"
+            columns: ["instagram_publication_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_performance_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_versions: {
         Row: {
           content_id: string
@@ -469,6 +812,7 @@ export type Database = {
           hashtags: string[]
           id: string
           origin: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id: string | null
           published_at: string | null
           radar_opportunity_id: string | null
           rejection_reason: string | null
@@ -490,6 +834,7 @@ export type Database = {
           hashtags?: string[]
           id?: string
           origin?: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id?: string | null
           published_at?: string | null
           radar_opportunity_id?: string | null
           rejection_reason?: string | null
@@ -511,6 +856,7 @@ export type Database = {
           hashtags?: string[]
           id?: string
           origin?: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id?: string | null
           published_at?: string | null
           radar_opportunity_id?: string | null
           rejection_reason?: string | null
@@ -534,6 +880,13 @@ export type Database = {
             columns: ["duplicated_from"]
             isOneToOne: false
             referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contents_pilot_plan_item_id_fkey"
+            columns: ["pilot_plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_plan_items"
             referencedColumns: ["id"]
           },
           {
@@ -656,6 +1009,7 @@ export type Database = {
           disconnected_at: string | null
           id: string
           ig_user_id: string
+          insights_status: Database["public"]["Enums"]["instagram_insights_status"]
           last_connected_at: string | null
           name: string | null
           profile_picture_url: string | null
@@ -672,6 +1026,7 @@ export type Database = {
           disconnected_at?: string | null
           id?: string
           ig_user_id: string
+          insights_status?: Database["public"]["Enums"]["instagram_insights_status"]
           last_connected_at?: string | null
           name?: string | null
           profile_picture_url?: string | null
@@ -688,6 +1043,7 @@ export type Database = {
           disconnected_at?: string | null
           id?: string
           ig_user_id?: string
+          insights_status?: Database["public"]["Enums"]["instagram_insights_status"]
           last_connected_at?: string | null
           name?: string | null
           profile_picture_url?: string | null
@@ -938,6 +1294,543 @@ export type Database = {
             foreignKeyName: "instagram_webhook_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_collection_runs: {
+        Row: {
+          duration_ms: number | null
+          errors: Json
+          finished_at: string | null
+          id: string
+          permission_blocked_count: number
+          publications_scheduled: number
+          rate_limited_count: number
+          retries: number
+          snapshots_attempted: number
+          snapshots_collected: number
+          started_at: string
+        }
+        Insert: {
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          permission_blocked_count?: number
+          publications_scheduled?: number
+          rate_limited_count?: number
+          retries?: number
+          snapshots_attempted?: number
+          snapshots_collected?: number
+          started_at?: string
+        }
+        Update: {
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          permission_blocked_count?: number
+          publications_scheduled?: number
+          rate_limited_count?: number
+          retries?: number
+          snapshots_attempted?: number
+          snapshots_collected?: number
+          started_at?: string
+        }
+        Relationships: []
+      }
+      performance_insights: {
+        Row: {
+          ai_generation_id: string | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at: string
+          description: string
+          dismissed_at: string | null
+          evidence: Json
+          fact_signature: string
+          feedback:
+            | Database["public"]["Enums"]["performance_insight_feedback"]
+            | null
+          generated_at: string
+          id: string
+          insight_type: string
+          period_end: string
+          period_start: string
+          sample_size: number
+          source: Database["public"]["Enums"]["performance_insight_source"]
+          status: Database["public"]["Enums"]["performance_insight_status"]
+          title: string
+          workspace_id: string
+        }
+        Insert: {
+          ai_generation_id?: string | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at?: string
+          description: string
+          dismissed_at?: string | null
+          evidence: Json
+          fact_signature: string
+          feedback?:
+            | Database["public"]["Enums"]["performance_insight_feedback"]
+            | null
+          generated_at?: string
+          id?: string
+          insight_type: string
+          period_end: string
+          period_start: string
+          sample_size: number
+          source: Database["public"]["Enums"]["performance_insight_source"]
+          status?: Database["public"]["Enums"]["performance_insight_status"]
+          title: string
+          workspace_id: string
+        }
+        Update: {
+          ai_generation_id?: string | null
+          confidence?: Database["public"]["Enums"]["performance_confidence"]
+          created_at?: string
+          description?: string
+          dismissed_at?: string | null
+          evidence?: Json
+          fact_signature?: string
+          feedback?:
+            | Database["public"]["Enums"]["performance_insight_feedback"]
+            | null
+          generated_at?: string
+          id?: string
+          insight_type?: string
+          period_end?: string
+          period_start?: string
+          sample_size?: number
+          source?: Database["public"]["Enums"]["performance_insight_source"]
+          status?: Database["public"]["Enums"]["performance_insight_status"]
+          title?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_insights_ai_generation_id_fkey"
+            columns: ["ai_generation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_insights_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_scoring_config: {
+        Row: {
+          id: string
+          maturity_consolidated_days: number
+          maturity_evolving_hours: number
+          min_sample_provisional: number
+          min_sample_ready: number
+          updated_at: string
+          weight_engagement: number
+          weight_reach: number
+          weight_saves: number
+          weight_shares: number
+          winsorize_high_pct: number
+          winsorize_low_pct: number
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string
+          maturity_consolidated_days?: number
+          maturity_evolving_hours?: number
+          min_sample_provisional?: number
+          min_sample_ready?: number
+          updated_at?: string
+          weight_engagement?: number
+          weight_reach?: number
+          weight_saves?: number
+          weight_shares?: number
+          winsorize_high_pct?: number
+          winsorize_low_pct?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string
+          maturity_consolidated_days?: number
+          maturity_evolving_hours?: number
+          min_sample_provisional?: number
+          min_sample_ready?: number
+          updated_at?: string
+          weight_engagement?: number
+          weight_reach?: number
+          weight_saves?: number
+          weight_shares?: number
+          winsorize_high_pct?: number
+          winsorize_low_pct?: number
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_scoring_config_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_plan_items: {
+        Row: {
+          angle: string | null
+          attempt_count: number
+          brand_pillar: string | null
+          claimed_at: string | null
+          content_id: string | null
+          created_at: string
+          editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id: string | null
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          objective: string | null
+          pilot_plan_id: string
+          radar_opportunity_id: string | null
+          reason: string | null
+          rejection_feedback: Json | null
+          scheduled_for: string
+          source: string
+          status: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason: string | null
+          topic: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          angle?: string | null
+          attempt_count?: number
+          brand_pillar?: string | null
+          claimed_at?: string | null
+          content_id?: string | null
+          created_at?: string
+          editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id?: string | null
+          format: Database["public"]["Enums"]["content_type"]
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          objective?: string | null
+          pilot_plan_id: string
+          radar_opportunity_id?: string | null
+          reason?: string | null
+          rejection_feedback?: Json | null
+          scheduled_for: string
+          source?: string
+          status?: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason?: string | null
+          topic: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          angle?: string | null
+          attempt_count?: number
+          brand_pillar?: string | null
+          claimed_at?: string | null
+          content_id?: string | null
+          created_at?: string
+          editorial_role?: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id?: string | null
+          format?: Database["public"]["Enums"]["content_type"]
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          objective?: string | null
+          pilot_plan_id?: string
+          radar_opportunity_id?: string | null
+          reason?: string | null
+          rejection_feedback?: Json | null
+          scheduled_for?: string
+          source?: string
+          status?: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason?: string | null
+          topic?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_plan_items_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plan_items_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "strategy_experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plan_items_pilot_plan_id_fkey"
+            columns: ["pilot_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plan_items_radar_opportunity_id_fkey"
+            columns: ["radar_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "radar_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plan_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_plans: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          generated_at: string
+          generation_key: string
+          id: string
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          generated_at?: string
+          generation_key: string
+          id?: string
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          period_end: string
+          period_start: string
+          status?: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          generated_at?: string
+          generation_key?: string
+          id?: string
+          mode?: Database["public"]["Enums"]["pilot_mode"]
+          period_end?: string
+          period_start?: string
+          status?: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plans_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "pilot_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plans_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_runs: {
+        Row: {
+          ai_calls: number
+          contents_generated: number
+          created_at: string
+          credits_consumed: number
+          duration_ms: number | null
+          error_summary: string | null
+          estimated_ai_cost: Json
+          finished_at: string | null
+          id: string
+          items_created: number
+          plan_id: string | null
+          radar_used: number
+          run_type: string
+          slots_evaluated: number
+          started_at: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          ai_calls?: number
+          contents_generated?: number
+          created_at?: string
+          credits_consumed?: number
+          duration_ms?: number | null
+          error_summary?: string | null
+          estimated_ai_cost?: Json
+          finished_at?: string | null
+          id?: string
+          items_created?: number
+          plan_id?: string | null
+          radar_used?: number
+          run_type: string
+          slots_evaluated?: number
+          started_at?: string
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          ai_calls?: number
+          contents_generated?: number
+          created_at?: string
+          credits_consumed?: number
+          duration_ms?: number | null
+          error_summary?: string | null
+          estimated_ai_cost?: Json
+          finished_at?: string | null
+          id?: string
+          items_created?: number
+          plan_id?: string | null
+          radar_used?: number
+          run_type?: string
+          slots_evaluated?: number
+          started_at?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_runs_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_settings: {
+        Row: {
+          allowed_formats: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays: number[]
+          created_at: string
+          default_instagram_account_id: string | null
+          editorial_mix: Json
+          format_mix: Json | null
+          id: string
+          max_credits_per_window: number | null
+          max_posts_per_window: number
+          max_radar_per_window: number
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days: number
+          preferred_times: Json
+          radar_min_confidence: string
+          radar_min_opportunity_score: number
+          status: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective: string | null
+          temporary_objective_expires_at: string | null
+          updated_at: string
+          use_radar: boolean
+          workspace_id: string
+        }
+        Insert: {
+          allowed_formats?: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays?: number[]
+          created_at?: string
+          default_instagram_account_id?: string | null
+          editorial_mix?: Json
+          format_mix?: Json | null
+          id?: string
+          max_credits_per_window?: number | null
+          max_posts_per_window?: number
+          max_radar_per_window?: number
+          mode?: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days?: number
+          preferred_times?: Json
+          radar_min_confidence?: string
+          radar_min_opportunity_score?: number
+          status?: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective?: string | null
+          temporary_objective_expires_at?: string | null
+          updated_at?: string
+          use_radar?: boolean
+          workspace_id: string
+        }
+        Update: {
+          allowed_formats?: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays?: number[]
+          created_at?: string
+          default_instagram_account_id?: string | null
+          editorial_mix?: Json
+          format_mix?: Json | null
+          id?: string
+          max_credits_per_window?: number | null
+          max_posts_per_window?: number
+          max_radar_per_window?: number
+          mode?: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days?: number
+          preferred_times?: Json
+          radar_min_confidence?: string
+          radar_min_opportunity_score?: number
+          status?: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective?: string | null
+          temporary_objective_expires_at?: string | null
+          updated_at?: string
+          use_radar?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_settings_default_instagram_account_id_fkey"
+            columns: ["default_instagram_account_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1412,6 +2305,483 @@ export type Database = {
           },
         ]
       }
+      strategy_experiments: {
+        Row: {
+          actual_sample_size: number
+          baseline_definition: Json
+          cancelled_at: string | null
+          completed_at: string | null
+          confidence:
+            | Database["public"]["Enums"]["performance_confidence"]
+            | null
+          created_at: string
+          created_by: string | null
+          dimension: string
+          hypothesis: string
+          id: string
+          period_end: string
+          period_start: string
+          recommendation_id: string | null
+          result: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["strategy_experiment_status"]
+          success_criteria: Json
+          target_sample_size: number
+          updated_at: string
+          variant: Json
+          workspace_id: string
+        }
+        Insert: {
+          actual_sample_size?: number
+          baseline_definition: Json
+          cancelled_at?: string | null
+          completed_at?: string | null
+          confidence?:
+            | Database["public"]["Enums"]["performance_confidence"]
+            | null
+          created_at?: string
+          created_by?: string | null
+          dimension: string
+          hypothesis: string
+          id?: string
+          period_end: string
+          period_start: string
+          recommendation_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["strategy_experiment_status"]
+          success_criteria: Json
+          target_sample_size: number
+          updated_at?: string
+          variant: Json
+          workspace_id: string
+        }
+        Update: {
+          actual_sample_size?: number
+          baseline_definition?: Json
+          cancelled_at?: string | null
+          completed_at?: string | null
+          confidence?:
+            | Database["public"]["Enums"]["performance_confidence"]
+            | null
+          created_at?: string
+          created_by?: string | null
+          dimension?: string
+          hypothesis?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          recommendation_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["strategy_experiment_status"]
+          success_criteria?: Json
+          target_sample_size?: number
+          updated_at?: string
+          variant?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_experiments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_experiments_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "strategy_recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_experiments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_recommendation_runs: {
+        Row: {
+          candidates_evaluated: number
+          deduplicated: number
+          duration_ms: number | null
+          errors: Json
+          finished_at: string | null
+          id: string
+          recommendations_created: number
+          skipped_low_sample: number
+          stale_count: number
+          started_at: string
+          workspace_id: string
+        }
+        Insert: {
+          candidates_evaluated?: number
+          deduplicated?: number
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          recommendations_created?: number
+          skipped_low_sample?: number
+          stale_count?: number
+          started_at?: string
+          workspace_id: string
+        }
+        Update: {
+          candidates_evaluated?: number
+          deduplicated?: number
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          recommendations_created?: number
+          skipped_low_sample?: number
+          stale_count?: number
+          started_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_recommendation_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategy_recommendations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          after: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before: Json | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at: string
+          dismiss_reason: string | null
+          dismissed_at: string | null
+          dismissed_by: string | null
+          evidence: Json
+          expires_at: string
+          fact: Json
+          fingerprint: string
+          id: string
+          insight_id: string | null
+          interpretation: string
+          operation: string | null
+          period_end: string
+          period_start: string
+          priority_score: number
+          recommendation_type: Database["public"]["Enums"]["strategy_recommendation_type"]
+          reverted_at: string | null
+          reverted_by: string | null
+          sample_size: number
+          status: Database["public"]["Enums"]["strategy_recommendation_status"]
+          status_reason: string | null
+          target: string | null
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          after?: Json | null
+          applied_at?: string | null
+          applied_by?: string | null
+          before?: Json | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at?: string
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          evidence: Json
+          expires_at: string
+          fact: Json
+          fingerprint: string
+          id?: string
+          insight_id?: string | null
+          interpretation: string
+          operation?: string | null
+          period_end: string
+          period_start: string
+          priority_score?: number
+          recommendation_type: Database["public"]["Enums"]["strategy_recommendation_type"]
+          reverted_at?: string | null
+          reverted_by?: string | null
+          sample_size: number
+          status?: Database["public"]["Enums"]["strategy_recommendation_status"]
+          status_reason?: string | null
+          target?: string | null
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          after?: Json | null
+          applied_at?: string | null
+          applied_by?: string | null
+          before?: Json | null
+          confidence?: Database["public"]["Enums"]["performance_confidence"]
+          created_at?: string
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          evidence?: Json
+          expires_at?: string
+          fact?: Json
+          fingerprint?: string
+          id?: string
+          insight_id?: string | null
+          interpretation?: string
+          operation?: string | null
+          period_end?: string
+          period_start?: string
+          priority_score?: number
+          recommendation_type?: Database["public"]["Enums"]["strategy_recommendation_type"]
+          reverted_at?: string | null
+          reverted_by?: string | null
+          sample_size?: number
+          status?: Database["public"]["Enums"]["strategy_recommendation_status"]
+          status_reason?: string | null
+          target?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategy_recommendations_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_recommendations_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_recommendations_dismissed_by_fkey"
+            columns: ["dismissed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_recommendations_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "performance_insights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_recommendations_reverted_by_fkey"
+            columns: ["reverted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategy_recommendations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visual_dna_generation_runs: {
+        Row: {
+          credit_cost: number
+          duration_ms: number | null
+          errors: Json
+          finished_at: string | null
+          id: string
+          images_attempted: number
+          images_succeeded: number
+          option_set_id: string | null
+          started_at: string
+          workspace_id: string
+        }
+        Insert: {
+          credit_cost?: number
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          images_attempted?: number
+          images_succeeded?: number
+          option_set_id?: string | null
+          started_at?: string
+          workspace_id: string
+        }
+        Update: {
+          credit_cost?: number
+          duration_ms?: number | null
+          errors?: Json
+          finished_at?: string | null
+          id?: string
+          images_attempted?: number
+          images_succeeded?: number
+          option_set_id?: string | null
+          started_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visual_dna_generation_runs_option_set_id_fkey"
+            columns: ["option_set_id"]
+            isOneToOne: false
+            referencedRelation: "visual_dna_option_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visual_dna_generation_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visual_dna_option_sets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          credit_cost: number
+          credit_ledger_id: string | null
+          finished_at: string | null
+          id: string
+          prompt_version: string
+          reference_snapshot: Json
+          round_number: number
+          shared_brief: Json | null
+          status: Database["public"]["Enums"]["visual_dna_option_set_status"]
+          status_reason: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number
+          credit_ledger_id?: string | null
+          finished_at?: string | null
+          id?: string
+          prompt_version?: string
+          reference_snapshot?: Json
+          round_number: number
+          shared_brief?: Json | null
+          status?: Database["public"]["Enums"]["visual_dna_option_set_status"]
+          status_reason?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number
+          credit_ledger_id?: string | null
+          finished_at?: string | null
+          id?: string
+          prompt_version?: string
+          reference_snapshot?: Json
+          round_number?: number
+          shared_brief?: Json | null
+          status?: Database["public"]["Enums"]["visual_dna_option_set_status"]
+          status_reason?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visual_dna_option_sets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visual_dna_option_sets_credit_ledger_id_fkey"
+            columns: ["credit_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "credit_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visual_dna_option_sets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visual_dna_options: {
+        Row: {
+          ai_generation_id: string | null
+          attributes: Json | null
+          attributes_summary: string | null
+          created_at: string
+          id: string
+          label: string
+          option_set_id: string
+          preview_asset_path: string | null
+          status: Database["public"]["Enums"]["visual_dna_option_status"]
+          workspace_id: string
+        }
+        Insert: {
+          ai_generation_id?: string | null
+          attributes?: Json | null
+          attributes_summary?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          option_set_id: string
+          preview_asset_path?: string | null
+          status?: Database["public"]["Enums"]["visual_dna_option_status"]
+          workspace_id: string
+        }
+        Update: {
+          ai_generation_id?: string | null
+          attributes?: Json | null
+          attributes_summary?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          option_set_id?: string
+          preview_asset_path?: string | null
+          status?: Database["public"]["Enums"]["visual_dna_option_status"]
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visual_dna_options_ai_generation_id_fkey"
+            columns: ["ai_generation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visual_dna_options_option_set_id_fkey"
+            columns: ["option_set_id"]
+            isOneToOne: false
+            referencedRelation: "visual_dna_option_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visual_dna_options_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
@@ -1521,6 +2891,266 @@ export type Database = {
       }
     }
     Functions: {
+      activate_pilot: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          allowed_formats: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays: number[]
+          created_at: string
+          default_instagram_account_id: string | null
+          editorial_mix: Json
+          format_mix: Json | null
+          id: string
+          max_credits_per_window: number | null
+          max_posts_per_window: number
+          max_radar_per_window: number
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days: number
+          preferred_times: Json
+          radar_min_confidence: string
+          radar_min_opportunity_score: number
+          status: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective: string | null
+          temporary_objective_expires_at: string | null
+          updated_at: string
+          use_radar: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      add_brand_reference: {
+        Args: {
+          p_handle: string
+          p_liked_aspects?: string[]
+          p_notes?: string
+          p_reference_type?: string
+          p_workspace_id: string
+        }
+        Returns: {
+          analysis: Json | null
+          analysis_error_code: string | null
+          analyzed_at: string | null
+          created_at: string
+          created_by: string | null
+          handle: string
+          id: string
+          ig_user_id: string | null
+          liked_aspects: string[]
+          notes: string | null
+          reference_type: string | null
+          removed_at: string | null
+          status: Database["public"]["Enums"]["brand_reference_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "brand_reference_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      add_pilot_plan_item: {
+        Args: {
+          p_angle?: string
+          p_brand_pillar?: string
+          p_editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          p_format: Database["public"]["Enums"]["content_type"]
+          p_objective?: string
+          p_plan_id: string
+          p_scheduled_for: string
+          p_topic: string
+        }
+        Returns: {
+          angle: string | null
+          attempt_count: number
+          brand_pillar: string | null
+          claimed_at: string | null
+          content_id: string | null
+          created_at: string
+          editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id: string | null
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          objective: string | null
+          pilot_plan_id: string
+          radar_opportunity_id: string | null
+          reason: string | null
+          rejection_feedback: Json | null
+          scheduled_for: string
+          source: string
+          status: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason: string | null
+          topic: string
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plan_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      adjust_brand_visual_dna: {
+        Args: { p_attributes: Json; p_workspace_id: string }
+        Returns: {
+          attributes: Json
+          based_on_option_id: string | null
+          confirmed_at: string
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          reference_ids: string[]
+          status: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "brand_visual_dna"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      apply_strategy_recommendation: {
+        Args: { p_recommendation_id: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          after: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before: Json | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at: string
+          dismiss_reason: string | null
+          dismissed_at: string | null
+          dismissed_by: string | null
+          evidence: Json
+          expires_at: string
+          fact: Json
+          fingerprint: string
+          id: string
+          insight_id: string | null
+          interpretation: string
+          operation: string | null
+          period_end: string
+          period_start: string
+          priority_score: number
+          recommendation_type: Database["public"]["Enums"]["strategy_recommendation_type"]
+          reverted_at: string | null
+          reverted_by: string | null
+          sample_size: number
+          status: Database["public"]["Enums"]["strategy_recommendation_status"]
+          status_reason: string | null
+          target: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "strategy_recommendations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      approve_pilot_plan: {
+        Args: { p_plan_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          generated_at: string
+          generation_key: string
+          id: string
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cancel_pilot_plan: {
+        Args: { p_plan_id: string; p_reason?: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          generated_at: string
+          generation_key: string
+          id: string
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cancel_strategy_experiment: {
+        Args: { p_experiment_id: string; p_reason?: string }
+        Returns: {
+          actual_sample_size: number
+          baseline_definition: Json
+          cancelled_at: string | null
+          completed_at: string | null
+          confidence:
+            | Database["public"]["Enums"]["performance_confidence"]
+            | null
+          created_at: string
+          created_by: string | null
+          dimension: string
+          hypothesis: string
+          id: string
+          period_end: string
+          period_start: string
+          recommendation_id: string | null
+          result: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["strategy_experiment_status"]
+          success_criteria: Json
+          target_sample_size: number
+          updated_at: string
+          variant: Json
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "strategy_experiments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      check_pilot_activation_readiness: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       claim_instagram_publications: {
         Args: { p_batch_limit?: number }
         Returns: {
@@ -1551,6 +3181,133 @@ export type Database = {
           to: "instagram_publications"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      claim_performance_snapshots: {
+        Args: { p_limit?: number }
+        Returns: {
+          age_bucket: string
+          api_version: string | null
+          attempt_count: number
+          captured_at: string | null
+          claimed_at: string | null
+          collector_status: Database["public"]["Enums"]["performance_snapshot_status"]
+          comments: number | null
+          content_id: string
+          created_at: string
+          id: string
+          instagram_account_id: string
+          instagram_publication_id: string
+          last_attempt_at: string | null
+          last_error_code: string | null
+          last_error_message: string | null
+          likes: number | null
+          next_retry_at: string | null
+          raw_metrics: Json
+          reach: number | null
+          saved: number | null
+          shares: number | null
+          target_at: string
+          total_interactions: number | null
+          unsupported_metrics: string[]
+          updated_at: string
+          views: number | null
+          workspace_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "content_performance_snapshots"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_pilot_plan_items_for_generation: {
+        Args: { p_limit?: number; p_plan_id: string }
+        Returns: {
+          angle: string | null
+          attempt_count: number
+          brand_pillar: string | null
+          claimed_at: string | null
+          content_id: string | null
+          created_at: string
+          editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id: string | null
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          objective: string | null
+          pilot_plan_id: string
+          radar_opportunity_id: string | null
+          reason: string | null
+          rejection_feedback: Json | null
+          scheduled_for: string
+          source: string
+          status: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason: string | null
+          topic: string
+          updated_at: string
+          workspace_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plan_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_pilot_workspace_for_planning: {
+        Args: {
+          p_period_end: string
+          p_period_start: string
+          p_workspace_id: string
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          generated_at: string
+          generation_key: string
+          id: string
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      claim_visual_dna_generation: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          credit_cost: number
+          credit_ledger_id: string | null
+          finished_at: string | null
+          id: string
+          prompt_version: string
+          reference_snapshot: Json
+          round_number: number
+          shared_brief: Json | null
+          status: Database["public"]["Enums"]["visual_dna_option_set_status"]
+          status_reason: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "visual_dna_option_sets"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       cleanup_expired_discovery_data: { Args: never; Returns: undefined }
@@ -1590,6 +3347,65 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      compute_experiment_result: {
+        Args: { p_experiment_id: string }
+        Returns: {
+          actual_sample_size: number
+          baseline_definition: Json
+          cancelled_at: string | null
+          completed_at: string | null
+          confidence:
+            | Database["public"]["Enums"]["performance_confidence"]
+            | null
+          created_at: string
+          created_by: string | null
+          dimension: string
+          hypothesis: string
+          id: string
+          period_end: string
+          period_start: string
+          recommendation_id: string | null
+          result: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["strategy_experiment_status"]
+          success_criteria: Json
+          target_sample_size: number
+          updated_at: string
+          variant: Json
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "strategy_experiments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      compute_performance_facts: {
+        Args: { p_period_days?: number; p_workspace_id: string }
+        Returns: Json
+      }
+      confirm_visual_dna_option: {
+        Args: { p_option_id: string }
+        Returns: {
+          attributes: Json
+          based_on_option_id: string | null
+          confirmed_at: string
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          reference_ids: string[]
+          status: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "brand_visual_dna"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       consume_credits: {
         Args: {
           p_amount: number
@@ -1618,6 +3434,180 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      consume_credits_system: {
+        Args: {
+          p_amount: number
+          p_metadata?: Json
+          p_operation: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_workspace_id: string
+        }
+        Returns: {
+          account_id: string
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          id: string
+          metadata: Json
+          operation: string
+          reference_id: string | null
+          reference_type: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "credit_ledger"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      disable_pilot: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          allowed_formats: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays: number[]
+          created_at: string
+          default_instagram_account_id: string | null
+          editorial_mix: Json
+          format_mix: Json | null
+          id: string
+          max_credits_per_window: number | null
+          max_posts_per_window: number
+          max_radar_per_window: number
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days: number
+          preferred_times: Json
+          radar_min_confidence: string
+          radar_min_opportunity_score: number
+          status: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective: string | null
+          temporary_objective_expires_at: string | null
+          updated_at: string
+          use_radar: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      dismiss_strategy_recommendation: {
+        Args: { p_reason?: string; p_recommendation_id: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          after: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before: Json | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at: string
+          dismiss_reason: string | null
+          dismissed_at: string | null
+          dismissed_by: string | null
+          evidence: Json
+          expires_at: string
+          fact: Json
+          fingerprint: string
+          id: string
+          insight_id: string | null
+          interpretation: string
+          operation: string | null
+          period_end: string
+          period_start: string
+          priority_score: number
+          recommendation_type: Database["public"]["Enums"]["strategy_recommendation_type"]
+          reverted_at: string | null
+          reverted_by: string | null
+          sample_size: number
+          status: Database["public"]["Enums"]["strategy_recommendation_status"]
+          status_reason: string | null
+          target: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "strategy_recommendations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      dismiss_visual_dna_option_set: {
+        Args: { p_feedback?: string; p_option_set_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          credit_cost: number
+          credit_ledger_id: string | null
+          finished_at: string | null
+          id: string
+          prompt_version: string
+          reference_snapshot: Json
+          round_number: number
+          shared_brief: Json | null
+          status: Database["public"]["Enums"]["visual_dna_option_set_status"]
+          status_reason: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "visual_dna_option_sets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      edit_pilot_plan_item: {
+        Args: {
+          p_angle?: string
+          p_brand_pillar?: string
+          p_editorial_role?: Database["public"]["Enums"]["pilot_editorial_role"]
+          p_format?: Database["public"]["Enums"]["content_type"]
+          p_item_id: string
+          p_objective?: string
+          p_scheduled_for?: string
+          p_topic?: string
+        }
+        Returns: {
+          angle: string | null
+          attempt_count: number
+          brand_pillar: string | null
+          claimed_at: string | null
+          content_id: string | null
+          created_at: string
+          editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id: string | null
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          objective: string | null
+          pilot_plan_id: string
+          radar_opportunity_id: string | null
+          reason: string | null
+          rejection_feedback: Json | null
+          scheduled_for: string
+          source: string
+          status: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason: string | null
+          topic: string
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plan_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      ensure_performance_snapshots_scheduled: {
+        Args: { p_limit?: number; p_lookback_days?: number }
+        Returns: number
       }
       fail_instagram_publication: {
         Args: {
@@ -1653,6 +3643,56 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "instagram_publications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fail_visual_dna_generation: {
+        Args: { p_option_set_id: string; p_reason?: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          credit_cost: number
+          credit_ledger_id: string | null
+          finished_at: string | null
+          id: string
+          prompt_version: string
+          reference_snapshot: Json
+          round_number: number
+          shared_brief: Json | null
+          status: Database["public"]["Enums"]["visual_dna_option_set_status"]
+          status_reason: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "visual_dna_option_sets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_pilot_plan: {
+        Args: { p_plan_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          generated_at: string
+          generation_key: string
+          id: string
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plans"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1762,6 +3802,137 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pause_pilot: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          allowed_formats: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays: number[]
+          created_at: string
+          default_instagram_account_id: string | null
+          editorial_mix: Json
+          format_mix: Json | null
+          id: string
+          max_credits_per_window: number | null
+          max_posts_per_window: number
+          max_radar_per_window: number
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days: number
+          preferred_times: Json
+          radar_min_confidence: string
+          radar_min_opportunity_score: number
+          status: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective: string | null
+          temporary_objective_expires_at: string | null
+          updated_at: string
+          use_radar: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pilot_check_budget: {
+        Args: { p_needed: number; p_plan_id: string; p_workspace_id: string }
+        Returns: Json
+      }
+      pilot_check_slot_conflict: {
+        Args: {
+          p_exclude_plan_item_id?: string
+          p_scheduled_for: string
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
+      pilot_create_content: {
+        Args: {
+          p_caption: string
+          p_cta: string
+          p_format: Database["public"]["Enums"]["content_format"]
+          p_hashtags: string[]
+          p_pilot_plan_item_id: string
+          p_title: string
+          p_type: Database["public"]["Enums"]["content_type"]
+          p_workspace_id: string
+        }
+        Returns: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          cta: string | null
+          deleted_at: string | null
+          duplicated_from: string | null
+          format: Database["public"]["Enums"]["content_format"]
+          hashtags: string[]
+          id: string
+          origin: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id: string | null
+          published_at: string | null
+          radar_opportunity_id: string | null
+          rejection_reason: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["content_status"]
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pilot_estimate_batch_cost: {
+        Args: { p_plan_id: string }
+        Returns: number
+      }
+      pilot_reclaim_stuck_plan_items: {
+        Args: {
+          p_limit?: number
+          p_max_attempts?: number
+          p_timeout_minutes?: number
+        }
+        Returns: {
+          item_id: string
+          outcome: string
+          plan_id: string
+        }[]
+      }
+      pilot_submit_content_for_review: {
+        Args: { p_content_id: string }
+        Returns: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          cta: string | null
+          deleted_at: string | null
+          duplicated_from: string | null
+          format: Database["public"]["Enums"]["content_format"]
+          hashtags: string[]
+          id: string
+          origin: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id: string | null
+          published_at: string | null
+          radar_opportunity_id: string | null
+          rejection_reason: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["content_status"]
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       radar_compute_novelty: {
         Args: {
           p_lookback_days?: number
@@ -1769,6 +3940,38 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: number
+      }
+      recompute_content_performance_score: {
+        Args: { p_instagram_publication_id: string }
+        Returns: {
+          baseline_sample_size: number
+          baseline_scope:
+            | Database["public"]["Enums"]["performance_baseline_scope"]
+            | null
+          baseline_tier: Database["public"]["Enums"]["performance_baseline_tier"]
+          computed_at: string
+          content_id: string
+          created_at: string
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          instagram_publication_id: string
+          latest_age_bucket: string | null
+          maturity_stage: Database["public"]["Enums"]["performance_maturity_stage"]
+          relative_engagement: number | null
+          relative_reach: number | null
+          relative_saves: number | null
+          relative_shares: number | null
+          score: number | null
+          scoring_config_snapshot: Json
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "content_performance_scores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       refund_ai_generation_system: {
         Args: { p_generation_id: string }
@@ -1814,6 +4017,180 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      remove_brand_reference: {
+        Args: { p_reference_id: string }
+        Returns: {
+          analysis: Json | null
+          analysis_error_code: string | null
+          analyzed_at: string | null
+          created_at: string
+          created_by: string | null
+          handle: string
+          id: string
+          ig_user_id: string | null
+          liked_aspects: string[]
+          notes: string | null
+          reference_type: string | null
+          removed_at: string | null
+          status: Database["public"]["Enums"]["brand_reference_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "brand_reference_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolve_pilot_plan_item: {
+        Args: {
+          p_content_id?: string
+          p_item_id: string
+          p_outcome: string
+          p_reason?: string
+        }
+        Returns: {
+          angle: string | null
+          attempt_count: number
+          brand_pillar: string | null
+          claimed_at: string | null
+          content_id: string | null
+          created_at: string
+          editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id: string | null
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          objective: string | null
+          pilot_plan_id: string
+          radar_opportunity_id: string | null
+          reason: string | null
+          rejection_feedback: Json | null
+          scheduled_for: string
+          source: string
+          status: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason: string | null
+          topic: string
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plan_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resume_pilot: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          allowed_formats: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays: number[]
+          created_at: string
+          default_instagram_account_id: string | null
+          editorial_mix: Json
+          format_mix: Json | null
+          id: string
+          max_credits_per_window: number | null
+          max_posts_per_window: number
+          max_radar_per_window: number
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days: number
+          preferred_times: Json
+          radar_min_confidence: string
+          radar_min_opportunity_score: number
+          status: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective: string | null
+          temporary_objective_expires_at: string | null
+          updated_at: string
+          use_radar: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revert_strategy_recommendation: {
+        Args: { p_recommendation_id: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          after: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before: Json | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at: string
+          dismiss_reason: string | null
+          dismissed_at: string | null
+          dismissed_by: string | null
+          evidence: Json
+          expires_at: string
+          fact: Json
+          fingerprint: string
+          id: string
+          insight_id: string | null
+          interpretation: string
+          operation: string | null
+          period_end: string
+          period_start: string
+          priority_score: number
+          recommendation_type: Database["public"]["Enums"]["strategy_recommendation_type"]
+          reverted_at: string | null
+          reverted_by: string | null
+          sample_size: number
+          status: Database["public"]["Enums"]["strategy_recommendation_status"]
+          status_reason: string | null
+          target: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "strategy_recommendations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_performance_insight_feedback: {
+        Args: {
+          p_dismiss?: boolean
+          p_feedback?: Database["public"]["Enums"]["performance_insight_feedback"]
+          p_insight_id: string
+        }
+        Returns: {
+          ai_generation_id: string | null
+          confidence: Database["public"]["Enums"]["performance_confidence"]
+          created_at: string
+          description: string
+          dismissed_at: string | null
+          evidence: Json
+          fact_signature: string
+          feedback:
+            | Database["public"]["Enums"]["performance_insight_feedback"]
+            | null
+          generated_at: string
+          id: string
+          insight_type: string
+          period_end: string
+          period_start: string
+          sample_size: number
+          source: Database["public"]["Enums"]["performance_insight_source"]
+          status: Database["public"]["Enums"]["performance_insight_status"]
+          title: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "performance_insights"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_radar_opportunity_status: {
         Args: {
           p_dismissed_reason?: string
@@ -1850,6 +4227,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      skip_pilot_plan_item: {
+        Args: { p_item_id: string; p_reason?: string }
+        Returns: {
+          angle: string | null
+          attempt_count: number
+          brand_pillar: string | null
+          claimed_at: string | null
+          content_id: string | null
+          created_at: string
+          editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
+          experiment_id: string | null
+          format: Database["public"]["Enums"]["content_type"]
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          objective: string | null
+          pilot_plan_id: string
+          radar_opportunity_id: string | null
+          reason: string | null
+          rejection_feedback: Json | null
+          scheduled_for: string
+          source: string
+          status: Database["public"]["Enums"]["pilot_plan_item_status"]
+          status_reason: string | null
+          topic: string
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plan_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       slugify_base: { Args: { p_text: string }; Returns: string }
       soft_delete_content: {
         Args: { p_content_id: string }
@@ -1864,6 +4276,7 @@ export type Database = {
           hashtags: string[]
           id: string
           origin: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id: string | null
           published_at: string | null
           radar_opportunity_id: string | null
           rejection_reason: string | null
@@ -1881,9 +4294,152 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      start_pilot_generation: {
+        Args: { p_plan_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          generated_at: string
+          generation_key: string
+          id: string
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["pilot_plan_status"]
+          superseded_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      start_strategy_experiment: {
+        Args: {
+          p_dimension: string
+          p_hypothesis: string
+          p_period_days?: number
+          p_recommendation_id?: string
+          p_success_threshold_pct?: number
+          p_target_sample_size?: number
+          p_variant: Json
+          p_workspace_id: string
+        }
+        Returns: {
+          actual_sample_size: number
+          baseline_definition: Json
+          cancelled_at: string | null
+          completed_at: string | null
+          confidence:
+            | Database["public"]["Enums"]["performance_confidence"]
+            | null
+          created_at: string
+          created_by: string | null
+          dimension: string
+          hypothesis: string
+          id: string
+          period_end: string
+          period_start: string
+          recommendation_id: string | null
+          result: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["strategy_experiment_status"]
+          success_criteria: Json
+          target_sample_size: number
+          updated_at: string
+          variant: Json
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "strategy_experiments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       storage_path_workspace_id: {
         Args: { object_name: string }
         Returns: string
+      }
+      sync_visual_dna_option_set: {
+        Args: { p_option_set_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          credit_cost: number
+          credit_ledger_id: string | null
+          finished_at: string | null
+          id: string
+          prompt_version: string
+          reference_snapshot: Json
+          round_number: number
+          shared_brief: Json | null
+          status: Database["public"]["Enums"]["visual_dna_option_set_status"]
+          status_reason: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "visual_dna_option_sets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_pilot_settings: {
+        Args: {
+          p_allowed_formats: Database["public"]["Enums"]["content_type"][]
+          p_allowed_weekdays: number[]
+          p_default_instagram_account_id: string
+          p_editorial_mix: Json
+          p_format_mix?: Json
+          p_max_credits_per_window: number
+          p_max_posts_per_window: number
+          p_max_radar_per_window: number
+          p_mode: Database["public"]["Enums"]["pilot_mode"]
+          p_planning_window_days: number
+          p_preferred_times: Json
+          p_radar_min_confidence: string
+          p_radar_min_opportunity_score: number
+          p_temporary_objective: string
+          p_temporary_objective_expires_at: string
+          p_use_radar: boolean
+          p_workspace_id: string
+        }
+        Returns: {
+          allowed_formats: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays: number[]
+          created_at: string
+          default_instagram_account_id: string | null
+          editorial_mix: Json
+          format_mix: Json | null
+          id: string
+          max_credits_per_window: number | null
+          max_posts_per_window: number
+          max_radar_per_window: number
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days: number
+          preferred_times: Json
+          radar_min_confidence: string
+          radar_min_opportunity_score: number
+          status: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective: string | null
+          temporary_objective_expires_at: string | null
+          updated_at: string
+          use_radar: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       upsert_radar_opportunity: {
         Args: {
@@ -1945,6 +4501,13 @@ export type Database = {
         | "legenda"
         | "ideias_conteudo"
         | "imagem"
+        | "performance_insight"
+      brand_reference_status:
+        | "manual"
+        | "analysis_pending"
+        | "analyzed"
+        | "permission_required"
+        | "unavailable"
       content_element_type: "text" | "image" | "shape"
       content_format: "1:1" | "4:5" | "9:16"
       content_origin: "manual" | "ia" | "radar" | "autopilot"
@@ -1963,6 +4526,11 @@ export type Database = {
         | "token_expirado"
         | "desconectado"
         | "erro"
+      instagram_insights_status:
+        | "not_connected"
+        | "permission_required"
+        | "available"
+        | "not_supported"
       instagram_publication_status:
         | "pending"
         | "processing"
@@ -1971,6 +4539,65 @@ export type Database = {
         | "published"
         | "failed"
         | "cancelled"
+      performance_baseline_scope: "format" | "workspace"
+      performance_baseline_tier:
+        | "collecting_data"
+        | "baseline_provisional"
+        | "baseline_ready"
+      performance_confidence: "low" | "medium" | "high"
+      performance_insight_feedback: "useful" | "not_useful"
+      performance_insight_source: "deterministic" | "ai"
+      performance_insight_status: "active" | "dismissed" | "expired"
+      performance_maturity_stage: "initial" | "evolving" | "consolidated"
+      performance_snapshot_status:
+        | "pending"
+        | "collected"
+        | "permission_required"
+        | "media_unavailable"
+        | "failed"
+      pilot_editorial_role:
+        | "educativo"
+        | "autoridade"
+        | "relacionamento"
+        | "venda"
+      pilot_mode: "assisted" | "semi_auto"
+      pilot_plan_item_status:
+        | "planned"
+        | "approved"
+        | "generating"
+        | "generated"
+        | "skipped"
+        | "failed"
+      pilot_plan_status:
+        | "draft"
+        | "awaiting_approval"
+        | "approved"
+        | "generating"
+        | "completed"
+        | "cancelled"
+      pilot_status: "disabled" | "active" | "paused"
+      strategy_experiment_status:
+        | "draft"
+        | "active"
+        | "completed"
+        | "cancelled"
+        | "inconclusive"
+      strategy_recommendation_status:
+        | "proposed"
+        | "accepted"
+        | "dismissed"
+        | "expired"
+        | "reverted"
+      strategy_recommendation_type:
+        | "settings_change"
+        | "experiment_suggestion"
+        | "informational"
+      visual_dna_option_set_status:
+        | "generating"
+        | "ready"
+        | "failed"
+        | "dismissed"
+      visual_dna_option_status: "pending" | "generated" | "failed"
       workspace_role: "owner" | "admin" | "editor" | "approver" | "viewer"
     }
     CompositeTypes: {
@@ -2107,6 +4734,14 @@ export const Constants = {
         "legenda",
         "ideias_conteudo",
         "imagem",
+        "performance_insight",
+      ],
+      brand_reference_status: [
+        "manual",
+        "analysis_pending",
+        "analyzed",
+        "permission_required",
+        "unavailable",
       ],
       content_element_type: ["text", "image", "shape"],
       content_format: ["1:1", "4:5", "9:16"],
@@ -2128,6 +4763,12 @@ export const Constants = {
         "desconectado",
         "erro",
       ],
+      instagram_insights_status: [
+        "not_connected",
+        "permission_required",
+        "available",
+        "not_supported",
+      ],
       instagram_publication_status: [
         "pending",
         "processing",
@@ -2137,6 +4778,74 @@ export const Constants = {
         "failed",
         "cancelled",
       ],
+      performance_baseline_scope: ["format", "workspace"],
+      performance_baseline_tier: [
+        "collecting_data",
+        "baseline_provisional",
+        "baseline_ready",
+      ],
+      performance_confidence: ["low", "medium", "high"],
+      performance_insight_feedback: ["useful", "not_useful"],
+      performance_insight_source: ["deterministic", "ai"],
+      performance_insight_status: ["active", "dismissed", "expired"],
+      performance_maturity_stage: ["initial", "evolving", "consolidated"],
+      performance_snapshot_status: [
+        "pending",
+        "collected",
+        "permission_required",
+        "media_unavailable",
+        "failed",
+      ],
+      pilot_editorial_role: [
+        "educativo",
+        "autoridade",
+        "relacionamento",
+        "venda",
+      ],
+      pilot_mode: ["assisted", "semi_auto"],
+      pilot_plan_item_status: [
+        "planned",
+        "approved",
+        "generating",
+        "generated",
+        "skipped",
+        "failed",
+      ],
+      pilot_plan_status: [
+        "draft",
+        "awaiting_approval",
+        "approved",
+        "generating",
+        "completed",
+        "cancelled",
+      ],
+      pilot_status: ["disabled", "active", "paused"],
+      strategy_experiment_status: [
+        "draft",
+        "active",
+        "completed",
+        "cancelled",
+        "inconclusive",
+      ],
+      strategy_recommendation_status: [
+        "proposed",
+        "accepted",
+        "dismissed",
+        "expired",
+        "reverted",
+      ],
+      strategy_recommendation_type: [
+        "settings_change",
+        "experiment_suggestion",
+        "informational",
+      ],
+      visual_dna_option_set_status: [
+        "generating",
+        "ready",
+        "failed",
+        "dismissed",
+      ],
+      visual_dna_option_status: ["pending", "generated", "failed"],
       workspace_role: ["owner", "admin", "editor", "approver", "viewer"],
     },
   },

@@ -1,6 +1,9 @@
 import type { Enums } from '@/types/database'
 
-export type GenerationType = Enums<'ai_generation_type'>
+// performance_insight (Fase 10) é gerado só internamente (worker/"Explicar
+// melhor" do dashboard de Performance) — nunca aparece no seletor de
+// "Criar com IA", então fica de fora deste union.
+export type GenerationType = Exclude<Enums<'ai_generation_type'>, 'performance_insight'>
 
 export const GENERATION_TYPE_LABEL: Record<GenerationType, string> = {
   post_unico: 'Post único',

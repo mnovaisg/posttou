@@ -11,6 +11,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { getMediaProvider, ProviderNotConfiguredError, ProviderRequestError } from '../_shared/ai-gateway/gateway.ts'
 import { brandProfileToPromptText } from '../_shared/ai-gateway/brand-context.ts'
+import { ANTI_COPY_INSTRUCTION, referencesToPromptText, visualDnaToPromptText, type ReferenceForPrompt, type VisualDnaAttributes } from '../_shared/ai-gateway/visual-dna-context.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -93,8 +94,34 @@ Deno.serve(async (req) => {
 
     const { data: brandProfile } = await admin.from('brand_profiles').select('*').eq('workspace_id', workspaceId).maybeSingle()
     const brandText = brandProfileToPromptText(brandProfile ?? null)
-    const fullPrompt = brandProfile
-      ? `Contexto da marca (use para guiar estilo/identidade visual quando relevante):\n${brandText}\n\nPedido do usuário: ${prompt}`
+
+    // Fase 12: DNA visual confirmado + referências ativas — só quando
+    // existirem (workspace pode nunca ter configurado nenhum dos dois).
+    // Nunca enviado ao planner do Piloto (ajuste 8) — só aqui, no ponto
+    // real de geração de imagem.
+    const { data: activeVisualDna } = await admin
+      .from('brand_visual_dna')
+      .select('attributes')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active')
+      .maybeSingle()
+    const visualDnaText = visualDnaToPromptText((activeVisualDna?.attributes ?? null) as VisualDnaAttributes | null)
+
+    const { data: referenceRows } = await admin
+      .from('brand_reference_profiles')
+      .select('handle, reference_type, liked_aspects, notes, status, analysis')
+      .eq('workspace_id', workspaceId)
+      .is('removed_at', null)
+    const referencesText = referencesToPromptText((referenceRows ?? []) as ReferenceForPrompt[])
+
+    const contextBlocks = [
+      brandProfile ? `Contexto da marca (use para guiar estilo/identidade visual quando relevante):\n${brandText}` : '',
+      visualDnaText,
+      referencesText,
+    ].filter(Boolean)
+
+    const fullPrompt = contextBlocks.length
+      ? `${contextBlocks.join('\n\n')}\n\n${ANTI_COPY_INSTRUCTION}\n\nPedido do usuário: ${prompt}`
       : prompt
 
     const { data: generationRow, error: insertError } = await admin

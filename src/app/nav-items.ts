@@ -10,7 +10,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'DNA da Marca', path: '/dna-da-marca', icon: '🧠', implemented: true },
   { label: 'Criar com IA', path: '/criar', icon: '✨', implemented: true },
   { label: 'Radar Viral', path: '/radar', icon: '🔥', implemented: true },
-  { label: 'Piloto Automático', path: '/piloto-automatico', icon: '🤖', implemented: false },
-  { label: 'Relatórios', path: '/relatorios', icon: '📊', implemented: false },
+  { label: 'Piloto Automático', path: '/piloto-automatico', icon: '🤖', implemented: true },
+  { label: 'Relatórios', path: '/relatorios', icon: '📊', implemented: true },
   { label: 'Configurações', path: '/configuracoes', icon: '⚙️', implemented: true },
 ]

@@ -12,6 +12,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { ComingSoonPage } from '@/app/ComingSoonPage'
 import { NAV_ITEMS } from '@/app/nav-items'
 import { BrandDnaPage } from '@/features/brand-dna/BrandDnaPage'
+import { VisualDnaPage } from '@/features/brand-visual-dna/VisualDnaPage'
 import { ContentPage } from '@/features/content/ContentPage'
 import { ContentDetailPage } from '@/features/content/ContentDetailPage'
 import { AiCreatePage } from '@/features/ai-generate/AiCreatePage'
@@ -19,6 +20,8 @@ import { EditorPage } from '@/features/editor/EditorPage'
 import { ConfiguracoesPage } from '@/features/instagram/ConfiguracoesPage'
 import { DiscoveryLandingPage } from '@/features/instagram-discovery/DiscoveryLandingPage'
 import { RadarPage } from '@/features/radar/RadarPage'
+import { PilotPage } from '@/features/pilot/PilotPage'
+import { ReportsPage } from '@/features/reports/ReportsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,10 +32,7 @@ const queryClient = new QueryClient({
   },
 })
 
-const COMING_SOON_COPY: Record<string, { icon: string; description: string }> = {
-  '/piloto-automatico': { icon: '🤖', description: 'Deixe a IA criar conteúdo automaticamente, com ou sem aprovação. Chega na Fase 9.' },
-  '/relatorios': { icon: '📊', description: 'Acompanhe alcance, engajamento e crescimento com métricas reais do Instagram. Chega na Fase 10.' },
-}
+const COMING_SOON_COPY: Record<string, { icon: string; description: string }> = {}
 
 function App() {
   return (
@@ -57,11 +57,14 @@ function App() {
             >
               <Route index element={<DashboardPage />} />
               <Route path="/dna-da-marca" element={<BrandDnaPage />} />
+              <Route path="/dna-da-marca/visual" element={<VisualDnaPage />} />
               <Route path="/conteudo" element={<ContentPage />} />
               <Route path="/conteudo/:id" element={<ContentDetailPage />} />
               <Route path="/conteudo/:id/editor" element={<EditorPage />} />
               <Route path="/criar" element={<AiCreatePage />} />
               <Route path="/radar" element={<RadarPage />} />
+              <Route path="/piloto-automatico" element={<PilotPage />} />
+              <Route path="/relatorios" element={<ReportsPage />} />
               <Route path="/configuracoes" element={<ConfiguracoesPage />} />
               {NAV_ITEMS.filter((item) => !item.implemented).map((item) => (
                 <Route
