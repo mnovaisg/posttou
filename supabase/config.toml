@@ -1,0 +1,13 @@
+# Fase 14A — vincula este repositório ao projeto Supabase correto.
+# NUNCA colocar secrets, tokens, senhas ou connection strings aqui — este
+# arquivo é versionado no git. Segredos reais (KIE_API_KEY, secrets de
+# cron, HMAC keys, etc.) ficam exclusivamente nas variáveis de ambiente
+# das Edge Functions, configuradas fora do repositório.
+#
+# project_id é o identificador público do projeto (equivalente à URL do
+# projeto) — não é secreto, mas é o que impede um "supabase db push" sem
+# --project-ref explícito de mirar o projeto errado por engano.
+project_id = "japufmcbhvusgcbhhhby"
+
+[db]
+major_version = 17

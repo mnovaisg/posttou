@@ -71,6 +71,13 @@ Deno.serve(async (req) => {
     const { data: isMember } = await supabase.rpc('is_workspace_member', { p_workspace_id: workspaceId })
     if (!isMember) return json({ error: 'Sem acesso a este workspace.' }, 403)
 
+    // Fase 14C: gap real encontrado em auditoria — este endpoint consome
+    // créditos mas nunca teve o gate de assinatura da Fase 14B.
+    const { data: entitlement } = await supabase.rpc('check_subscription_entitlement', { p_workspace_id: workspaceId })
+    if (!entitlement?.allowed) {
+      return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
+    }
+
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
     if (!anthropicKey) {
       return json(

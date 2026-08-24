@@ -9,8 +9,9 @@
 // Ajuste 2 da aprovação: calcula o custo total do lote ANTES de
 // reivindicar qualquer item. Se insuficiente, NENHUM item é gerado.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { getTextProvider, ProviderNotConfiguredError, ProviderRequestError } from '../_shared/ai-gateway/gateway.ts'
+import { getMediaProvider, getTextProvider, ProviderNotConfiguredError, ProviderRequestError } from '../_shared/ai-gateway/gateway.ts'
 import { buildPrompt, type GenerationType, type HistoryItem } from '../_shared/ai-gateway/prompts.ts'
+import { generatePilotVisualAsset } from '../_shared/ai-gateway/pilot-visual-asset.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,6 +71,21 @@ Deno.serve(async (req) => {
     if (!isOwnerAdmin) return json({ error: 'forbidden', message: 'Só owner/admin pode iniciar a geração de conteúdo.' }, 403)
   }
 
+  // Fase 14B, decisão 7: Piloto verifica a franquia (e o status da
+  // assinatura) ANTES de começar a criar automaticamente — evita queimar
+  // chamadas de IA para itens que vão falhar de qualquer forma no gate de
+  // public.contents. A proteção definitiva contra concorrência continua
+  // sendo o trigger enforce_content_franchise_gate (advisory lock), não
+  // esta checagem — esta é só uma otimização para não desperdiçar custo.
+  const { data: entitlement } = await admin.rpc('check_subscription_entitlement', { p_workspace_id: plan.workspace_id })
+  if (!entitlement?.allowed) {
+    return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
+  }
+  const { data: entitlementDetail } = await admin.rpc('get_workspace_entitlements', { p_workspace_id: plan.workspace_id })
+  if (typeof entitlementDetail?.content_remaining_this_period === 'number' && entitlementDetail.content_remaining_this_period <= 0) {
+    return json({ error: 'franchise_limit_reached', message: 'Franquia de conteúdos do plano esgotada neste período.' }, 402)
+  }
+
   const startedAt = Date.now()
   const { data: run } = await admin.from('pilot_runs').insert({ workspace_id: plan.workspace_id, run_type: 'content_generation', status: 'running', plan_id: planId }).select('id').single()
 
@@ -78,6 +94,8 @@ Deno.serve(async (req) => {
   let aiCalls = 0
   let creditsConsumed = 0
   const usage = { input_tokens: 0, output_tokens: 0 }
+  // deno-lint-ignore no-explicit-any
+  let mediaProviderCache: any = null
 
   try {
     if (plan.status === 'approved') {
@@ -146,7 +164,7 @@ Deno.serve(async (req) => {
 
     for (const item of claimedItems ?? []) {
       // item 44: pausa observada antes de CADA item — nenhum novo item começa depois que o Piloto foi pausado.
-      const { data: liveSettings } = await admin.from('pilot_settings').select('status').eq('workspace_id', plan.workspace_id).single()
+      const { data: liveSettings } = await admin.from('pilot_settings').select('status, auto_generate_art').eq('workspace_id', plan.workspace_id).single()
       if (liveSettings?.status !== 'active') {
         await admin.rpc('resolve_pilot_plan_item', { p_item_id: item.id, p_outcome: 'skipped', p_reason: 'pilot_paused' })
         continue
@@ -271,6 +289,11 @@ Deno.serve(async (req) => {
 
       await admin.from('ai_generations').update({ content_id: content.id }).eq('id', generationId)
 
+      // Fase 13: cada página guarda seu texto (z_index 1) — quando a arte
+      // automática estiver ligada, a imagem entra por baixo (z_index 0),
+      // full-bleed, exatamente como o fluxo manual do Editor já monta um
+      // elemento 'image' (ajuste 9: mesma estrutura, só muda quem chama).
+      const createdPages: { id: string; slideText: string }[] = []
       if ('slides' in parsed && Array.isArray(parsed.slides) && parsed.slides.length) {
         for (let i = 0; i < parsed.slides.length; i++) {
           const { data: page } = await admin.from('content_pages').insert({ content_id: content.id, position: i, width: DIMS.width, height: DIMS.height }).select('id').single()
@@ -282,12 +305,15 @@ Deno.serve(async (req) => {
               position_y: 80,
               width: DIMS.width - 160,
               height: DIMS.height - 160,
+              z_index: 1,
               content: { text: parsed.slides[i] },
             })
+            createdPages.push({ id: page.id, slideText: parsed.slides[i] })
           }
         }
       } else {
-        await admin.from('content_pages').insert({ content_id: content.id, position: 0, width: DIMS.width, height: DIMS.height })
+        const { data: page } = await admin.from('content_pages').insert({ content_id: content.id, position: 0, width: DIMS.width, height: DIMS.height }).select('id').single()
+        if (page) createdPages.push({ id: page.id, slideText: parsed.caption ?? title })
       }
 
       if (item.radar_opportunity_id) {
@@ -300,8 +326,43 @@ Deno.serve(async (req) => {
         }
       }
 
-      // item 4/99: único caminho para sair de "rascunho" — nunca aprova, agenda ou publica.
-      await admin.rpc('pilot_submit_content_for_review', { p_content_id: content.id })
+      if (liveSettings.auto_generate_art && createdPages.length) {
+        // Ajuste 11: NUNCA espera a imagem terminar — só dispara a(s)
+        // tarefa(s) e segue pro próximo item. O conteúdo só entra em
+        // 'em_revisao' quando TODAS as páginas resolverem (trigger
+        // sync_content_page_visual_asset / pilot_mark_visual_asset_failed
+        // no bookkeeping.ts) — nunca aqui.
+        let mediaProvider
+        try {
+          mediaProvider = mediaProviderCache ?? getMediaProvider()
+          mediaProviderCache = mediaProvider
+        } catch (err) {
+          if (err instanceof ProviderNotConfiguredError) {
+            for (const page of createdPages) {
+              await admin.rpc('pilot_mark_visual_asset_failed', { p_page_id: page.id, p_reason: 'ai_not_configured' })
+            }
+            await admin.rpc('resolve_pilot_plan_item', { p_item_id: item.id, p_outcome: 'generated', p_content_id: content.id })
+            contentsGenerated += 1
+            continue
+          }
+          throw err
+        }
+
+        for (const page of createdPages) {
+          await generatePilotVisualAsset({
+            admin,
+            mediaProvider,
+            supabaseUrl,
+            workspaceId: plan.workspace_id,
+            pageId: page.id,
+            contentId: content.id,
+            contentContext: `Título: ${title}\nLegenda: ${parsed.caption ?? ''}\nTrecho desta página: ${page.slideText}`,
+          })
+        }
+      } else {
+        // item 4/99: único caminho para sair de "rascunho" — nunca aprova, agenda ou publica.
+        await admin.rpc('pilot_submit_content_for_review', { p_content_id: content.id })
+      }
 
       await admin.rpc('resolve_pilot_plan_item', { p_item_id: item.id, p_outcome: 'generated', p_content_id: content.id })
       contentsGenerated += 1

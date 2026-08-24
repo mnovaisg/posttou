@@ -64,6 +64,14 @@ Deno.serve(async (req) => {
     const { data: isMember, error: memberError } = await userClient.rpc('is_workspace_member', { p_workspace_id: workspaceId })
     if (memberError || !isMember) return json({ error: 'Sem acesso a este workspace.' }, 403)
 
+    // Fase 14C: gap real encontrado em auditoria — ai-generate-image nunca
+    // tinha o gate de assinatura da Fase 14B, permitindo gerar imagem pelo
+    // Editor mesmo com trial expirado/assinatura cancelada.
+    const { data: entitlement } = await admin.rpc('check_subscription_entitlement', { p_workspace_id: workspaceId })
+    if (!entitlement?.allowed) {
+      return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
+    }
+
     if (typeof contentId === 'string' && contentId) {
       const { data: content } = await admin.from('contents').select('workspace_id').eq('id', contentId).maybeSingle()
       if (!content || content.workspace_id !== workspaceId) {

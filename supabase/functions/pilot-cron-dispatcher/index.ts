@@ -11,11 +11,14 @@
 // assistida também roda de forma assíncrona e pode travar do mesmo jeito.
 // Reaproveita este mesmo dispatcher/cron já existente — nenhuma infra paralela.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { getMediaProvider, ProviderNotConfiguredError } from '../_shared/ai-gateway/gateway.ts'
+import { generatePilotVisualAsset } from '../_shared/ai-gateway/pilot-visual-asset.ts'
 
 const BATCH_LIMIT = 10 // item 60: nunca carregar todos os workspaces de uma vez
 const RECOVERY_TIMEOUT_MINUTES = 10
 const RECOVERY_MAX_ATTEMPTS = 3
 const RECOVERY_LIMIT = 50
+const VISUAL_AUTO_RETRY_LIMIT = 20 // Fase 13, ajuste 3: 1 retry automático controlado por página falhada
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -58,6 +61,46 @@ Deno.serve(async (req) => {
       }
     }
     if (reclaimed?.length) recoveryResults.unshift({ itemsEvaluated: reclaimed.length, breakdown: reclaimed })
+  }
+
+  // Fase 13, ajuste 3: retry automático controlado (1x) das páginas cuja
+  // arte falhou na primeira tentativa — reaproveita o mesmo gerador
+  // compartilhado do caminho inicial/manual. Nunca mexe no texto.
+  const visualRetryResults: unknown[] = []
+  const { data: retryPages, error: retryClaimError } = await admin.rpc('pilot_claim_visual_assets_for_auto_retry', { p_limit: VISUAL_AUTO_RETRY_LIMIT })
+  if (retryClaimError) {
+    console.error('pilot-cron-dispatcher: falha ao reivindicar retries automáticos de arte.', retryClaimError)
+  } else if (retryPages?.length) {
+    let mediaProvider
+    try {
+      mediaProvider = getMediaProvider()
+    } catch (err) {
+      if (err instanceof ProviderNotConfiguredError) mediaProvider = null
+      else throw err
+    }
+    for (const page of retryPages) {
+      if (!mediaProvider) {
+        await admin.rpc('pilot_mark_visual_asset_failed', { p_page_id: page.id, p_reason: 'ai_not_configured' })
+        visualRetryResults.push({ pageId: page.id, outcome: 'not_configured' })
+        continue
+      }
+      const { data: content } = await admin.from('contents').select('id, workspace_id, title, caption').eq('id', page.content_id).single()
+      if (!content) {
+        await admin.rpc('pilot_mark_visual_asset_failed', { p_page_id: page.id, p_reason: 'content_not_found' })
+        visualRetryResults.push({ pageId: page.id, outcome: 'content_not_found' })
+        continue
+      }
+      const result = await generatePilotVisualAsset({
+        admin,
+        mediaProvider,
+        supabaseUrl,
+        workspaceId: content.workspace_id,
+        pageId: page.id,
+        contentId: content.id,
+        contentContext: `Título: ${content.title}\nLegenda: ${content.caption ?? ''}`,
+      })
+      visualRetryResults.push({ pageId: page.id, outcome: result.ok ? 'retry_dispatched' : 'retry_failed', errorCode: result.errorCode })
+    }
   }
 
   const { data: activeSemiAuto } = await admin
@@ -131,5 +174,5 @@ Deno.serve(async (req) => {
     // draft/awaiting_approval/generating: nada a fazer neste tick (draft não deveria persistir; generating será retomado no próximo tick se travou).
   }
 
-  return json({ workspacesEvaluated: activeSemiAuto?.length ?? 0, workspacesProcessed: processed, results, recovery: recoveryResults })
+  return json({ workspacesEvaluated: activeSemiAuto?.length ?? 0, workspacesProcessed: processed, results, recovery: recoveryResults, visualAssetAutoRetry: visualRetryResults })
 })

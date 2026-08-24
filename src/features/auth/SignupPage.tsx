@@ -5,6 +5,7 @@ import { AuthLayout } from '@/features/auth/AuthLayout'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase/client'
 
 export function SignupPage() {
   const { signUp } = useAuth()
@@ -15,10 +16,22 @@ export function SignupPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [done, setDone] = React.useState(false)
+  const [acceptedTerms, setAcceptedTerms] = React.useState(false)
+  const [resendStatus, setResendStatus] = React.useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+
+  async function handleResend() {
+    setResendStatus('sending')
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    setResendStatus(error ? 'error' : 'sent')
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    if (!acceptedTerms) {
+      setError('Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.')
+      return
+    }
     setLoading(true)
     const { error } = await signUp(email, password, {
       fullName,
@@ -29,6 +42,10 @@ export function SignupPage() {
       setError(error)
       return
     }
+    // Registro do aceite fica melhor esforço aqui: nesta etapa ainda não
+    // há sessão (confirmação de e-mail pendente) — record_legal_acceptance
+    // roda de verdade no primeiro login bem-sucedido (AuthProvider.signIn).
+    window.localStorage.setItem('posttou:pending-legal-acceptance', '1')
     setDone(true)
   }
 
@@ -39,7 +56,15 @@ export function SignupPage() {
           Enviamos um link de confirmação para <strong>{email}</strong>. Abra seu e-mail para ativar a
           conta e acessar o POSTTOU.
         </p>
-        <Link to="/entrar" className="mt-6 inline-block text-sm font-medium text-brand-600 hover:underline">
+        <button
+          className="mt-4 text-sm font-medium text-brand-600 hover:underline disabled:opacity-50"
+          disabled={resendStatus === 'sending' || resendStatus === 'sent'}
+          onClick={handleResend}
+        >
+          {resendStatus === 'sent' ? 'E-mail reenviado.' : resendStatus === 'sending' ? 'Reenviando…' : 'Não recebeu? Reenviar e-mail'}
+        </button>
+        {resendStatus === 'error' && <p className="mt-1 text-xs text-danger-500">Não foi possível reenviar agora. Tente de novo em instantes.</p>}
+        <Link to="/entrar" className="mt-6 block text-sm font-medium text-brand-600 hover:underline">
           Voltar para o login
         </Link>
       </AuthLayout>
@@ -85,6 +110,25 @@ export function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
+        <label className="flex items-start gap-2 text-xs text-ink-500">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+          />
+          <span>
+            Li e aceito os{' '}
+            <Link to="/termos-de-uso" target="_blank" className="font-medium text-brand-600 hover:underline">
+              Termos de Uso
+            </Link>{' '}
+            e a{' '}
+            <Link to="/politica-de-privacidade" target="_blank" className="font-medium text-brand-600 hover:underline">
+              Política de Privacidade
+            </Link>
+            .
+          </span>
+        </label>
         {error && <p className="text-sm text-danger-500">{error}</p>}
         <Button type="submit" disabled={loading} className="mt-2">
           {loading ? 'Criando conta…' : 'Criar conta'}

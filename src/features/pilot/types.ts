@@ -53,4 +53,5 @@ export interface PilotSettingsInput {
   temporaryObjectiveExpiresAt: string | null
   defaultInstagramAccountId: string | null
   maxCreditsPerWindow: number | null
+  autoGenerateArt: boolean
 }

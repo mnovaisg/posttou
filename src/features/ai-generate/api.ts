@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { BillingError, isBillingError, mapBillingError } from '@/lib/billingErrors'
 import { DEFAULT_FORMAT_BY_TYPE, PAGE_DIMENSIONS_BY_FORMAT } from '@/features/content/types'
 import type { ContentOrigin, ContentRow, ContentType } from '@/features/content/types'
 import type {
@@ -44,6 +45,7 @@ export async function generateWithAi(params: GenerateWithAiParams): Promise<AiGe
   const body = await res.json()
   if (!res.ok) {
     if (res.status === 501) throw new AiNotConfiguredError(body.message ?? 'Geração com IA não configurada.')
+    if (isBillingError(res.status, body)) throw new BillingError(mapBillingError(body))
     throw new Error(body.error ?? 'Não foi possível gerar o conteúdo agora.')
   }
   return body as AiGenerateResponse

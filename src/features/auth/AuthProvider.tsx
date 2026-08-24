@@ -59,6 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = React.useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error: mapAuthError(error.message) }
+
+    if (data.session) {
+      const { data: profile } = await supabase.from('profiles').select('deleted_at').eq('id', data.session.user.id).maybeSingle()
+      if (profile?.deleted_at) {
+        await supabase.auth.signOut()
+        return { error: 'Esta conta foi excluída. Entre em contato com o suporte se isso for um engano.' }
+      }
+    }
+
     if (data.session) {
       await supabase.rpc('log_audit_event', {
         p_workspace_id: null as unknown as string,
@@ -66,6 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         p_resource_type: 'session',
         p_metadata: {},
       })
+
+      if (window.localStorage.getItem('posttou:pending-legal-acceptance') === '1') {
+        window.localStorage.removeItem('posttou:pending-legal-acceptance')
+        await Promise.all([
+          supabase.rpc('record_legal_acceptance', { p_document_type: 'terms_of_service', p_document_version: '2026.08-provisorio' }),
+          supabase.rpc('record_legal_acceptance', { p_document_type: 'privacy_policy', p_document_version: '2026.08-provisorio' }),
+        ]).catch(() => {})
+      }
     }
     return { error: null }
   }, [])

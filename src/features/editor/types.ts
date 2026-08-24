@@ -85,6 +85,8 @@ export interface EditorPage {
   height: number
   elements: EditorElement[]
   isNew?: boolean
+  /** Fase 13 — estado da arte automática do Piloto para esta página. */
+  visual_asset_status?: 'not_requested' | 'pending' | 'generating' | 'ready' | 'failed'
 }
 
 export interface EditorFormatSpec {
@@ -96,6 +98,7 @@ export interface EditorFormatSpec {
 
 export const EDITOR_FORMATS: EditorFormatSpec[] = [
   { format: '1:1', label: 'Post', width: 1080, height: 1080 },
+  { format: '4:5', label: 'Post/Carrossel', width: 1080, height: 1350 },
   { format: '9:16', label: 'Story/Reels', width: 1080, height: 1920 },
 ]
 

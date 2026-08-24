@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { fetchInstagramAccounts } from '@/features/instagram/api'
+import { fetchActiveVisualDna } from '@/features/brand-visual-dna/api'
 import {
   activatePilot,
   approvePilotPlan,
@@ -57,6 +58,7 @@ function defaultSettingsInput(): PilotSettingsInput {
     temporaryObjectiveExpiresAt: null,
     defaultInstagramAccountId: null,
     maxCreditsPerWindow: null,
+    autoGenerateArt: false,
   }
 }
 
@@ -72,13 +74,17 @@ export function PilotPage() {
   const [formLoaded, setFormLoaded] = React.useState(false)
 
   const settingsQuery = useQuery({ queryKey: ['pilot-settings', workspaceId], enabled: !!workspaceId, queryFn: () => fetchPilotSettings(workspaceId) })
+  const visualDnaQuery = useQuery({ queryKey: ['brand-visual-dna-active', workspaceId], enabled: !!workspaceId, queryFn: () => fetchActiveVisualDna(workspaceId) })
   const readinessQuery = useQuery({ queryKey: ['pilot-readiness', workspaceId], enabled: !!workspaceId, queryFn: () => checkPilotActivationReadiness(workspaceId) })
   const accountsQuery = useQuery({ queryKey: ['instagram-accounts', workspaceId], enabled: !!workspaceId, queryFn: () => fetchInstagramAccounts(workspaceId) })
   const planQuery = useQuery({ queryKey: ['pilot-plan', workspaceId], enabled: !!workspaceId, queryFn: () => fetchCurrentPilotPlan(workspaceId), refetchInterval: 4000 })
   const runsQuery = useQuery({ queryKey: ['pilot-runs', workspaceId], enabled: !!workspaceId, queryFn: () => fetchLatestPilotRuns(workspaceId) })
 
   React.useEffect(() => {
-    if (settingsQuery.data && !formLoaded) {
+    if (formLoaded) return
+    if (settingsQuery.data === undefined || visualDnaQuery.isLoading) return
+
+    if (settingsQuery.data) {
       const s = settingsQuery.data
       setForm({
         mode: s.mode,
@@ -96,10 +102,16 @@ export function PilotPage() {
         temporaryObjectiveExpiresAt: s.temporary_objective_expires_at,
         defaultInstagramAccountId: s.default_instagram_account_id,
         maxCreditsPerWindow: s.max_credits_per_window,
+        autoGenerateArt: s.auto_generate_art,
       })
-      setFormLoaded(true)
+    } else {
+      // Fase 13, ajuste 2: workspace ainda sem Piloto configurado — sugere
+      // (mas não força) ligar a arte automática só quando já existe DNA
+      // Visual confirmado. Usuário sempre pode desmarcar antes de salvar.
+      setForm((f) => ({ ...f, autoGenerateArt: !!visualDnaQuery.data }))
     }
-  }, [settingsQuery.data, formLoaded])
+    setFormLoaded(true)
+  }, [settingsQuery.data, visualDnaQuery.data, visualDnaQuery.isLoading, formLoaded])
 
   const saveMutation = useMutation({
     mutationFn: () => upsertPilotSettings(workspaceId, form),
@@ -382,6 +394,27 @@ export function PilotPage() {
                 onChange={(e) => setForm({ ...form, maxCreditsPerWindow: e.target.value ? Number(e.target.value) : null })}
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-ink-200 p-3 dark:border-ink-700">
+            <label className="flex items-center gap-2 text-sm font-medium text-ink-900 dark:text-ink-50">
+              <input
+                type="checkbox"
+                disabled={!canConfigure}
+                checked={form.autoGenerateArt}
+                onChange={(e) => setForm({ ...form, autoGenerateArt: e.target.checked })}
+              />
+              Gerar arte automaticamente
+            </label>
+            <p className="text-xs text-ink-500">
+              Cada conteúdo do Piloto ganha uma imagem gerada por IA antes de ir para revisão — usa o DNA Visual
+              confirmado quando existir.{' '}
+              {!visualDnaQuery.data && (
+                <span className="text-amber-600 dark:text-amber-400">
+                  Configure seu DNA Visual para artes mais alinhadas à sua marca.
+                </span>
+              )}
+            </p>
           </div>
 
           {canConfigure && (

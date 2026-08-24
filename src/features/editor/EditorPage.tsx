@@ -13,6 +13,7 @@ import {
   uploadContentImage,
 } from '@/features/editor/api'
 import { fetchOperationCosts } from '@/features/ai-generate/api'
+import { retryPilotVisualAsset } from '@/features/pilot/api'
 import { useEditorHistory } from '@/features/editor/useEditorHistory'
 import { Canvas } from '@/features/editor/components/Canvas'
 import { PropertiesPanel } from '@/features/editor/components/PropertiesPanel'
@@ -59,6 +60,19 @@ export function EditorPage() {
   const [saveError, setSaveError] = React.useState<string | null>(null)
   const [showGenerateDialog, setShowGenerateDialog] = React.useState(false)
   const [showPreview, setShowPreview] = React.useState(false)
+  const [retryingVisualAsset, setRetryingVisualAsset] = React.useState(false)
+
+  async function handleRetryVisualAsset(pageId: string) {
+    setRetryingVisualAsset(true)
+    try {
+      await retryPilotVisualAsset(pageId)
+      updatePages((prev) => prev.map((p) => (p.id === pageId ? { ...p, visual_asset_status: 'generating' } : p)))
+    } catch (err) {
+      console.error('Falha ao tentar gerar a arte novamente', err)
+    } finally {
+      setRetryingVisualAsset(false)
+    }
+  }
   const [clipboard, setClipboard] = React.useState<EditorElement | null>(null)
   const [mobilePanel, setMobilePanel] = React.useState<'none' | 'tools' | 'properties'>('none')
 
@@ -420,6 +434,19 @@ export function EditorPage() {
 
       {saveError && <p className="bg-red-50 px-4 py-1 text-xs text-danger-500 dark:bg-red-950">{saveError}</p>}
       {!canEdit && <p className="bg-amber-50 px-4 py-1 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">Você tem acesso somente leitura a este conteúdo.</p>}
+      {activePage?.visual_asset_status === 'failed' && (
+        <div className="flex items-center justify-between gap-3 bg-red-50 px-4 py-1.5 text-xs text-danger-600 dark:bg-red-950 dark:text-danger-300">
+          <span>Arte não gerada — a geração automática desta página falhou.</span>
+          {canEdit && (
+            <Button size="sm" variant="outline" disabled={retryingVisualAsset} onClick={() => handleRetryVisualAsset(activePage.id)}>
+              {retryingVisualAsset ? 'Tentando…' : 'Tentar gerar arte novamente'}
+            </Button>
+          )}
+        </div>
+      )}
+      {(activePage?.visual_asset_status === 'pending' || activePage?.visual_asset_status === 'generating') && (
+        <p className="bg-brand-50 px-4 py-1 text-xs text-brand-700 dark:bg-brand-950 dark:text-brand-300">Gerando arte automaticamente…</p>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="hidden w-48 shrink-0 overflow-y-auto border-r border-ink-200 bg-white dark:border-ink-700 dark:bg-ink-900 lg:block">

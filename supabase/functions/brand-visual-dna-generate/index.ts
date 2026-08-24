@@ -51,6 +51,14 @@ Deno.serve(async (req) => {
   const workspaceId = (body as Record<string, unknown> | null)?.workspaceId
   if (typeof workspaceId !== 'string' || !workspaceId) return json({ error: 'workspaceId é obrigatório.' }, 400)
 
+  // Fase 14B: DNA Visual não consome franquia de conteúdo, mas ainda é
+  // uma operação paga — bloqueada quando a assinatura expirou/cancelou,
+  // mesmo dentro das 2 rodadas gratuitas.
+  const { data: entitlement } = await admin.rpc('check_subscription_entitlement', { p_workspace_id: workspaceId })
+  if (!entitlement?.allowed) {
+    return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
+  }
+
   // claim_visual_dna_generation resolve sozinha: role owner/admin, lock por
   // workspace (dois cliques não geram 2 rodadas), contagem de rodada que
   // nunca reseta, e cobrança de crédito quando aplicável (ajuste 1).
@@ -216,7 +224,13 @@ Deno.serve(async (req) => {
     return json({ optionSetId, roundNumber: optionSet.round_number, creditCost: optionSet.credit_cost, errors })
   } catch (err) {
     console.error('Erro inesperado em brand-visual-dna-generate', err)
-    await userClient.rpc('fail_visual_dna_generation', { p_option_set_id: optionSetId, p_reason: 'unexpected_error' }).catch(() => {})
+    // .rpc() do supabase-js é "thenable", não uma Promise real — nunca tem
+    // .catch() encadeável; precisa de try/catch ao redor do await.
+    try {
+      await userClient.rpc('fail_visual_dna_generation', { p_option_set_id: optionSetId, p_reason: 'unexpected_error' })
+    } catch (cleanupErr) {
+      console.error('brand-visual-dna-generate: falha no cleanup pós-erro.', cleanupErr)
+    }
     return json({ error: 'Erro inesperado ao processar a solicitação.', optionSetId }, 500)
   }
 })

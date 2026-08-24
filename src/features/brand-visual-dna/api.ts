@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { BillingError, isBillingError, mapBillingError } from '@/lib/billingErrors'
 import type { BrandReferenceRow, BrandVisualDnaRow, VisualDnaOptionRow, VisualDnaOptionSetRow } from '@/features/brand-visual-dna/types'
 
 export async function fetchReferences(workspaceId: string): Promise<BrandReferenceRow[]> {
@@ -104,7 +105,10 @@ export async function generateVisualDna(workspaceId: string): Promise<GenerateVi
     body: JSON.stringify({ workspaceId }),
   })
   const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? 'Não foi possível iniciar a geração das direções visuais.')
+  if (!res.ok) {
+    if (isBillingError(res.status, body)) throw new BillingError(mapBillingError(body))
+    throw new Error(body.error ?? 'Não foi possível iniciar a geração das direções visuais.')
+  }
   return body as GenerateVisualDnaResponse
 }
 

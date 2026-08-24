@@ -77,6 +77,14 @@ Deno.serve(async (req) => {
     })
     if (memberError || !isMember) return json({ error: 'Sem acesso a este workspace.' }, 403)
 
+    // Fase 14B: gate server-side de assinatura — nunca confiar só no
+    // frontend. Bloqueia toda nova geração paga quando trial/assinatura
+    // expirou ou foi cancelada.
+    const { data: entitlement } = await admin.rpc('check_subscription_entitlement', { p_workspace_id: workspaceId })
+    if (!entitlement?.allowed) {
+      return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
+    }
+
     let textProvider
     try {
       textProvider = getTextProvider()

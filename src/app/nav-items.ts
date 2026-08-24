@@ -12,5 +12,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Radar Viral', path: '/radar', icon: '🔥', implemented: true },
   { label: 'Piloto Automático', path: '/piloto-automatico', icon: '🤖', implemented: true },
   { label: 'Relatórios', path: '/relatorios', icon: '📊', implemented: true },
+  { label: 'Plano e Cobrança', path: '/plano-e-cobranca', icon: '💳', implemented: true },
   { label: 'Configurações', path: '/configuracoes', icon: '⚙️', implemented: true },
 ]

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { BillingError, isBillingError, mapBillingError } from '@/lib/billingErrors'
 import type { PilotEditorialRole, PilotPlanItemRow, PilotPlanRow, PilotRunRow, PilotSettingsInput, PilotSettingsRow } from '@/features/pilot/types'
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
@@ -37,6 +38,7 @@ export async function upsertPilotSettings(workspaceId: string, input: PilotSetti
     p_temporary_objective_expires_at: input.temporaryObjectiveExpiresAt,
     p_default_instagram_account_id: input.defaultInstagramAccountId,
     p_max_credits_per_window: input.maxCreditsPerWindow,
+    p_auto_generate_art: input.autoGenerateArt,
   } as never)
   if (error) throw error
   return data
@@ -103,7 +105,10 @@ async function callFunction(name: string, body: Record<string, unknown>): Promis
   const headers = { 'Content-Type': 'application/json', ...(await authHeader()) }
   const res = await fetch(`${FUNCTIONS_URL}/${name}`, { method: 'POST', headers, body: JSON.stringify(body) })
   const responseBody = await res.json()
-  if (!res.ok) throw new Error(responseBody.message ?? responseBody.error ?? 'Não foi possível concluir a ação.')
+  if (!res.ok) {
+    if (isBillingError(res.status, responseBody)) throw new BillingError(mapBillingError(responseBody))
+    throw new Error(responseBody.message ?? responseBody.error ?? 'Não foi possível concluir a ação.')
+  }
   return responseBody
 }
 
@@ -113,6 +118,11 @@ export function generatePilotPlan(workspaceId: string) {
 
 export function generatePilotContent(planId: string) {
   return callFunction('pilot-content-generate', { planId })
+}
+
+/** Fase 13 — "Tentar gerar arte novamente" (owner/admin), nunca regenera o texto. */
+export function retryPilotVisualAsset(pageId: string) {
+  return callFunction('pilot-visual-asset-retry', { pageId })
 }
 
 export async function approvePilotPlan(planId: string): Promise<PilotPlanRow> {

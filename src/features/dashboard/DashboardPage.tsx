@@ -10,8 +10,8 @@ import { formatInTimeZone } from '@/lib/timezone'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { NAV_ITEMS } from '@/app/nav-items'
+import { OnboardingWidget } from '@/features/onboarding/OnboardingWidget'
 
 interface DashboardData {
   creditBalance: number
@@ -21,7 +21,6 @@ interface DashboardData {
   contentPublicado: number
   instagramConnectedCount: number
   instagramTotalCount: number
-  brandDnaCompleted: boolean
   upcoming: ContentRow[]
 }
 
@@ -30,11 +29,10 @@ function useDashboardData(workspaceId: string | null) {
     queryKey: ['dashboard', workspaceId],
     enabled: !!workspaceId,
     queryFn: async (): Promise<DashboardData> => {
-      const [{ data: account }, summary, { data: igAccounts }, { data: brandProfile }, { data: upcoming }] = await Promise.all([
+      const [{ data: account }, summary, { data: igAccounts }, { data: upcoming }] = await Promise.all([
         supabase.from('credit_accounts').select('balance').eq('workspace_id', workspaceId!).maybeSingle(),
         getContentSummary(workspaceId!),
         supabase.from('instagram_accounts').select('status').eq('workspace_id', workspaceId!),
-        supabase.from('brand_profiles').select('onboarding_completed_at').eq('workspace_id', workspaceId!).maybeSingle(),
         supabase
           .from('contents')
           .select('*')
@@ -53,7 +51,6 @@ function useDashboardData(workspaceId: string | null) {
         contentPublicado: summary.publicado,
         instagramConnectedCount: (igAccounts ?? []).filter((a) => a.status === 'conectado').length,
         instagramTotalCount: (igAccounts ?? []).length,
-        brandDnaCompleted: !!brandProfile?.onboarding_completed_at,
         upcoming: upcoming ?? [],
       }
     },
@@ -66,20 +63,12 @@ export function DashboardPage() {
   const { data, isLoading } = useDashboardData(activeWorkspace?.id ?? null)
   const fullName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email
 
-  const onboardingSteps = [
-    { label: 'Criar workspace', done: !!activeWorkspace },
-    { label: 'Configurar DNA da Marca', done: !!data?.brandDnaCompleted },
-    { label: 'Conectar Instagram', done: (data?.instagramConnectedCount ?? 0) > 0 },
-    { label: 'Criar primeiro conteúdo', done: (data?.contentCount ?? 0) > 0 },
-  ]
-  const completedSteps = onboardingSteps.filter((s) => s.done).length
-
   if (workspaceLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
         </div>
@@ -98,7 +87,7 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Saldo de créditos</CardTitle>
@@ -145,16 +134,6 @@ export function DashboardPage() {
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Onboarding</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-ink-900 dark:text-ink-50">
-              {completedSteps}/{onboardingSteps.length}
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -176,32 +155,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Primeiros passos</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {onboardingSteps.map((step) => (
-              <div key={step.label} className="flex items-center gap-2 text-sm">
-                <span
-                  className={
-                    step.done
-                      ? 'flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] text-white'
-                      : 'flex h-5 w-5 items-center justify-center rounded-full border border-ink-300 dark:border-ink-600'
-                  }
-                >
-                  {step.done ? '✓' : ''}
-                </span>
-                <span className={step.done ? 'text-ink-400 line-through' : 'text-ink-700 dark:text-ink-200'}>
-                  {step.label}
-                </span>
-              </div>
-            ))}
-            <Button variant="secondary" size="sm" className="mt-2" asChild>
-              <Link to={data?.brandDnaCompleted ? '/conteudo' : '/dna-da-marca'}>Continuar onboarding</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {activeWorkspace && <OnboardingWidget workspaceId={activeWorkspace.id} />}
       </div>
 
       <Card>

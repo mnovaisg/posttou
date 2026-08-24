@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          id: string
+          notes: string | null
+          processed_at: string | null
+          reason: string | null
+          requested_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          reason?: string | null
+          requested_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          reason?: string | null
+          requested_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_generations: {
         Row: {
           brand_context_snapshot: Json
@@ -172,6 +202,30 @@ export type Database = {
           provider?: string
           signature?: string
           task_id?: string
+        }
+        Relationships: []
+      }
+      asaas_webhook_events: {
+        Row: {
+          asaas_event_id: string
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string
+        }
+        Insert: {
+          asaas_event_id: string
+          event_type: string
+          id?: string
+          payload?: Json
+          processed_at?: string
+        }
+        Update: {
+          asaas_event_id?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string
         }
         Relationships: []
       }
@@ -507,6 +561,58 @@ export type Database = {
           },
         ]
       }
+      content_franchise_ledger: {
+        Row: {
+          content_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          workspace_id: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          period_end: string
+          period_start: string
+          workspace_id: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          period_end?: string
+          period_start?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_franchise_ledger_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: true
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_franchise_ledger_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_franchise_ledger_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_pages: {
         Row: {
           background_color: string
@@ -516,6 +622,9 @@ export type Database = {
           id: string
           position: number
           updated_at: string
+          visual_ai_generation_id: string | null
+          visual_asset_status: Database["public"]["Enums"]["content_visual_asset_status"]
+          visual_generation_attempts: number
           width: number
         }
         Insert: {
@@ -526,6 +635,9 @@ export type Database = {
           id?: string
           position?: number
           updated_at?: string
+          visual_ai_generation_id?: string | null
+          visual_asset_status?: Database["public"]["Enums"]["content_visual_asset_status"]
+          visual_generation_attempts?: number
           width?: number
         }
         Update: {
@@ -536,6 +648,9 @@ export type Database = {
           id?: string
           position?: number
           updated_at?: string
+          visual_ai_generation_id?: string | null
+          visual_asset_status?: Database["public"]["Enums"]["content_visual_asset_status"]
+          visual_generation_attempts?: number
           width?: number
         }
         Relationships: [
@@ -544,6 +659,13 @@ export type Database = {
             columns: ["content_id"]
             isOneToOne: false
             referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_pages_visual_ai_generation_id_fkey"
+            columns: ["visual_ai_generation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generations"
             referencedColumns: ["id"]
           },
         ]
@@ -1299,6 +1421,179 @@ export type Database = {
           },
         ]
       }
+      legal_acceptances: {
+        Row: {
+          accepted_at: string
+          document_type: string
+          document_version: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          document_type: string
+          document_version: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          document_type?: string
+          document_version?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      legal_documents: {
+        Row: {
+          content_url: string | null
+          created_at: string
+          document_type: string
+          id: string
+          is_current: boolean
+          version: string
+        }
+        Insert: {
+          content_url?: string | null
+          created_at?: string
+          document_type: string
+          id?: string
+          is_current?: boolean
+          version: string
+        }
+        Update: {
+          content_url?: string | null
+          created_at?: string
+          document_type?: string
+          id?: string
+          is_current?: boolean
+          version?: string
+        }
+        Relationships: []
+      }
+      onboarding_progress: {
+        Row: {
+          created_at: string
+          dismissed_steps: string[]
+          onboarding_dismissed: boolean
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          dismissed_steps?: string[]
+          onboarding_dismissed?: boolean
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          dismissed_steps?: string[]
+          onboarding_dismissed?: boolean
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          status: string
+          token_hash: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          organization_id: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          status?: string
+          token_hash: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["workspace_role"]
+          status?: string
+          token_hash?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       performance_collection_runs: {
         Row: {
           duration_ms: number | null
@@ -1753,6 +2048,7 @@ export type Database = {
         Row: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
           editorial_mix: Json
@@ -1776,6 +2072,7 @@ export type Database = {
         Insert: {
           allowed_formats?: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays?: number[]
+          auto_generate_art?: boolean
           created_at?: string
           default_instagram_account_id?: string | null
           editorial_mix?: Json
@@ -1799,6 +2096,7 @@ export type Database = {
         Update: {
           allowed_formats?: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays?: number[]
+          auto_generate_art?: boolean
           created_at?: string
           default_instagram_account_id?: string | null
           editorial_mix?: Json
@@ -1835,6 +2133,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      plans: {
+        Row: {
+          capabilities: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          max_members: number
+          max_workspaces: number
+          monthly_content_allowance: number
+          name: string
+          price_monthly_cents: number
+          price_yearly_cents: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          capabilities?: Json
+          created_at?: string
+          id: string
+          is_active?: boolean
+          max_members: number
+          max_workspaces: number
+          monthly_content_allowance: number
+          name: string
+          price_monthly_cents: number
+          price_yearly_cents: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          capabilities?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_members?: number
+          max_workspaces?: number
+          monthly_content_allowance?: number
+          name?: string
+          price_monthly_cents?: number
+          price_yearly_cents?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       pre_onboarding_sessions: {
         Row: {
@@ -1924,6 +2267,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          deleted_at: string | null
           full_name: string | null
           id: string
           trial_ends_at: string | null
@@ -1934,6 +2278,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id: string
           trial_ends_at?: string | null
@@ -1944,6 +2289,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id?: string
           trial_ends_at?: string | null
@@ -2597,6 +2943,145 @@ export type Database = {
           },
         ]
       }
+      subscription_status_history: {
+        Row: {
+          created_at: string
+          from_status: Database["public"]["Enums"]["subscription_status"] | null
+          id: string
+          organization_id: string
+          reason: string | null
+          to_status: Database["public"]["Enums"]["subscription_status"]
+        }
+        Insert: {
+          created_at?: string
+          from_status?:
+            | Database["public"]["Enums"]["subscription_status"]
+            | null
+          id?: string
+          organization_id: string
+          reason?: string | null
+          to_status: Database["public"]["Enums"]["subscription_status"]
+        }
+        Update: {
+          created_at?: string
+          from_status?:
+            | Database["public"]["Enums"]["subscription_status"]
+            | null
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          to_status?: Database["public"]["Enums"]["subscription_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_status_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
+          billing_interval?: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          metadata?: Json
+          organization_id: string
+          past_due_grace_days?: number
+          past_due_since?: string | null
+          pending_billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind?: string | null
+          pending_change_price_cents?: number | null
+          pending_plan_id?: string | null
+          plan_id: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
+          billing_interval?: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          past_due_grace_days?: number
+          past_due_since?: string | null
+          pending_billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind?: string | null
+          pending_change_price_cents?: number | null
+          pending_plan_id?: string | null
+          plan_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_pending_plan_id_fkey"
+            columns: ["pending_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visual_dna_generation_runs: {
         Row: {
           credit_cost: number
@@ -2839,6 +3324,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          organization_id: string
           owner_id: string
           slug: string
           timezone: string
@@ -2848,6 +3334,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          organization_id: string
           owner_id: string
           slug: string
           timezone?: string
@@ -2857,12 +3344,20 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          organization_id?: string
           owner_id?: string
           slug?: string
           timezone?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "workspaces_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workspaces_owner_id_fkey"
             columns: ["owner_id"]
@@ -2891,11 +3386,17 @@ export type Database = {
       }
     }
     Functions: {
+      _pilot_submit_content_if_visual_complete: {
+        Args: { p_content_id: string }
+        Returns: undefined
+      }
+      accept_organization_invite: { Args: { p_token: string }; Returns: Json }
       activate_pilot: {
         Args: { p_workspace_id: string }
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
           editorial_mix: Json
@@ -3020,6 +3521,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      apply_confirmed_plan_change_system: {
+        Args: { p_organization_id: string }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      apply_scheduled_downgrades_system: { Args: never; Returns: number }
       apply_strategy_recommendation: {
         Args: { p_recommendation_id: string }
         Returns: {
@@ -3087,6 +3623,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: undefined
+      }
       cancel_pilot_plan: {
         Args: { p_plan_id: string; p_reason?: string }
         Returns: {
@@ -3147,7 +3687,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      change_member_role: {
+        Args: {
+          p_new_role: Database["public"]["Enums"]["workspace_role"]
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
       check_pilot_activation_readiness: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
+      check_subscription_entitlement: {
         Args: { p_workspace_id: string }
         Returns: Json
       }
@@ -3464,11 +4016,46 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      count_organization_seats_used: {
+        Args: { p_organization_id: string }
+        Returns: number
+      }
+      create_organization_invite: {
+        Args: {
+          p_email: string
+          p_role: Database["public"]["Enums"]["workspace_role"]
+          p_workspace_id: string
+        }
+        Returns: {
+          invite_id: string
+          token: string
+        }[]
+      }
+      create_workspace_in_organization: {
+        Args: { p_name: string; p_organization_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          owner_id: string
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workspaces"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       disable_pilot: {
         Args: { p_workspace_id: string }
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
           editorial_mix: Json
@@ -3495,6 +4082,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      dismiss_onboarding: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
+      dismiss_onboarding_step: {
+        Args: { p_step: string; p_workspace_id: string }
+        Returns: undefined
       }
       dismiss_strategy_recommendation: {
         Args: { p_reason?: string; p_recommendation_id: string }
@@ -3609,6 +4204,7 @@ export type Database = {
         Args: { p_limit?: number; p_lookback_days?: number }
         Returns: number
       }
+      export_my_data: { Args: never; Returns: Json }
       fail_instagram_publication: {
         Args: {
           p_error_code: string
@@ -3697,6 +4293,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_effective_subscription_status: {
+        Args: { p_sub: Database["public"]["Tables"]["subscriptions"]["Row"] }
+        Returns: Database["public"]["Enums"]["subscription_status"]
+      }
+      get_franchise_period: {
+        Args: {
+          p_now?: string
+          p_sub: Database["public"]["Tables"]["subscriptions"]["Row"]
+        }
+        Returns: {
+          period_end: string
+          period_start: string
+        }[]
+      }
+      get_invite_preview: { Args: { p_token: string }; Returns: Json }
+      get_onboarding_state: { Args: { p_workspace_id: string }; Returns: Json }
+      get_workspace_entitlements: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       grant_credits: {
         Args: {
           p_amount: number
@@ -3731,6 +4347,14 @@ export type Database = {
           p_roles: Database["public"]["Enums"]["workspace_role"][]
           p_workspace_id: string
         }
+        Returns: boolean
+      }
+      is_organization_member: {
+        Args: { p_organization_id: string }
+        Returns: boolean
+      }
+      is_organization_owner: {
+        Args: { p_organization_id: string }
         Returns: boolean
       }
       is_workspace_member: {
@@ -3777,6 +4401,32 @@ export type Database = {
         Args: { p_content_id: string; p_opportunity_id: string }
         Returns: undefined
       }
+      list_organization_invites: {
+        Args: { p_organization_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by_name: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          status: string
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
+      list_organization_members: {
+        Args: { p_organization_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          member_since: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          user_id: string
+          workspace_id: string
+          workspace_name: string
+        }[]
+      }
       log_audit_event: {
         Args: {
           p_action: string
@@ -3807,6 +4457,7 @@ export type Database = {
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
           editorial_mix: Json
@@ -3845,6 +4496,50 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: boolean
+      }
+      pilot_claim_visual_asset_manual_retry: {
+        Args: { p_page_id: string }
+        Returns: {
+          background_color: string
+          content_id: string
+          created_at: string
+          height: number
+          id: string
+          position: number
+          updated_at: string
+          visual_ai_generation_id: string | null
+          visual_asset_status: Database["public"]["Enums"]["content_visual_asset_status"]
+          visual_generation_attempts: number
+          width: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "content_pages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pilot_claim_visual_assets_for_auto_retry: {
+        Args: { p_limit?: number }
+        Returns: {
+          background_color: string
+          content_id: string
+          created_at: string
+          height: number
+          id: string
+          position: number
+          updated_at: string
+          visual_ai_generation_id: string | null
+          visual_asset_status: Database["public"]["Enums"]["content_visual_asset_status"]
+          visual_generation_attempts: number
+          width: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "content_pages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       pilot_create_content: {
         Args: {
@@ -3890,6 +4585,50 @@ export type Database = {
         Args: { p_plan_id: string }
         Returns: number
       }
+      pilot_mark_visual_asset_failed: {
+        Args: { p_page_id: string; p_reason: string }
+        Returns: {
+          background_color: string
+          content_id: string
+          created_at: string
+          height: number
+          id: string
+          position: number
+          updated_at: string
+          visual_ai_generation_id: string | null
+          visual_asset_status: Database["public"]["Enums"]["content_visual_asset_status"]
+          visual_generation_attempts: number
+          width: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "content_pages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pilot_mark_visual_asset_generating: {
+        Args: { p_ai_generation_id: string; p_page_id: string }
+        Returns: {
+          background_color: string
+          content_id: string
+          created_at: string
+          height: number
+          id: string
+          position: number
+          updated_at: string
+          visual_ai_generation_id: string | null
+          visual_asset_status: Database["public"]["Enums"]["content_visual_asset_status"]
+          visual_generation_attempts: number
+          width: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "content_pages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       pilot_reclaim_stuck_plan_items: {
         Args: {
           p_limit?: number
@@ -3933,6 +4672,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      process_asaas_payment_confirmed_system: {
+        Args: {
+          p_asaas_event_id: string
+          p_asaas_subscription_id: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: Json
+      }
+      process_asaas_payment_overdue_system: {
+        Args: { p_asaas_event_id: string; p_asaas_subscription_id: string }
+        Returns: Json
+      }
       radar_compute_novelty: {
         Args: {
           p_lookback_days?: number
@@ -3972,6 +4724,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_legal_acceptance: {
+        Args: { p_document_type: string; p_document_version: string }
+        Returns: undefined
       }
       refund_ai_generation_system: {
         Args: { p_generation_id: string }
@@ -4043,6 +4799,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      remove_organization_member: {
+        Args: { p_user_id: string; p_workspace_id: string }
+        Returns: undefined
+      }
+      request_account_deletion: {
+        Args: { p_email_confirmation: string }
+        Returns: Json
+      }
+      request_plan_change: {
+        Args: {
+          p_new_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_new_plan_id: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      resend_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: {
+          invite_id: string
+          token: string
+        }[]
+      }
       resolve_pilot_plan_item: {
         Args: {
           p_content_id?: string
@@ -4088,6 +4867,7 @@ export type Database = {
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
           editorial_mix: Json
@@ -4152,6 +4932,41 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "strategy_recommendations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      run_subscription_status_transitions_system: { Args: never; Returns: Json }
+      schedule_subscription_cancellation: {
+        Args: { p_organization_id: string }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -4391,10 +5206,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      undo_subscription_cancellation: {
+        Args: { p_organization_id: string }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_pilot_settings: {
         Args: {
           p_allowed_formats: Database["public"]["Enums"]["content_type"][]
           p_allowed_weekdays: number[]
+          p_auto_generate_art?: boolean
           p_default_instagram_account_id: string
           p_editorial_mix: Json
           p_format_mix?: Json
@@ -4414,6 +5264,7 @@ export type Database = {
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
           editorial_mix: Json
@@ -4502,6 +5353,7 @@ export type Database = {
         | "ideias_conteudo"
         | "imagem"
         | "performance_insight"
+      billing_interval: "monthly" | "yearly"
       brand_reference_status:
         | "manual"
         | "analysis_pending"
@@ -4521,6 +5373,12 @@ export type Database = {
         | "publicado"
         | "falhou"
       content_type: "post" | "carrossel" | "reel"
+      content_visual_asset_status:
+        | "not_requested"
+        | "pending"
+        | "generating"
+        | "ready"
+        | "failed"
       instagram_account_status:
         | "conectado"
         | "token_expirado"
@@ -4592,6 +5450,13 @@ export type Database = {
         | "settings_change"
         | "experiment_suggestion"
         | "informational"
+      subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "cancel_at_period_end"
+        | "cancelled"
+        | "expired"
       visual_dna_option_set_status:
         | "generating"
         | "ready"
@@ -4736,6 +5601,7 @@ export const Constants = {
         "imagem",
         "performance_insight",
       ],
+      billing_interval: ["monthly", "yearly"],
       brand_reference_status: [
         "manual",
         "analysis_pending",
@@ -4757,6 +5623,13 @@ export const Constants = {
         "falhou",
       ],
       content_type: ["post", "carrossel", "reel"],
+      content_visual_asset_status: [
+        "not_requested",
+        "pending",
+        "generating",
+        "ready",
+        "failed",
+      ],
       instagram_account_status: [
         "conectado",
         "token_expirado",
@@ -4838,6 +5711,14 @@ export const Constants = {
         "settings_change",
         "experiment_suggestion",
         "informational",
+      ],
+      subscription_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "cancel_at_period_end",
+        "cancelled",
+        "expired",
       ],
       visual_dna_option_set_status: [
         "generating",

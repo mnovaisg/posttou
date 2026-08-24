@@ -158,8 +158,14 @@ Deno.serve(async (req) => {
 
     let aiGenerated = false
     // Ajuste 6: só chama IA quando há fato NOVO e significativo (>=2 insights determinísticos novos nesta rodada).
+    // Fase 14B: a síntese por IA é a parte paga daqui — gateada por
+    // assinatura. Os insights determinísticos acima continuam funcionando
+    // mesmo com assinatura expirada (não têm custo de IA).
     if (newCount >= 2) {
-      aiGenerated = await tryGenerateAiSynthesis(admin, workspaceId, facts as Facts, candidates)
+      const { data: entitlement } = await admin.rpc('check_subscription_entitlement', { p_workspace_id: workspaceId })
+      if (entitlement?.allowed) {
+        aiGenerated = await tryGenerateAiSynthesis(admin, workspaceId, facts as Facts, candidates)
+      }
     }
 
     results.push({ workspaceId, newDeterministic: newCount, aiGenerated })

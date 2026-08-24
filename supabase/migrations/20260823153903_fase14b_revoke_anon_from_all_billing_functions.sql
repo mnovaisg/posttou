@@ -1,0 +1,14 @@
+revoke execute on function public.apply_confirmed_plan_change_system(uuid) from anon;
+revoke execute on function public.apply_scheduled_downgrades_system() from anon;
+revoke execute on function public.check_subscription_entitlement(uuid) from anon;
+revoke execute on function public.create_workspace_in_organization(uuid, text) from anon;
+revoke execute on function public.get_effective_subscription_status(public.subscriptions) from anon;
+revoke execute on function public.get_franchise_period(public.subscriptions, timestamptz) from anon;
+revoke execute on function public.get_workspace_entitlements(uuid) from anon;
+revoke execute on function public.is_organization_member(uuid) from anon;
+revoke execute on function public.is_organization_owner(uuid) from anon;
+revoke execute on function public.process_asaas_payment_confirmed_system(text, text, timestamptz, timestamptz) from anon;
+revoke execute on function public.process_asaas_payment_overdue_system(text, text) from anon;
+revoke execute on function public.request_plan_change(uuid, text, public.billing_interval) from anon;
+revoke execute on function public.schedule_subscription_cancellation(uuid) from anon;
+revoke execute on function public.undo_subscription_cancellation(uuid) from anon;

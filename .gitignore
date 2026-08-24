@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Supabase CLI local cache
+supabase/.temp/
+
+# Vercel local project link
+.vercel
+
 # Claude Code local settings (pode conter segredos usados durante a sessão)
 .claude/settings.local.json
 
@@ -25,3 +31,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.github/workflows/check-migrations-drift.yml

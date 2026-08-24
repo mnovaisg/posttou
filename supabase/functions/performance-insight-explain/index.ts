@@ -47,6 +47,13 @@ Deno.serve(async (req) => {
     const { data: isMember } = await userClient.rpc('is_workspace_member', { p_workspace_id: workspaceId })
     if (!isMember) return json({ error: 'Sem acesso a este workspace.' }, 403)
 
+    // Fase 14C: gap real encontrado em auditoria — este endpoint consome
+    // créditos mas nunca teve o gate de assinatura da Fase 14B.
+    const { data: entitlement } = await userClient.rpc('check_subscription_entitlement', { p_workspace_id: workspaceId })
+    if (!entitlement?.allowed) {
+      return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
+    }
+
     let textProvider
     try {
       textProvider = getTextProvider()
