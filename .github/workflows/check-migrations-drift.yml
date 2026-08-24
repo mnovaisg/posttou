@@ -1,0 +1,30 @@
+name: Verificar drift de migrations
+
+# Fase 14A — roda sempre que supabase/migrations/ mudar num PR, ou
+# manualmente. Requer os secrets SUPABASE_ACCESS_TOKEN (token pessoal/de
+# serviço, nunca a chave do projeto) e SUPABASE_PROJECT_REF configurados
+# nas configurações do repositório antes de habilitar de fato — sem eles,
+# o job falha de forma explícita (não passa silenciosamente).
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch: {}
+
+jobs:
+  check-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Link project e verificar drift
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN e/ou SUPABASE_PROJECT_REF não configurados nos secrets do repositório."
+            exit 1
+          fi
+          npx -y supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
+          bash scripts/check-migrations-drift.sh
