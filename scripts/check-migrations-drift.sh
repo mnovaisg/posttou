@@ -31,12 +31,15 @@ OUTPUT=$($SUPABASE_BIN migration list 2>&1) || {
 
 echo "$OUTPUT"
 
-# Linhas de dados da tabela têm o formato "| <local> | <remote> | <time> |".
-# Sinaliza qualquer linha onde uma das duas primeiras colunas está vazia.
-DRIFT_LINES=$(echo "$OUTPUT" | grep -E '^\s*\|' | grep -Ev 'Local\s*\|\s*Remote' | awk -F'|' '
-  {
-    local=$2; gsub(/^[ \t]+|[ \t]+$/, "", local);
-    remote=$3; gsub(/^[ \t]+|[ \t]+$/, "", remote);
+# Linhas de dados da tabela têm colunas separadas por "|" (com ou sem pipe
+# inicial/final, e com ou sem valores entre crases — o formato já mudou
+# entre versões do CLI, então normalizamos em vez de depender de um
+# formato exato). Sinaliza qualquer linha onde uma das duas primeiras
+# colunas está vazia.
+DRIFT_LINES=$(echo "$OUTPUT" | grep -F '|' | sed -E 's/^[[:space:]]*\|//' | awk -F'|' '
+  NF >= 2 {
+    local=$1; gsub(/^[ \t`]+|[ \t`]+$/, "", local);
+    remote=$2; gsub(/^[ \t`]+|[ \t`]+$/, "", remote);
     if ((local == "" && remote != "") || (remote == "" && local != "")) print
   }
 ')
