@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /conteudo
+Disallow: /dna-da-marca
+Disallow: /criar
+Disallow: /radar
+Disallow: /piloto-automatico
+Disallow: /relatorios
+Disallow: /plano-e-cobranca
+Disallow: /equipe
+Disallow: /configuracoes
+
+Sitemap: https://posttou.vercel.app/sitemap.xml

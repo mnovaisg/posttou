@@ -86,6 +86,14 @@ Deno.serve(async (req) => {
     return json({ error: 'franchise_limit_reached', message: 'Franquia de conteúdos do plano esgotada neste período.' }, 402)
   }
 
+  // Ajuste pré-beta: mesmo guard de check_brand_dna_ready dos caminhos
+  // manuais de geração — o Piloto também não deve gerar conteúdo sem o
+  // Brand DNA mínimo do workspace.
+  const { data: brandDnaGate } = await admin.rpc('check_brand_dna_ready', { p_workspace_id: plan.workspace_id })
+  if (!brandDnaGate?.allowed) {
+    return json({ error: 'brand_dna_required', reason: brandDnaGate?.reason ?? 'BRAND_DNA_REQUIRED' }, 412)
+  }
+
   const startedAt = Date.now()
   const { data: run } = await admin.from('pilot_runs').insert({ workspace_id: plan.workspace_id, run_type: 'content_generation', status: 'running', plan_id: planId }).select('id').single()
 

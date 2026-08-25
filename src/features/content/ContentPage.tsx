@@ -1,7 +1,9 @@
 import * as React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { getContentSummary } from '@/features/content/api'
+import { fetchOnboardingState } from '@/features/onboarding/api'
 import { DEFAULT_FILTERS } from '@/features/content/types'
 import type { ContentFilters, ViewMode } from '@/features/content/types'
 import { Button } from '@/components/ui/button'
@@ -21,6 +23,7 @@ const VIEW_TABS: { value: ViewMode; label: string; icon: string }[] = [
 ]
 
 export function ContentPage() {
+  const navigate = useNavigate()
   const { activeWorkspace, hasRole } = useWorkspace()
   const [view, setView] = React.useState<ViewMode>('lista')
   const [filters, setFilters] = React.useState<ContentFilters>(DEFAULT_FILTERS)
@@ -32,6 +35,35 @@ export function ContentPage() {
     enabled: !!activeWorkspace,
     queryFn: () => getContentSummary(activeWorkspace!.id),
   })
+
+  // Mesma queryKey do OnboardingWidget/Dashboard — dedupe via React Query,
+  // sem chamada extra. Só usada para decidir o texto/CTA do empty state
+  // (item 8 do ajuste pré-beta: "Meu Conteúdo" nunca é bloqueado, mas o
+  // empty state deve orientar para o DNA primeiro quando ele não existe).
+  const { data: onboarding } = useQuery({
+    queryKey: ['onboarding-state', activeWorkspace?.id],
+    queryFn: () => fetchOnboardingState(activeWorkspace!.id),
+    enabled: !!activeWorkspace,
+  })
+  const hasBrandDna = onboarding?.brand_dna_done ?? true
+
+  // canCreate (owner/admin/editor) também governa a etapa de DNA — mesmo
+  // papel exigido para escrever em brand_profiles (item 14: nunca mostrar
+  // CTA que o papel do usuário não pode executar).
+  const emptyState = hasBrandDna
+    ? {
+        title: 'Vamos criar seu primeiro conteúdo',
+        description: 'Comece criando seu primeiro post, carrossel ou reel.',
+        ctaLabel: '+ Criar meu primeiro conteúdo',
+        onCreate: canCreate ? () => setCreateOpen(true) : undefined,
+      }
+    : {
+        title: 'Antes do seu primeiro conteúdo, vamos conhecer sua marca',
+        description:
+          'O POSTTOU usa o DNA da sua marca para criar conteúdos mais alinhados ao seu público, posicionamento e jeito de comunicar.',
+        ctaLabel: 'Criar meu DNA',
+        onCreate: canCreate ? () => navigate('/dna-da-marca') : undefined,
+      }
 
   function patchFilters(patch: Partial<ContentFilters>) {
     setFilters((prev) => ({ ...prev, ...patch }))
@@ -119,8 +151,12 @@ export function ContentPage() {
         )}
       </div>
 
-      {view === 'lista' && <ListView workspaceId={activeWorkspace.id} filters={filters} />}
-      {view === 'grade' && <GridView workspaceId={activeWorkspace.id} filters={filters} />}
+      {view === 'lista' && (
+        <ListView workspaceId={activeWorkspace.id} filters={filters} emptyState={emptyState} />
+      )}
+      {view === 'grade' && (
+        <GridView workspaceId={activeWorkspace.id} filters={filters} emptyState={emptyState} />
+      )}
       {view === 'calendario' && <CalendarView workspaceId={activeWorkspace.id} timezone={activeWorkspace.timezone} />}
 
       <CreateContentDialog open={createOpen} onOpenChange={setCreateOpen} workspaceId={activeWorkspace.id} />

@@ -72,6 +72,14 @@ Deno.serve(async (req) => {
       return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
     }
 
+    // Ajuste pré-beta: mesmo guard de check_brand_dna_ready usado em
+    // ai-generate — geração de arte por IA também não deve rodar sem o
+    // Brand DNA mínimo.
+    const { data: brandDnaGate } = await admin.rpc('check_brand_dna_ready', { p_workspace_id: workspaceId })
+    if (!brandDnaGate?.allowed) {
+      return json({ error: 'brand_dna_required', reason: brandDnaGate?.reason ?? 'BRAND_DNA_REQUIRED' }, 412)
+    }
+
     if (typeof contentId === 'string' && contentId) {
       const { data: content } = await admin.from('contents').select('workspace_id').eq('id', contentId).maybeSingle()
       if (!content || content.workspace_id !== workspaceId) {

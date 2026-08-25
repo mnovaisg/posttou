@@ -39,6 +39,16 @@ const PILOT_IMAGE_SIZE = '2:3'
 export async function generatePilotVisualAsset(params: PilotVisualAssetParams): Promise<PilotVisualAssetResult> {
   const { admin, mediaProvider, supabaseUrl, workspaceId, pageId, contentId, contentContext } = params
 
+  // Ajuste pré-beta: mesmo guard de check_brand_dna_ready dos outros 3
+  // caminhos de geração — cobre os 3 chamadores desta função (geração
+  // inicial do Piloto, retry manual, auto-retry do cron) num único lugar,
+  // sem duplicar a checagem em cada um.
+  const { data: brandDnaGate } = await admin.rpc('check_brand_dna_ready', { p_workspace_id: workspaceId })
+  if (!brandDnaGate?.allowed) {
+    await admin.rpc('pilot_mark_visual_asset_failed', { p_page_id: pageId, p_reason: 'brand_dna_required' })
+    return { ok: false, errorCode: 'brand_dna_required', errorMessage: 'O DNA da marca precisa estar completo para gerar arte.' }
+  }
+
   const { data: brandProfile } = await admin.from('brand_profiles').select('*').eq('workspace_id', workspaceId).maybeSingle()
   const brandText = brandProfileToPromptText(brandProfile ?? null)
 

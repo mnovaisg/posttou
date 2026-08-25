@@ -85,6 +85,14 @@ Deno.serve(async (req) => {
       return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
     }
 
+    // Ajuste pré-beta: geração de conteúdo por IA nunca deve rodar sem o
+    // Brand DNA mínimo — o frontend já orienta para isso, mas o guard real
+    // é aqui (auditoria encontrou os 4 caminhos reais sem nenhuma checagem).
+    const { data: brandDnaGate } = await admin.rpc('check_brand_dna_ready', { p_workspace_id: workspaceId })
+    if (!brandDnaGate?.allowed) {
+      return json({ error: 'brand_dna_required', reason: brandDnaGate?.reason ?? 'BRAND_DNA_REQUIRED' }, 412)
+    }
+
     let textProvider
     try {
       textProvider = getTextProvider()

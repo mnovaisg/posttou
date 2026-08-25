@@ -1,10 +1,12 @@
 export function ContentEmptyState({
   title,
   description,
+  ctaLabel,
   onCreate,
 }: {
   title: string
   description: string
+  ctaLabel?: string
   onCreate?: () => void
 }) {
   return (
@@ -18,7 +20,7 @@ export function ContentEmptyState({
           onClick={onCreate}
           className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
-          + Criar meu primeiro conteúdo
+          {ctaLabel ?? '+ Criar meu primeiro conteúdo'}
         </button>
       )}
     </div>

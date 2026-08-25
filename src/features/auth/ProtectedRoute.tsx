@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { LandingPage } from '@/features/landing/LandingPage'
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
@@ -15,6 +16,15 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!session) {
+    // Ajuste de Launch Readiness: "/" é o único ponto de entrada que serve
+    // dois públicos — visitante anônimo vê a landing comercial pública
+    // (sem redirect, sem mudar a URL); qualquer outra rota protegida sem
+    // sessão continua indo para /entrar, como sempre. Nenhuma rota nova,
+    // nenhum navigate('/') existente muda de comportamento (só rodam
+    // autenticados).
+    if (location.pathname === '/') {
+      return <LandingPage />
+    }
     return <Navigate to="/entrar" state={{ from: location.pathname }} replace />
   }
 

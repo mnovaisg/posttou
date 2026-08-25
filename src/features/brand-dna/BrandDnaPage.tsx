@@ -15,7 +15,9 @@ import { StepVoice } from '@/features/brand-dna/steps/StepVoice'
 import { StepVisual } from '@/features/brand-dna/steps/StepVisual'
 import { StepReview } from '@/features/brand-dna/steps/StepReview'
 import { AiAssistDialog } from '@/features/brand-dna/AiAssistDialog'
+import { KnowYourBrandFlow } from '@/features/brand-dna/KnowYourBrandFlow'
 import { readPendingCreateIdea } from '@/features/instagram-discovery/session-token'
+import type { TablesUpdate } from '@/types/database'
 
 const STEPS = [
   { id: 1, label: 'Marca' },
@@ -42,6 +44,13 @@ export function BrandDnaPage() {
   const [draft, setDraft] = React.useState<BrandDnaDraft | null>(null)
   const [validationError, setValidationError] = React.useState<string | null>(null)
   const [justCompleted, setJustCompleted] = React.useState(false)
+  // Ajuste pré-beta: "Conhecer sua marca" (KnowYourBrandFlow) é a etapa
+  // inicial real para um workspace em branco — o formulário/wizard vira
+  // editor avançado. Só entra em 'wizard' direto quando já existe algo
+  // (DNA concluído, retomando um rascunho, ou pré-preenchido pela
+  // Discovery pré-cadastro) — nunca pergunta o @ duas vezes nem reseta
+  // progresso de workspace existente.
+  const [flowStage, setFlowStage] = React.useState<'know_brand' | 'wizard' | null>(null)
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['brand-profile', activeWorkspace?.id],
@@ -54,6 +63,8 @@ export function BrandDnaPage() {
       const d = draftFromRow(profile)
       setDraft(d)
       setStep(profile.onboarding_completed_at ? 6 : Math.min(d.onboardingStep, 6))
+      const isBlankProfile = !profile.company_name && !profile.description
+      setFlowStage(profile.onboarding_completed_at || !isBlankProfile ? 'wizard' : 'know_brand')
     }
   }, [profile, draft])
 
@@ -67,6 +78,32 @@ export function BrandDnaPage() {
     },
     onSuccess: (row) => {
       queryClient.setQueryData(['brand-profile', activeWorkspace?.id], row)
+    },
+  })
+
+  const knowBrandMutation = useMutation({
+    mutationFn: async (opts: { patch: TablesUpdate<'brand_profiles'>; complete: boolean }) => {
+      if (!activeWorkspace) throw new Error('Workspace ausente.')
+      const patch: TablesUpdate<'brand_profiles'> = { ...opts.patch }
+      if (opts.complete) {
+        patch.onboarding_completed_at = new Date().toISOString()
+        patch.onboarding_step = 6
+      }
+      return updateBrandProfile(activeWorkspace.id, patch)
+    },
+    onSuccess: (row, opts) => {
+      queryClient.setQueryData(['brand-profile', activeWorkspace?.id], row)
+      setDraft(draftFromRow(row))
+      if (opts.complete) {
+        if (readPendingCreateIdea()) {
+          navigate('/criar')
+          return
+        }
+        setJustCompleted(true)
+      } else {
+        setStep(1)
+        setFlowStage('wizard')
+      }
     },
   })
 
@@ -112,11 +149,37 @@ export function BrandDnaPage() {
     setJustCompleted(true)
   }
 
-  if (workspaceLoading || profileLoading || !draft) {
+  if (workspaceLoading || profileLoading || !draft || !flowStage) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  if (flowStage === 'know_brand' && !justCompleted) {
+    return (
+      <div className="mx-auto flex max-w-2xl flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900 dark:text-ink-50">DNA da Marca</h1>
+          <p className="text-sm text-ink-500">
+            Vamos conhecer sua marca para criar conteúdos que realmente pareçam feitos por você.
+          </p>
+        </div>
+        <KnowYourBrandFlow
+          workspaceId={activeWorkspace!.id}
+          companyNameFallback={activeWorkspace?.name ?? null}
+          onAccept={(patch) => knowBrandMutation.mutate({ patch, complete: true })}
+          onReview={(patch) => knowBrandMutation.mutate({ patch, complete: false })}
+        />
+        <button
+          type="button"
+          className="self-center text-xs text-ink-400 hover:underline"
+          onClick={() => setFlowStage('wizard')}
+        >
+          Prefiro preencher manualmente
+        </button>
       </div>
     )
   }
@@ -127,12 +190,21 @@ export function BrandDnaPage() {
         <span className="text-4xl">🎉</span>
         <h2 className="text-xl font-semibold text-ink-900 dark:text-ink-50">Seu DNA está pronto!</h2>
         <p className="text-sm text-ink-500">
-          O POSTTOU já sabe quem é a sua marca. A partir de agora, toda geração de conteúdo vai considerar isso
-          automaticamente.
+          O POSTTOU já sabe quem é a sua marca. Agora podemos definir como ela deve parecer visualmente, ou você
+          pode ir direto para o seu primeiro conteúdo.
         </p>
-        <div className="flex gap-2">
-          <Button onClick={() => setJustCompleted(false)}>Ver / editar meu DNA</Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button onClick={() => navigate('/dna-da-marca/visual')}>Criar meu DNA Visual</Button>
+          <Button variant="outline" onClick={() => navigate('/criar')}>
+            Pular e criar meu primeiro conteúdo
+          </Button>
         </div>
+        <button
+          className="text-xs text-ink-400 hover:underline"
+          onClick={() => setJustCompleted(false)}
+        >
+          Ver / editar meu DNA
+        </button>
       </div>
     )
   }

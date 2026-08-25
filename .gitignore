@@ -32,3 +32,4 @@ supabase/.temp/
 *.sln
 *.sw?
 .github/workflows/check-migrations-drift.yml
+.env*

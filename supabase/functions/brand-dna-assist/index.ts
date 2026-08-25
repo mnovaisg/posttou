@@ -2,10 +2,12 @@
 // descrição curta fornecida pelo usuário. Nunca salva nada sozinha —
 // devolve sugestões para o usuário revisar e aceitar campo a campo.
 //
-// Depende de configuração externa: variável de ambiente ANTHROPIC_API_KEY
-// (Supabase Edge Function secret). Sem ela, responde 501 de forma clara,
-// em vez de simular uma resposta de IA.
+// Ajuste pré-beta: esta função chamava a Anthropic diretamente (resquício
+// anterior à Fase 4/AI Gateway), sem passar por getTextProvider() como
+// todo o resto do POSTTOU — corrigido para reaproveitar o AI Gateway
+// compartilhado (_shared/ai-gateway). Nenhum provider paralelo.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { getTextProvider, ProviderNotConfiguredError, ProviderRequestError } from '../_shared/ai-gateway/gateway.ts'
 
 const CREDIT_COST = 5
 
@@ -78,16 +80,18 @@ Deno.serve(async (req) => {
       return json({ error: 'subscription_required', reason: entitlement?.reason ?? 'SUBSCRIPTION_NOT_ACTIVE' }, 402)
     }
 
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
-    if (!anthropicKey) {
-      return json(
-        {
-          error: 'not_configured',
-          message:
-            'O preenchimento com IA ainda não está configurado neste ambiente. Peça ao administrador para configurar a variável ANTHROPIC_API_KEY nas Edge Functions do Supabase.',
-        },
-        501,
-      )
+    let textProvider
+    try {
+      textProvider = getTextProvider()
+    } catch (err) {
+      if (err instanceof ProviderNotConfiguredError) {
+        // Nunca expor nome de provider/variável de ambiente ao usuário final.
+        return json(
+          { error: 'not_configured', message: 'O preenchimento com IA não está disponível no momento. Você pode continuar preenchendo manualmente.' },
+          501,
+        )
+      }
+      throw err
     }
 
     // Débito atômico de créditos ANTES da chamada de IA — se não houver
@@ -102,41 +106,25 @@ Deno.serve(async (req) => {
       return json({ error: creditError.message ?? 'Saldo de créditos insuficiente.' }, 402)
     }
 
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-5',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: `Você é um estrategista de marca. Com base nesta descrição de negócio em português do Brasil, sugira o preenchimento do DNA de marca de um SaaS de conteúdo para Instagram.\n\nDescrição do negócio: """${businessDescription}"""\n\n${SUGGESTION_SCHEMA_HINT}`,
-          },
-        ],
-      }),
-    })
+    const systemPrompt =
+      'Você é um estrategista de marca. Com base na descrição de negócio informada pelo usuário (em português do Brasil), sugira o preenchimento do DNA de marca de um SaaS de conteúdo para Instagram.'
+    const userPrompt = `Descrição do negócio: """${businessDescription}"""\n\n${SUGGESTION_SCHEMA_HINT}`
 
-    if (!anthropicRes.ok) {
-      const detail = await anthropicRes.text()
-      console.error('Anthropic API error', anthropicRes.status, detail)
-      return json({ error: 'Não foi possível gerar sugestões agora. Tente novamente em instantes.' }, 502)
+    let result
+    try {
+      result = await textProvider.generateText({ systemPrompt, userPrompt, maxTokens: 1024 })
+    } catch (err) {
+      console.error('brand-dna-assist: falha ao chamar o provedor de IA.', err instanceof ProviderRequestError ? err.message : err)
+      return json({ error: 'Não conseguimos gerar as sugestões agora. Você pode tentar novamente em alguns instantes ou continuar preenchendo manualmente.' }, 502)
     }
-
-    const anthropicJson = await anthropicRes.json()
-    const text = anthropicJson?.content?.[0]?.text ?? ''
 
     let suggestions: unknown
     try {
-      const match = text.match(/\{[\s\S]*\}/)
-      suggestions = JSON.parse(match ? match[0] : text)
+      const match = result.text.match(/\{[\s\S]*\}/)
+      suggestions = JSON.parse(match ? match[0] : result.text)
     } catch {
-      console.error('Falha ao parsear resposta da IA', text)
-      return json({ error: 'A IA retornou uma resposta em formato inesperado. Tente novamente.' }, 502)
+      console.error('Falha ao parsear resposta da IA', result.text)
+      return json({ error: 'Não conseguimos gerar as sugestões agora. Você pode tentar novamente em alguns instantes ou continuar preenchendo manualmente.' }, 502)
     }
 
     await supabase.rpc('log_audit_event', {

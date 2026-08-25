@@ -17,7 +17,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export function ListView({ workspaceId, filters }: { workspaceId: string; filters: ContentFilters }) {
+interface EmptyStateConfig {
+  title: string
+  description: string
+  ctaLabel: string
+  onCreate?: () => void
+}
+
+export function ListView({
+  workspaceId,
+  filters,
+  emptyState,
+}: {
+  workspaceId: string
+  filters: ContentFilters
+  emptyState: EmptyStateConfig
+}) {
   const { activeWorkspace, hasRole } = useWorkspace()
   const queryClient = useQueryClient()
   const [confirmDelete, setConfirmDelete] = React.useState<ContentRow | null>(null)
@@ -66,8 +81,10 @@ export function ListView({ workspaceId, filters }: { workspaceId: string; filter
   if (rows.length === 0) {
     return (
       <ContentEmptyState
-        title="Você ainda não criou nenhum conteúdo."
-        description="Comece criando seu primeiro post, carrossel ou reel."
+        title={emptyState.title}
+        description={emptyState.description}
+        ctaLabel={emptyState.ctaLabel}
+        onCreate={emptyState.onCreate}
       />
     )
   }

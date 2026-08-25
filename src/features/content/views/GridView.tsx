@@ -14,7 +14,22 @@ const ASPECT_CLASS: Record<string, string> = {
   '9:16': 'aspect-[9/16]',
 }
 
-export function GridView({ workspaceId, filters }: { workspaceId: string; filters: ContentFilters }) {
+interface EmptyStateConfig {
+  title: string
+  description: string
+  ctaLabel: string
+  onCreate?: () => void
+}
+
+export function GridView({
+  workspaceId,
+  filters,
+  emptyState,
+}: {
+  workspaceId: string
+  filters: ContentFilters
+  emptyState: EmptyStateConfig
+}) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['contents', 'grade', workspaceId, filters],
     initialPageParam: 0,
@@ -40,8 +55,10 @@ export function GridView({ workspaceId, filters }: { workspaceId: string; filter
   if (rows.length === 0) {
     return (
       <ContentEmptyState
-        title="Você ainda não criou nenhum conteúdo."
-        description="Comece criando seu primeiro post, carrossel ou reel."
+        title={emptyState.title}
+        description={emptyState.description}
+        ctaLabel={emptyState.ctaLabel}
+        onCreate={emptyState.onCreate}
       />
     )
   }

@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { NAV_ITEMS } from '@/app/nav-items'
 import { OnboardingWidget } from '@/features/onboarding/OnboardingWidget'
+import { fetchOnboardingState } from '@/features/onboarding/api'
 
 interface DashboardData {
   creditBalance: number
@@ -63,6 +64,21 @@ export function DashboardPage() {
   const { data, isLoading } = useDashboardData(activeWorkspace?.id ?? null)
   const fullName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email
 
+  // Mesma queryKey do OnboardingWidget — o React Query dedupe a chamada,
+  // nenhuma requisição extra. Só usada aqui para decidir a ordem do
+  // layout (onboarding em destaque enquanto as etapas obrigatórias não
+  // estiverem concluídas); o estado real e a UI do checklist continuam
+  // inteiramente dentro do OnboardingWidget.
+  const { data: onboarding } = useQuery({
+    queryKey: ['onboarding-state', activeWorkspace?.id],
+    queryFn: () => fetchOnboardingState(activeWorkspace!.id),
+    enabled: !!activeWorkspace,
+  })
+  const onboardingActive =
+    !!onboarding &&
+    !onboarding.onboarding_dismissed &&
+    !(onboarding.brand_dna_done && onboarding.first_content_done && onboarding.instagram_connected_done && onboarding.first_publish_done)
+
   if (workspaceLoading) {
     return (
       <div className="space-y-6">
@@ -87,75 +103,83 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Saldo de créditos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-16" /> : (
-              <p className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{data?.creditBalance ?? 0}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Conteúdos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <>
-                <p className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{data?.contentCount ?? 0}</p>
-                <p className="mt-1 text-xs text-ink-400">
-                  {data?.contentRascunho ?? 0} rascunho · {data?.contentAgendado ?? 0} agendado · {data?.contentPublicado ?? 0} publicado
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Contas Instagram</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="flex items-center gap-2">
-                <p className="text-3xl font-semibold text-ink-900 dark:text-ink-50">
-                  {data?.instagramConnectedCount ?? 0}
-                </p>
-                <Badge variant={data?.instagramConnectedCount ? 'success' : 'neutral'}>
-                  {data?.instagramConnectedCount ? 'conectado' : 'nenhuma conectada'}
-                </Badge>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {onboardingActive && activeWorkspace && (
+        <div className="mx-auto w-full max-w-2xl">
+          <OnboardingWidget workspaceId={activeWorkspace.id} />
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Atalhos</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="flex items-center gap-3 rounded-lg border border-ink-200 p-3 text-sm font-medium text-ink-700 transition-colors hover:border-brand-300 hover:bg-brand-50 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
-              >
-                <span className="text-lg">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
+      <div className={onboardingActive ? 'space-y-8 opacity-90' : 'space-y-8'}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Saldo de créditos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-8 w-16" /> : (
+                <p className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{data?.creditBalance ?? 0}</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Conteúdos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <p className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{data?.contentCount ?? 0}</p>
+                  <p className="mt-1 text-xs text-ink-400">
+                    {data?.contentRascunho ?? 0} rascunho · {data?.contentAgendado ?? 0} agendado · {data?.contentPublicado ?? 0} publicado
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Contas Instagram</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-3xl font-semibold text-ink-900 dark:text-ink-50">
+                    {data?.instagramConnectedCount ?? 0}
+                  </p>
+                  <Badge variant={data?.instagramConnectedCount ? 'success' : 'neutral'}>
+                    {data?.instagramConnectedCount ? 'conectado' : 'nenhuma conectada'}
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        {activeWorkspace && <OnboardingWidget workspaceId={activeWorkspace.id} />}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className={onboardingActive ? 'lg:col-span-3' : 'lg:col-span-2'}>
+            <CardHeader>
+              <CardTitle>Atalhos</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="flex items-center gap-3 rounded-lg border border-ink-200 p-3 text-sm font-medium text-ink-700 transition-colors hover:border-brand-300 hover:bg-brand-50 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+
+          {!onboardingActive && activeWorkspace && <OnboardingWidget workspaceId={activeWorkspace.id} />}
+        </div>
       </div>
 
       <Card>

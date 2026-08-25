@@ -222,16 +222,17 @@ export function AiCreatePage() {
         <Card className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
           <CardContent className="flex items-center justify-between gap-4 py-4">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              Seu DNA da marca ainda não está completo. A IA vai gerar conteúdo mais genérico até você preenchê-lo.
+              Antes de gerar conteúdo com IA, o POSTTOU precisa conhecer sua marca — leva menos de 2 minutos com a IA
+              te ajudando a preencher.
             </p>
-            <Button size="sm" variant="outline" onClick={() => navigate('/dna-da-marca')}>
-              Completar DNA
+            <Button size="sm" onClick={() => navigate('/dna-da-marca')}>
+              Criar meu DNA
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {!response && (
+      {!response && brandReady && (
         <>
           <div className="flex flex-col gap-3">
             <Label>O que você quer criar?</Label>
