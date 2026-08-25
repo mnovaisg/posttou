@@ -42,8 +42,7 @@ export function LandingHero() {
             minutos.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-ink-600 dark:text-ink-300 lg:mx-0">
-            O POSTTOU conhece sua marca, cria conteúdo com texto + arte e ajuda a manter seu Instagram ativo
-            sem você começar do zero todos os dias.
+            Conteúdo bonito, estratégico e com a sua cara todos os dias — sem equipe e sem complicação.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 flex flex-col items-center gap-3 lg:items-start">
