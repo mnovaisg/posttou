@@ -3,37 +3,36 @@ import * as React from 'react'
 type Slide = {
   id: string
   kind: string
-  caption: string
-  gradient: string
+  image: string
+  alt: string
 }
 
-// Demonstrações ilustrativas próprias do POSTTOU (nenhum asset/copy de
-// terceiros) — estrutura pensada para ser trocada facilmente por
-// conteúdos reais gerados por clientes quando existirem.
+// Artes reais do POSTTOU (com texto embutido na própria imagem) — ordem
+// pensada para cobrir os principais perfis de cliente.
 const SLIDES: Slide[] = [
   {
-    id: 'educativo',
-    kind: 'Educativo',
-    caption: '5 dicas para vender mais no Instagram esta semana.',
-    gradient: 'linear-gradient(135deg, #6748fa 0%, #8b5cf6 100%)',
+    id: 'clinica',
+    kind: 'Clínica',
+    image: '/images/carrossel/clinica.png',
+    alt: 'Exemplo de conteúdo criado com o POSTTOU para uma clínica',
   },
   {
-    id: 'promocional',
-    kind: 'Promocional',
-    caption: 'Lançamento: conheça a nova coleção da marca.',
-    gradient: 'linear-gradient(135deg, #c026d3 0%, #f97316 100%)',
+    id: 'advocacia',
+    kind: 'Advocacia',
+    image: '/images/carrossel/advocacia.png',
+    alt: 'Exemplo de conteúdo criado com o POSTTOU para um escritório de advocacia',
   },
   {
-    id: 'bastidores',
-    kind: 'Bastidores',
-    caption: 'Um dia por trás da produção do seu conteúdo.',
-    gradient: 'linear-gradient(135deg, #f97316 0%, #facc15 100%)',
+    id: 'influencer',
+    kind: 'Influencer',
+    image: '/images/carrossel/influencer.png',
+    alt: 'Exemplo de conteúdo criado com o POSTTOU para um influenciador',
   },
   {
-    id: 'carrossel',
-    kind: 'Carrossel',
-    caption: 'Guia rápido: como aproveitar o produto em 3 passos.',
-    gradient: 'linear-gradient(135deg, #7c3aed 0%, #c026d3 100%)',
+    id: 'negocios',
+    kind: 'Outros Negócios',
+    image: '/images/carrossel/negocios.png',
+    alt: 'Exemplo de conteúdo criado com o POSTTOU para outros negócios',
   },
 ]
 
@@ -64,8 +63,6 @@ export function LandingContentCarousel() {
     return () => window.clearInterval(id)
   }, [paused, reducedMotion])
 
-  const slide = SLIDES[index]
-
   return (
     <div
       className="mx-auto w-full max-w-sm"
@@ -75,21 +72,23 @@ export function LandingContentCarousel() {
       onBlur={() => setPaused(false)}
     >
       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-ink-200 bg-white shadow-lg dark:border-ink-800 dark:bg-ink-900">
-        <div
-          className="flex h-2/3 items-center justify-center p-6 text-center transition-[background] duration-500"
-          style={{ background: slide.gradient }}
-        >
-          <span className="text-sm font-semibold uppercase tracking-wide text-white/90">{slide.kind}</span>
-        </div>
-        <div className="flex h-1/3 flex-col justify-center gap-1 px-5">
-          <p className="line-clamp-2 text-sm font-medium text-ink-800 dark:text-ink-100">{slide.caption}</p>
-        </div>
+        {SLIDES.map((s, i) => (
+          <img
+            key={s.id}
+            src={s.image}
+            alt={s.alt}
+            className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-500 ${
+              i === index ? 'opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+            loading={i === 0 ? 'eager' : 'lazy'}
+          />
+        ))}
 
         <button
           type="button"
           aria-label="Exemplo anterior"
           onClick={() => setIndex((i) => (i - 1 + SLIDES.length) % SLIDES.length)}
-          className="absolute left-2 top-[33%] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-ink-700 shadow hover:bg-white dark:bg-ink-950/70 dark:text-ink-100"
+          className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-ink-700 shadow hover:bg-white dark:bg-ink-950/70 dark:text-ink-100"
         >
           ‹
         </button>
@@ -97,7 +96,7 @@ export function LandingContentCarousel() {
           type="button"
           aria-label="Próximo exemplo"
           onClick={() => setIndex((i) => (i + 1) % SLIDES.length)}
-          className="absolute right-2 top-[33%] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-ink-700 shadow hover:bg-white dark:bg-ink-950/70 dark:text-ink-100"
+          className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-ink-700 shadow hover:bg-white dark:bg-ink-950/70 dark:text-ink-100"
         >
           ›
         </button>
