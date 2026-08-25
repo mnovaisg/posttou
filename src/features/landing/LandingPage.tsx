@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { LandingHeader } from '@/features/landing/LandingHeader'
 import { LandingHero } from '@/features/landing/LandingHero'
+import { LandingIndicators } from '@/features/landing/LandingIndicators'
 import { LandingBenefits, LandingHowItWorks } from '@/features/landing/LandingBenefits'
 import { LandingFeatures } from '@/features/landing/LandingFeatures'
 import { LandingAudience } from '@/features/landing/LandingAudience'
@@ -80,6 +81,7 @@ export function LandingPage() {
       <LandingHeader />
       <main>
         <LandingHero />
+        <LandingIndicators />
         <LandingBenefits />
         <LandingHowItWorks />
         <LandingFeatures />

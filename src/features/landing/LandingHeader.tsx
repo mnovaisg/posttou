@@ -43,7 +43,7 @@ export function LandingHeader() {
             Entrar
           </Link>
           <Button asChild onClick={() => trackEvent('landing_cta_start_free_click', { placement: 'header' })}>
-            <Link to="/cadastro">Começar grátis</Link>
+            <Link to="/cadastro">Testar grátis</Link>
           </Button>
         </div>
 
@@ -77,7 +77,7 @@ export function LandingHeader() {
                 Entrar
               </Link>
               <Button asChild onClick={() => trackEvent('landing_cta_start_free_click', { placement: 'header_mobile' })}>
-                <Link to="/cadastro">Começar grátis</Link>
+                <Link to="/cadastro">Testar grátis</Link>
               </Button>
             </div>
           </nav>

@@ -13,9 +13,9 @@ export function LandingCta() {
       </p>
       <div className="mt-8 flex flex-col items-center gap-3">
         <Button size="lg" asChild onClick={() => trackEvent('landing_cta_start_free_click', { placement: 'final' })}>
-          <Link to="/cadastro">Começar grátis</Link>
+          <Link to="/cadastro">Testar grátis</Link>
         </Button>
-        <p className="text-sm text-ink-500">3 dias grátis · sem cartão</p>
+        <p className="text-sm text-ink-500">3 dias grátis · Sem cartão</p>
       </div>
     </section>
   )
