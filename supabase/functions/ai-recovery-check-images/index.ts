@@ -14,6 +14,16 @@
 // completeImageGeneration() — a mesma função usada por ai-webhook e
 // ai-check-image. Nunca gera uma segunda imagem, nunca cria uma segunda
 // task na Kie — só consulta o status da task já existente.
+//
+// Bug real encontrado no teste do DNA Visual (2026-08-25): mesmo depois
+// deste worker completar as 3 gerações de imagem de uma rodada A/B/C, a
+// tabela visual_dna_option_sets ficava presa em 'generating' para sempre,
+// porque só o polling do frontend (VisualDnaPage) chamava
+// sync_visual_dna_option_set() — se a aba fechasse/o app fosse pro
+// background antes da conclusão real, nada mais sincronizava. Agora, ao
+// concluir uma geração vinculada a uma direção visual, este worker
+// também chama essa MESMA RPC (sem criar um segundo pipeline de
+// conclusão) para reconciliar o option_set correspondente.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { getMediaProvider, ProviderNotConfiguredError } from '../_shared/ai-gateway/gateway.ts'
 import { completeImageGeneration } from '../_shared/ai-gateway/complete-image-generation.ts'
@@ -73,6 +83,39 @@ Deno.serve(async (req) => {
     }
     const result = await completeImageGeneration(admin, mediaProvider, generation)
     results.push({ id: row.id, status: result.status })
+
+    // DNA Visual: se esta geração pertence a uma direção (A/B/C) de uma
+    // rodada, reconcilia visual_dna_option_sets sem depender de o
+    // navegador estar aberto. Reaproveita a MESMA RPC que o polling do
+    // frontend já chama (sync_visual_dna_option_set) — nenhum segundo
+    // pipeline de conclusão, nenhuma nova imagem, nenhum novo débito (a
+    // RPC só lê ai_generations já concluídos e só reembolsa se a rodada
+    // inteira falhou, com guarda de idempotência própria).
+    if (result.status === 'success' || result.status === 'failed') {
+      const { data: option } = await admin
+        .from('visual_dna_options')
+        .select('option_set_id')
+        .eq('ai_generation_id', row.id)
+        .maybeSingle()
+
+      if (option?.option_set_id) {
+        const { data: syncedSet, error: syncError } = await admin.rpc('sync_visual_dna_option_set', {
+          p_option_set_id: option.option_set_id,
+        })
+        if (syncError) {
+          console.error('ai-recovery-check-images: falha ao sincronizar visual_dna_option_set.', syncError)
+        } else if (syncedSet && syncedSet.status !== 'generating') {
+          await admin.from('audit_logs').insert({
+            workspace_id: syncedSet.workspace_id,
+            user_id: null,
+            action: 'visual_dna_recovery_sync',
+            resource_type: 'visual_dna_option_sets',
+            resource_id: syncedSet.id,
+            metadata: { status: syncedSet.status, triggered_by: 'ai-recovery-check-images' },
+          })
+        }
+      }
+    }
   }
 
   return json({ claimed: claimed.length, results })

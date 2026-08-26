@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { captureException } from '@/lib/observability'
+import { GenerationErrorBoundary } from '@/features/brand-visual-dna/GenerationErrorBoundary'
 import {
   addReference,
   analyzeReference,
@@ -66,16 +68,34 @@ export function VisualDnaPage() {
   })
 
   // Poll o estado da rodada (imagens assíncronas) enquanto "generating".
+  // Nunca deixa uma falha de rede/RPC virar rejeição não tratada — só
+  // tenta de novo no próximo tick. Sincroniza uma vez imediatamente ao
+  // entrar/retornar à tela (sem esperar os 3s do primeiro tick), para
+  // refletir na hora um estado que o recovery de backend já resolveu
+  // enquanto a aba estava fechada.
   React.useEffect(() => {
     if (!isGenerating || !optionSet) return
-    const interval = setInterval(async () => {
-      const updated = await syncOptionSet(optionSet.id)
-      queryClient.setQueryData(['visual-dna-latest-set', workspaceId], updated)
-      if (updated.status !== 'generating') {
-        queryClient.invalidateQueries({ queryKey: ['visual-dna-options', optionSet.id] })
+    let cancelled = false
+
+    async function runSync() {
+      try {
+        const updated = await syncOptionSet(optionSet!.id)
+        if (cancelled) return
+        queryClient.setQueryData(['visual-dna-latest-set', workspaceId], updated)
+        if (updated.status !== 'generating') {
+          queryClient.invalidateQueries({ queryKey: ['visual-dna-options', optionSet!.id] })
+        }
+      } catch (err) {
+        captureException(err, { area: 'visual_dna_sync_poll', optionSetId: optionSet!.id })
       }
-    }, 3000)
-    return () => clearInterval(interval)
+    }
+
+    void runSync()
+    const interval = setInterval(runSync, 3000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [isGenerating, optionSet, queryClient, workspaceId])
 
   const generateMutation = useMutation({
@@ -171,91 +191,96 @@ export function VisualDnaPage() {
 
         {!canEdit && <p className="text-sm text-ink-400">Somente owner/admin pode gerar ou confirmar direções visuais.</p>}
 
-        {canEdit && !optionSet && (
-          <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
-            {generateMutation.isPending ? 'Gerando…' : 'Gerar minhas 3 direções visuais'}
-          </Button>
-        )}
+        <GenerationErrorBoundary>
+          {canEdit && !optionSet && (
+            <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
+              {generateMutation.isPending ? 'Gerando…' : 'Gerar minhas 3 direções visuais'}
+            </Button>
+          )}
 
-        {canEdit && optionSet && (optionSet.status === 'dismissed' || optionSet.status === 'failed') && (
-          <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
-            {generateMutation.isPending ? 'Gerando…' : 'Gerar novamente'}
-          </Button>
-        )}
+          {canEdit && optionSet && (optionSet.status === 'dismissed' || optionSet.status === 'failed') && (
+            <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
+              {generateMutation.isPending ? 'Gerando…' : 'Gerar novamente'}
+            </Button>
+          )}
 
-        {generateMutation.isError && (
-          <p className="mt-2 text-sm text-danger-500">{(generateMutation.error as Error).message}</p>
-        )}
+          {generateMutation.isError && (
+            <p className="mt-2 text-sm text-danger-500">{(generateMutation.error as Error).message}</p>
+          )}
 
-        {isGenerating && (
-          <div className="flex items-center gap-2 text-sm text-ink-500">
-            <span className="h-3 w-3 animate-pulse rounded-full bg-brand-500" />
-            Gerando as 3 direções (isso pode levar até 1 minuto)…
-          </div>
-        )}
-
-        {optionSet?.status === 'ready' && optionsQuery.data && (
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {optionsQuery.data.map((opt) => (
-                <OptionCard
-                  key={opt.id}
-                  option={opt}
-                  selected={selectedOption?.id === opt.id}
-                  onSelect={() => setSelectedOption(opt)}
-                  canEdit={canEdit}
-                />
-              ))}
+          {isGenerating && (
+            <div className="flex items-start gap-2 text-sm text-ink-500">
+              <span className="mt-1 h-3 w-3 shrink-0 animate-pulse rounded-full bg-brand-500" />
+              <p>
+                Gerando suas 3 direções visuais... Isso pode levar alguns minutos. Você pode continuar usando o
+                POSTTOU e voltar depois.
+              </p>
             </div>
+          )}
 
-            {canEdit && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-4 dark:border-ink-800">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setFeedbackOpen((v) => !v)}
-                >
-                  Nenhum desses
-                </Button>
-                <Button
-                  type="button"
-                  disabled={!selectedOption || confirmMutation.isPending}
-                  onClick={() => selectedOption && confirmMutation.mutate(selectedOption.id)}
-                >
-                  {confirmMutation.isPending ? 'Confirmando…' : 'Confirmar direção escolhida'}
-                </Button>
+          {optionSet?.status === 'ready' && optionsQuery.data && (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {optionsQuery.data.map((opt) => (
+                  <OptionCard
+                    key={opt.id}
+                    option={opt}
+                    selected={selectedOption?.id === opt.id}
+                    onSelect={() => setSelectedOption(opt)}
+                    canEdit={canEdit}
+                  />
+                ))}
               </div>
-            )}
 
-            {feedbackOpen && (
-              <div className="rounded-xl border border-ink-200 p-4 dark:border-ink-700">
-                <p className="mb-2 text-sm text-ink-600 dark:text-ink-300">O que não combinou com nenhuma das 3 opções?</p>
-                <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder="Opcional" />
-                <div className="mt-2 flex justify-end gap-2">
-                  <Button type="button" variant="ghost" onClick={() => setFeedbackOpen(false)}>
-                    Cancelar
+              {canEdit && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-4 dark:border-ink-800">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setFeedbackOpen((v) => !v)}
+                  >
+                    Nenhum desses
                   </Button>
                   <Button
                     type="button"
-                    onClick={async () => {
-                      await dismissMutation.mutateAsync(feedback)
-                      setFeedbackOpen(false)
-                      setFeedback('')
-                      setSelectedOption(null)
-                    }}
-                    disabled={dismissMutation.isPending}
+                    disabled={!selectedOption || confirmMutation.isPending}
+                    onClick={() => selectedOption && confirmMutation.mutate(selectedOption.id)}
                   >
-                    Descartar e tentar de novo
+                    {confirmMutation.isPending ? 'Confirmando…' : 'Confirmar direção escolhida'}
                   </Button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {confirmMutation.isSuccess && (
-              <ConfirmationSummary attributes={(confirmMutation.data.attributes as Record<string, string>) ?? {}} />
-            )}
-          </div>
-        )}
+              {feedbackOpen && (
+                <div className="rounded-xl border border-ink-200 p-4 dark:border-ink-700">
+                  <p className="mb-2 text-sm text-ink-600 dark:text-ink-300">O que não combinou com nenhuma das 3 opções?</p>
+                  <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder="Opcional" />
+                  <div className="mt-2 flex justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={() => setFeedbackOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        await dismissMutation.mutateAsync(feedback)
+                        setFeedbackOpen(false)
+                        setFeedback('')
+                        setSelectedOption(null)
+                      }}
+                      disabled={dismissMutation.isPending}
+                    >
+                      Descartar e tentar de novo
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {confirmMutation.isSuccess && (
+                <ConfirmationSummary attributes={(confirmMutation.data.attributes as Record<string, string>) ?? {}} />
+              )}
+            </div>
+          )}
+        </GenerationErrorBoundary>
       </section>
     </div>
   )
