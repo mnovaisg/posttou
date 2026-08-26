@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { Button } from '@/components/ui/button'
@@ -219,66 +220,66 @@ export function VisualDnaPage() {
           )}
 
           {optionSet?.status === 'ready' && optionsQuery.data && (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                {optionsQuery.data.map((opt) => (
-                  <OptionCard
-                    key={opt.id}
-                    option={opt}
-                    selected={selectedOption?.id === opt.id}
-                    onSelect={() => setSelectedOption(opt)}
-                    canEdit={canEdit}
-                  />
-                ))}
-              </div>
-
-              {canEdit && (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-4 dark:border-ink-800">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setFeedbackOpen((v) => !v)}
-                  >
-                    Nenhum desses
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={!selectedOption || confirmMutation.isPending}
-                    onClick={() => selectedOption && confirmMutation.mutate(selectedOption.id)}
-                  >
-                    {confirmMutation.isPending ? 'Confirmando…' : 'Confirmar direção escolhida'}
-                  </Button>
+            confirmMutation.isSuccess ? (
+              <ConfirmationSuccess attributes={(confirmMutation.data.attributes as Record<string, string>) ?? {}} />
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  {optionsQuery.data.map((opt) => (
+                    <OptionCard
+                      key={opt.id}
+                      option={opt}
+                      selected={selectedOption?.id === opt.id}
+                      onSelect={() => setSelectedOption(opt)}
+                      canEdit={canEdit}
+                    />
+                  ))}
                 </div>
-              )}
 
-              {feedbackOpen && (
-                <div className="rounded-xl border border-ink-200 p-4 dark:border-ink-700">
-                  <p className="mb-2 text-sm text-ink-600 dark:text-ink-300">O que não combinou com nenhuma das 3 opções?</p>
-                  <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder="Opcional" />
-                  <div className="mt-2 flex justify-end gap-2">
-                    <Button type="button" variant="ghost" onClick={() => setFeedbackOpen(false)}>
-                      Cancelar
+                {canEdit && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-4 dark:border-ink-800">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setFeedbackOpen((v) => !v)}
+                    >
+                      Nenhum desses
                     </Button>
                     <Button
                       type="button"
-                      onClick={async () => {
-                        await dismissMutation.mutateAsync(feedback)
-                        setFeedbackOpen(false)
-                        setFeedback('')
-                        setSelectedOption(null)
-                      }}
-                      disabled={dismissMutation.isPending}
+                      disabled={!selectedOption || confirmMutation.isPending}
+                      onClick={() => selectedOption && confirmMutation.mutate(selectedOption.id)}
                     >
-                      Descartar e tentar de novo
+                      {confirmMutation.isPending ? 'Confirmando…' : 'Confirmar direção escolhida'}
                     </Button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {confirmMutation.isSuccess && (
-                <ConfirmationSummary attributes={(confirmMutation.data.attributes as Record<string, string>) ?? {}} />
-              )}
-            </div>
+                {feedbackOpen && (
+                  <div className="rounded-xl border border-ink-200 p-4 dark:border-ink-700">
+                    <p className="mb-2 text-sm text-ink-600 dark:text-ink-300">O que não combinou com nenhuma das 3 opções?</p>
+                    <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={2} placeholder="Opcional" />
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button type="button" variant="ghost" onClick={() => setFeedbackOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          await dismissMutation.mutateAsync(feedback)
+                          setFeedbackOpen(false)
+                          setFeedback('')
+                          setSelectedOption(null)
+                        }}
+                        disabled={dismissMutation.isPending}
+                      >
+                        Descartar e tentar de novo
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
           )}
         </GenerationErrorBoundary>
       </section>
@@ -286,17 +287,112 @@ export function VisualDnaPage() {
   )
 }
 
-function ConfirmationSummary({ attributes }: { attributes: Record<string, string> }) {
+// Resumo curto em linguagem humana (ex.: "Acolhedor · Orgânico · Limpo ·
+// Baixo contraste") — os atributos completos continuam disponíveis em
+// "Ver detalhes", sem remover nenhum dado estruturado.
+// Rótulos curtos para o vocabulário fixo real (espelhado em
+// VISUAL_DNA_VOCABULARY) — fallback genérico cobre qualquer valor futuro
+// que ainda não tenha um rótulo dedicado aqui.
+const TONE_VISUAL_LABELS: Record<string, string> = {
+  sofisticado: 'Sofisticado',
+  acolhedor: 'Acolhedor',
+  energetico: 'Energético',
+  profissional: 'Profissional',
+  divertido: 'Divertido',
+}
+const VISUAL_DIRECTION_LABELS: Record<string, string> = {
+  minimalista: 'Minimalista',
+  editorial: 'Editorial',
+  vibrante_colorido: 'Vibrante',
+  organico_natural: 'Orgânico',
+  corporativo_serio: 'Corporativo',
+  ousado_moderno: 'Ousado',
+}
+const GRAPHIC_DENSITY_LABELS: Record<string, string> = {
+  limpo: 'Limpo',
+  moderado: 'Moderado',
+  elementos_grafico_ricos: 'Rico em elementos',
+}
+const CONTRAST_LEVEL_LABELS: Record<string, string> = {
+  baixo: 'Baixo',
+  medio: 'Médio',
+  alto: 'Alto',
+}
+
+function buildHumanVisualSummary(attributes: Record<string, string>): string[] {
+  const humanize = (raw: string) => raw.replace(/_/g, ' ')
+  const capitalize = (text: string) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : text)
+  const parts: string[] = []
+
+  if (attributes.tone_visual) {
+    parts.push(TONE_VISUAL_LABELS[attributes.tone_visual] ?? capitalize(humanize(attributes.tone_visual)))
+  }
+  if (attributes.visual_direction) {
+    parts.push(
+      VISUAL_DIRECTION_LABELS[attributes.visual_direction] ??
+        capitalize(humanize(attributes.visual_direction).split(' ')[0]),
+    )
+  }
+  if (attributes.graphic_density) {
+    parts.push(GRAPHIC_DENSITY_LABELS[attributes.graphic_density] ?? capitalize(humanize(attributes.graphic_density)))
+  }
+  if (attributes.contrast_level) {
+    const label = CONTRAST_LEVEL_LABELS[attributes.contrast_level] ?? capitalize(humanize(attributes.contrast_level))
+    parts.push(`${label} contraste`)
+  }
+
+  return parts
+}
+
+// Item pré-beta: cada etapa concluída precisa conduzir claramente para a
+// próxima — reaproveita a mesma jornada do onboarding (get_onboarding_state
+// já marca visual_dna_done assim que confirm_visual_dna_option roda), sem
+// nenhuma tabela/flag nova. "Criar meu primeiro conteúdo" leva direto para
+// /criar, que já usa Brand DNA + DNA Visual confirmados automaticamente
+// (ai-generate-image lê brand_visual_dna ativo no backend).
+function ConfirmationSuccess({ attributes }: { attributes: Record<string, string> }) {
+  const navigate = useNavigate()
+  const [showDetails, setShowDetails] = React.useState(false)
+  const summary = buildHumanVisualSummary(attributes)
+
   return (
-    <div className="rounded-xl border border-success-200 bg-success-50 p-4 text-sm text-success-800 dark:border-success-800 dark:bg-success-950 dark:text-success-200">
-      <p className="mb-2 font-medium">DNA visual confirmado! A partir de agora, o Criar com IA vai considerar:</p>
-      <ul className="list-inside list-disc space-y-1">
-        {Object.entries(attributes).map(([key, value]) => (
-          <li key={key}>
-            {VISUAL_DNA_ATTRIBUTE_LABELS[key] ?? key}: {String(value).replace(/_/g, ' ')}
-          </li>
-        ))}
-      </ul>
+    <div className="flex flex-col items-center gap-4 rounded-2xl border border-success-200 bg-success-50 p-8 text-center dark:border-success-800 dark:bg-success-950">
+      <span className="text-3xl" aria-hidden>
+        ✨
+      </span>
+      <h3 className="text-lg font-semibold text-ink-900 dark:text-ink-50">Seu estilo visual está pronto</h3>
+      <p className="text-sm text-ink-600 dark:text-ink-300">
+        Agora o POSTTOU já sabe como sua marca deve se comunicar e como ela deve parecer.
+      </p>
+      {summary.length > 0 && (
+        <p className="text-sm font-medium text-success-800 dark:text-success-200">{summary.join(' · ')}</p>
+      )}
+
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button onClick={() => navigate('/criar')}>Criar meu primeiro conteúdo</Button>
+        <Button variant="outline" onClick={() => navigate('/')}>
+          Fazer isso depois
+        </Button>
+      </div>
+
+      <button
+        type="button"
+        className="text-xs text-ink-400 hover:underline"
+        onClick={() => setShowDetails((v) => !v)}
+      >
+        {showDetails ? 'Ocultar detalhes do DNA Visual' : 'Ver detalhes do DNA Visual'}
+      </button>
+
+      {showDetails && (
+        <ul className="mt-2 grid w-full grid-cols-1 gap-2 text-left text-sm text-ink-600 dark:text-ink-300 sm:grid-cols-2">
+          {Object.entries(attributes).map(([key, value]) => (
+            <li key={key} className="rounded-lg bg-white px-3 py-2 dark:bg-ink-900">
+              <span className="font-medium text-ink-800 dark:text-ink-100">{VISUAL_DNA_ATTRIBUTE_LABELS[key] ?? key}:</span>{' '}
+              {String(value).replace(/_/g, ' ')}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
