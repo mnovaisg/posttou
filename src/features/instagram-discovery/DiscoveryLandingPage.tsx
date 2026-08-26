@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PosttouMark } from '@/components/brand/PosttouMark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +29,7 @@ const PROGRESS_MESSAGES = [
 
 export function DiscoveryLandingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const [stage, setStage] = React.useState<Stage>('handle')
   const [handleInput, setHandleInput] = React.useState('')
@@ -36,41 +37,11 @@ export function DiscoveryLandingPage() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [result, setResult] = React.useState<DiscoveryStartResult | DiscoveryGetResult | null>(null)
 
-  React.useEffect(() => {
-    const existingToken = readDiscoveryToken()
-    if (!existingToken) return
-    setStage('loading')
-    getDiscoveryStatus(existingToken)
-      .then((res) => {
-        if (res.status === 'ready' && res.dna) {
-          setResult(res)
-          setStage('result')
-        } else {
-          clearDiscoveryToken()
-          setStage('handle')
-        }
-      })
-      .catch(() => {
-        clearDiscoveryToken()
-        setStage('handle')
-      })
-  }, [])
-
-  React.useEffect(() => {
-    if (stage !== 'loading') return
-    setProgressIndex(0)
-    const interval = window.setInterval(() => {
-      setProgressIndex((i) => Math.min(i + 1, PROGRESS_MESSAGES.length - 1))
-    }, 1800)
-    return () => window.clearInterval(interval)
-  }, [stage])
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function runDiscovery(handle: string) {
     setErrorMessage(null)
     setStage('loading')
     try {
-      const res = await startDiscovery(handleInput)
+      const res = await startDiscovery(handle)
       if (res.status === 'failed') {
         setErrorMessage(DISCOVERY_ERROR_MESSAGES[res.error ?? ''] ?? res.message ?? 'Não foi possível analisar esse perfil.')
         setStage('error')
@@ -87,6 +58,62 @@ export function DiscoveryLandingPage() {
       setErrorMessage(err instanceof Error ? err.message : 'Não foi possível analisar esse perfil.')
       setStage('error')
     }
+  }
+
+  // Na entrada: primeiro tenta restaurar uma sessão já em andamento
+  // (sessionStorage); só se não houver nenhuma é que considera o @ vindo
+  // da landing (?handle=) e dispara a análise automaticamente — nunca
+  // sobrescreve uma sessão real já pronta.
+  React.useEffect(() => {
+    let cancelled = false
+
+    async function init() {
+      const existingToken = readDiscoveryToken()
+      if (existingToken) {
+        setStage('loading')
+        try {
+          const res = await getDiscoveryStatus(existingToken)
+          if (cancelled) return
+          if (res.status === 'ready' && res.dna) {
+            setResult(res)
+            setStage('result')
+            return
+          }
+          clearDiscoveryToken()
+          setStage('handle')
+        } catch {
+          if (cancelled) return
+          clearDiscoveryToken()
+          setStage('handle')
+        }
+      }
+
+      const handleFromLanding = searchParams.get('handle')
+      if (!cancelled && handleFromLanding) {
+        setHandleInput(handleFromLanding)
+        void runDiscovery(handleFromLanding)
+      }
+    }
+
+    void init()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  React.useEffect(() => {
+    if (stage !== 'loading') return
+    setProgressIndex(0)
+    const interval = window.setInterval(() => {
+      setProgressIndex((i) => Math.min(i + 1, PROGRESS_MESSAGES.length - 1))
+    }, 1800)
+    return () => window.clearInterval(interval)
+  }, [stage])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await runDiscovery(handleInput)
   }
 
   function reset() {
@@ -163,12 +190,14 @@ export function DiscoveryLandingPage() {
         {stage === 'not_configured' && (
           <Card>
             <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-              <p className="text-sm text-ink-600 dark:text-ink-300">
-                A análise automática pelo Instagram ainda não está disponível neste ambiente.
+              <p className="text-sm font-medium text-ink-900 dark:text-ink-50">
+                Vamos conhecer sua marca de outro jeito
               </p>
-              <Link to="/cadastro" className="text-sm font-medium text-brand-600 hover:underline">
-                Criar conta sem análise automática
-              </Link>
+              <p className="text-sm text-ink-600 dark:text-ink-300">
+                Ainda não conseguimos analisar esse perfil automaticamente. Crie sua conta grátis e conte em
+                poucas frases o que sua marca faz — o POSTTOU monta o DNA da mesma forma.
+              </p>
+              <Button onClick={() => navigate('/cadastro')}>Criar minha conta grátis</Button>
             </CardContent>
           </Card>
         )}

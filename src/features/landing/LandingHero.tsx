@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { trackEvent } from '@/lib/analytics'
-import { normalizeInstagramHandle, setPendingInstagramHandle } from '@/lib/pendingInstagramHandle'
+import { normalizeInstagramHandle } from '@/lib/pendingInstagramHandle'
 import { LandingContentCarousel } from '@/features/landing/LandingContentCarousel'
 
 export function LandingHero() {
@@ -25,9 +25,11 @@ export function LandingHero() {
       return
     }
     setError(null)
-    setPendingInstagramHandle(normalized)
     trackEvent('landing_cta_start_free_click', { placement: 'hero', hasHandle: true })
-    navigate('/cadastro')
+    // Religa direto na infraestrutura real de Discovery (mesma usada por
+    // /descobrir) — a landing não roda nenhuma análise por conta própria,
+    // só encaminha o @ já normalizado para lá.
+    navigate(`/descobrir?handle=${encodeURIComponent(normalized)}`)
   }
 
   return (
