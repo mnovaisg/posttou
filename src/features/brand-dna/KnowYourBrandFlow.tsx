@@ -13,12 +13,15 @@ import { mapAiSuggestionsToBrandProfilePatch } from '@/features/brand-dna/mapAiS
 import type { BrandDnaAiSuggestions } from '@/features/brand-dna/mapAiSuggestionsToBrandProfilePatch'
 import type { TablesUpdate } from '@/types/database'
 import { consumePendingInstagramHandle } from '@/lib/pendingInstagramHandle'
+import { draftFromRow, draftToPatch } from '@/features/brand-dna/state'
+import type { BrandProfileRow } from '@/features/brand-dna/types'
 
 type Stage = 'handle' | 'loading' | 'description' | 'summary'
 
 type Source =
   | { kind: 'discovery'; handle: string; profile?: DiscoveryProfileSummary; dna: DiscoveryDna }
   | { kind: 'description'; suggestions: BrandDnaAiSuggestions }
+  | { kind: 'existing'; profile: BrandProfileRow }
 
 /**
  * Ajuste pré-beta — jornada guiada: "Conhecer sua marca" é o passo real
@@ -34,11 +37,14 @@ type Source =
 export function KnowYourBrandFlow({
   workspaceId,
   companyNameFallback,
+  existingProfile,
   onAccept,
   onReview,
 }: {
   workspaceId: string
   companyNameFallback: string | null
+  /** Dados já salvos em brand_profiles (ex.: pré-preenchidos por um claim de Discovery) ainda não revisados. */
+  existingProfile?: BrandProfileRow | null
   /** Usuário confirmou a sugestão — grava e marca o DNA como concluído. */
   onAccept: (patch: TablesUpdate<'brand_profiles'>) => void
   /** Usuário quer revisar campo a campo antes de concluir — grava como rascunho e abre o editor completo. */
@@ -83,9 +89,18 @@ export function KnowYourBrandFlow({
     }
   }
 
-  // Um único uso: se a landing capturou o @ antes do cadastro, já dispara
-  // o caminho automático existente (sem duplicar Discovery/UI extra).
+  // Prioridade 1: já existe dado salvo em brand_profiles (claim de uma
+  // sessão de Discovery pré-cadastro) ainda não revisado — mostra o
+  // resumo direto, sem pedir @/descrição de novo e sem rodar Discovery
+  // outra vez. Prioridade 2 (só se não houver o anterior): a landing
+  // capturou o @ nesta mesma aba antes do cadastro — dispara o caminho
+  // automático já existente.
   React.useEffect(() => {
+    if (existingProfile && (existingProfile.company_name || existingProfile.description)) {
+      setSource({ kind: 'existing', profile: existingProfile })
+      setStage('summary')
+      return
+    }
     const pending = consumePendingInstagramHandle()
     if (!pending) return
     setPendingHandle(pending)
@@ -132,6 +147,15 @@ export function KnowYourBrandFlow({
     if (!source) return {}
     if (source.kind === 'discovery') {
       return mapDiscoveryDnaToBrandProfilePatch(source.handle, source.profile, source.dna)
+    }
+    if (source.kind === 'existing') {
+      // Os dados já estão em brand_profiles desde o claim — nada
+      // conceitualmente novo a gravar, só falta marcar a conclusão (o
+      // caller/onAccept cuida disso). Mas um PATCH com corpo vazio faz o
+      // PostgREST devolver zero linhas (nenhuma coluna no SET), o que
+      // quebra o .single() do client — por isso reenviamos os mesmos
+      // valores já existentes, um PATCH idempotente com campos reais.
+      return draftToPatch(draftFromRow(source.profile))
     }
     return mapAiSuggestionsToBrandProfilePatch(companyNameFallback, source.suggestions)
   }
@@ -256,6 +280,43 @@ export function KnowYourBrandFlow({
               {dna.estrategia.temas_recorrentes.join(', ')}
             </p>
           ) : null}
+          <SummaryActions onAccept={handleAccept} onReview={handleReview} />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (source?.kind === 'existing') {
+    const d = draftFromRow(source.profile)
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <h2 className="text-lg font-semibold text-ink-900 dark:text-ink-50">Conhecemos sua marca ✨</h2>
+          <p className="mt-1 text-sm text-ink-500">
+            Com base no que você já nos contou, preparamos uma primeira versão do DNA da sua marca.
+          </p>
+          {d.companyName && (
+            <p className="mt-4 text-sm font-medium text-ink-900 dark:text-ink-50">{d.companyName}</p>
+          )}
+          {d.description && <p className="mt-1 text-sm text-ink-600 dark:text-ink-300">{d.description}</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {d.segment && <Badge variant="brand">{d.segment}</Badge>}
+            {d.voice.personality_traits.slice(0, 4).map((t) => (
+              <Badge key={t} variant="neutral">{t}</Badge>
+            ))}
+          </div>
+          {d.audience.pains.length > 0 && (
+            <p className="mt-4 text-sm text-ink-600 dark:text-ink-300">
+              <span className="font-medium text-ink-800 dark:text-ink-100">Dores do público: </span>
+              {d.audience.pains.join(', ')}
+            </p>
+          )}
+          {d.contentStrategy.priority_themes.length > 0 && (
+            <p className="mt-2 text-sm text-ink-600 dark:text-ink-300">
+              <span className="font-medium text-ink-800 dark:text-ink-100">Temas sugeridos: </span>
+              {d.contentStrategy.priority_themes.join(', ')}
+            </p>
+          )}
           <SummaryActions onAccept={handleAccept} onReview={handleReview} />
         </CardContent>
       </Card>

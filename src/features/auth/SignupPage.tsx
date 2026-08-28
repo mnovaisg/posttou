@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
+import { readDiscoveryToken } from '@/features/instagram-discovery/session-token'
 
 export function SignupPage() {
   const { signUp } = useAuth()
@@ -36,6 +37,10 @@ export function SignupPage() {
     const { error } = await signUp(email, password, {
       fullName,
       workspaceName: workspaceName || `${fullName} — Workspace`,
+      // Lido aqui (ainda na mesma aba onde a sessão de Discovery foi
+      // criada) e enviado para dentro da conta — o claim em si só
+      // acontece depois, no primeiro login já autenticado.
+      discoveryToken: readDiscoveryToken(),
     })
     setLoading(false)
     if (error) {

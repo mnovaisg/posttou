@@ -11,7 +11,7 @@ interface AuthContextValue {
   signUp: (
     email: string,
     password: string,
-    opts: { fullName: string; workspaceName: string },
+    opts: { fullName: string; workspaceName: string; discoveryToken?: string | null },
   ) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   requestPasswordReset: (email: string) => Promise<{ error: string | null }>
@@ -88,12 +88,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signUp = React.useCallback(
-    async (email: string, password: string, opts: { fullName: string; workspaceName: string }) => {
+    async (
+      email: string,
+      password: string,
+      opts: { fullName: string; workspaceName: string; discoveryToken?: string | null },
+    ) => {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: opts.fullName, workspace_name: opts.workspaceName },
+          // discovery_token viaja em raw_user_meta_data (nunca em URL/query
+          // string) especificamente para sobreviver à confirmação de
+          // e-mail: o link de confirmação quase sempre abre em outra
+          // aba/app, onde sessionStorage já não existe mais. Metadados do
+          // usuário acompanham a conta, não o navegador.
+          data: {
+            full_name: opts.fullName,
+            workspace_name: opts.workspaceName,
+            ...(opts.discoveryToken ? { discovery_token: opts.discoveryToken } : {}),
+          },
         },
       })
       if (error) return { error: mapAuthError(error.message) }

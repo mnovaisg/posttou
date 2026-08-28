@@ -63,8 +63,15 @@ export function BrandDnaPage() {
       const d = draftFromRow(profile)
       setDraft(d)
       setStep(profile.onboarding_completed_at ? 6 : Math.min(d.onboardingStep, 6))
-      const isBlankProfile = !profile.company_name && !profile.description
-      setFlowStage(profile.onboarding_completed_at || !isBlankProfile ? 'wizard' : 'know_brand')
+      // Progresso real no wizard (passou do passo 1 pelo menos uma vez)
+      // sempre retoma direto no wizard — nunca reseta um rascunho em
+      // andamento. Um perfil só com dados pré-preenchidos por
+      // Discovery/claim (onboarding_step ainda em 1, nunca avançado
+      // manualmente) é tratado como "ainda não revisado": cai em
+      // know_brand, que detecta os dados já existentes e mostra o
+      // resumo direto, sem pedir @/descrição de novo.
+      const hasRealWizardProgress = (profile.onboarding_step ?? 1) > 1
+      setFlowStage(profile.onboarding_completed_at || hasRealWizardProgress ? 'wizard' : 'know_brand')
     }
   }, [profile, draft])
 
@@ -170,6 +177,7 @@ export function BrandDnaPage() {
         <KnowYourBrandFlow
           workspaceId={activeWorkspace!.id}
           companyNameFallback={activeWorkspace?.name ?? null}
+          existingProfile={profile ?? null}
           onAccept={(patch) => knowBrandMutation.mutate({ patch, complete: true })}
           onReview={(patch) => knowBrandMutation.mutate({ patch, complete: false })}
         />
