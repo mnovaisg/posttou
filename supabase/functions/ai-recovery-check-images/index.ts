@@ -28,7 +28,20 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { getMediaProvider, ProviderNotConfiguredError } from '../_shared/ai-gateway/gateway.ts'
 import { completeImageGeneration } from '../_shared/ai-gateway/complete-image-generation.ts'
 
-const TIMEOUT_MINUTES = 10
+// Etapa 3A — webhook validado como caminho principal (ver
+// supabase/functions/ai-webhook). Recovery é rede de segurança: baseline
+// real da Kie é ~60-90s, então 3 minutos já dá margem confortável antes de
+// considerar uma geração "presa" pela primeira vez. Cron roda a cada 2
+// minutos (ver migration recovery_faster_timeout_and_cron).
+//
+// Fechamento Etapa 3 — backoff diferenciado (migration
+// recovery_retry_timeout_backoff): a PRIMEIRA checagem espera o timeout
+// cheio (evita falso positivo pra latência normal), mas rechecagens
+// seguintes (recovery_attempts > 0) já sabem que a task está viva — só
+// ainda não terminou — então usam uma janela bem menor antes de tentar de
+// novo, em vez de esperar outros TIMEOUT_MINUTES inteiros a cada vez.
+const TIMEOUT_MINUTES = 3
+const RETRY_TIMEOUT_MINUTES = 1
 const MAX_ATTEMPTS = 5
 const CLAIM_LIMIT = 20
 
@@ -51,6 +64,7 @@ Deno.serve(async (req) => {
     p_timeout_minutes: TIMEOUT_MINUTES,
     p_max_attempts: MAX_ATTEMPTS,
     p_limit: CLAIM_LIMIT,
+    p_retry_timeout_minutes: RETRY_TIMEOUT_MINUTES,
   })
   if (claimError) {
     console.error('ai-recovery-check-images: falha ao reivindicar gerações travadas.', claimError)

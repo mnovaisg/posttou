@@ -135,7 +135,7 @@ async function processPublication(admin: any, row: PublicationRow, tokenEncrypti
       p_error_message: 'A conta do Instagram está desconectada ou sem token válido.',
       p_terminal: true,
     })
-    await admin.rpc('log_audit_event', {
+    await admin.rpc('log_instagram_worker_audit_event', {
       p_workspace_id: content.workspace_id,
       p_action: 'instagram_reauthorization_required',
       p_resource_type: 'instagram_accounts',
@@ -153,7 +153,7 @@ async function processPublication(admin: any, row: PublicationRow, tokenEncrypti
       p_error_message: 'O token de acesso ao Instagram expirou.',
       p_terminal: true,
     })
-    await admin.rpc('log_audit_event', {
+    await admin.rpc('log_instagram_worker_audit_event', {
       p_workspace_id: content.workspace_id,
       p_action: 'instagram_reauthorization_required',
       p_resource_type: 'instagram_accounts',
@@ -283,6 +283,38 @@ async function processPublication(admin: any, row: PublicationRow, tokenEncrypti
     }
     if (statusCode === 'IN_PROGRESS') {
       return await scheduleRetry(admin, row, 'container_processing', 'Container ainda em processamento na Meta.', false, new Date(Date.now() + 30_000))
+    }
+    if (statusCode === 'PUBLISHED') {
+      // Etapa 4B — janela real (não só concorrência local): a Meta pode ter
+      // processado media_publish com sucesso numa tentativa anterior cuja
+      // RESPOSTA se perdeu (timeout/queda de rede entre nós e a Meta depois
+      // dela já ter publicado) — aí o worker reagenda um retry achando que
+      // falhou. FOR UPDATE SKIP LOCKED só impede duas execuções NOSSAS
+      // simultâneas; não impede isto, porque não é concorrência, é resposta
+      // perdida de uma chamada que já aconteceu de verdade do lado da Meta.
+      // status_code=PUBLISHED documentado oficialmente pela Meta como sinal
+      // de que o container já foi publicado (developers.facebook.com/docs/
+      // instagram-platform/content-publishing — "if media_publish does not
+      // return the published media ID, query the container's status_code").
+      // Não existe forma documentada/garantida de recuperar o ig_media_id
+      // exato a partir do container nesse ponto — por isso NUNCA chamamos
+      // media_publish de novo aqui (não há garantia de que seja seguro
+      // reprocessar), preferindo fechar sem media_id/permalink certos
+      // (sinalizado para reconciliação manual) a arriscar um segundo post
+      // real no Instagram.
+      console.warn('instagram-publish-worker: container já publicado numa tentativa anterior — resposta perdida, não republica.', {
+        publicationId: row.id,
+        containerId: finalContainerId,
+      })
+      await admin.rpc('complete_instagram_publication', { p_publication_id: row.id, p_ig_media_id: null, p_permalink: null })
+      await admin.rpc('log_instagram_worker_audit_event', {
+        p_workspace_id: content.workspace_id,
+        p_action: 'instagram_publish_reconciliation_needed',
+        p_resource_type: 'instagram_publications',
+        p_resource_id: row.id,
+        p_metadata: { container_id: finalContainerId, reason: 'container_already_published_response_lost' },
+      }).catch(() => {})
+      return 'published_unconfirmed_id'
     }
 
     await admin.from('instagram_publications').update({ status: 'publishing' }).eq('id', row.id)

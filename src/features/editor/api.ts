@@ -192,6 +192,8 @@ export interface GenerateImageParams {
   contentId: string
   prompt: string
   format: string
+  /** Etapa 3 — quando informado, liga a geração à página via os mesmos RPCs/trigger já usados pelo Piloto (recovery automático, sem depender do navegador aberto). */
+  pageId?: string
 }
 
 export interface GenerateImageResponse {
@@ -210,7 +212,13 @@ export async function generateImageWithAi(params: GenerateImageParams): Promise<
   const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-generate-image`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ workspaceId: params.workspaceId, contentId: params.contentId, prompt: params.prompt, format: params.format }),
+    body: JSON.stringify({
+      workspaceId: params.workspaceId,
+      contentId: params.contentId,
+      prompt: params.prompt,
+      format: params.format,
+      pageId: params.pageId,
+    }),
   })
   const body = await res.json()
   if (!res.ok) {

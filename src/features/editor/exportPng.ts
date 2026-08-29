@@ -1,4 +1,5 @@
 import Konva from 'konva'
+import { getCoverCrop } from '@/features/editor/imageCrop'
 import type { EditorElement, EditorPage, ImageElementContent, ShapeElementContent, ShapeElementStyle, TextElementContent, TextElementStyle } from '@/features/editor/types'
 
 /**
@@ -62,7 +63,10 @@ async function buildNode(el: EditorElement, imageUrls: Record<string, string>): 
     if (!url) return null
     const img = await loadImage(url)
     const style = el.style as { opacity: number }
-    return new Konva.Image({ ...common, image: img, width: el.width, height: el.height, opacity: style.opacity })
+    // Mesmo cálculo de "cover" do Canvas ao vivo (imageCrop.ts) — export
+    // e edição precisam sempre renderizar a mesma composição.
+    const crop = getCoverCrop(img.naturalWidth, img.naturalHeight, el.width, el.height)
+    return new Konva.Image({ ...common, image: img, crop, width: el.width, height: el.height, opacity: style.opacity })
   }
 
   const content = el.content as ShapeElementContent

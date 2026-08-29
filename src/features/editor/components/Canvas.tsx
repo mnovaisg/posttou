@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Stage, Layer, Rect, Circle, Line, Text as KonvaText, Image as KonvaImage, Transformer } from 'react-konva'
 import useImage from 'use-image'
 import type Konva from 'konva'
+import { getCoverCrop } from '@/features/editor/imageCrop'
 import type {
   EditorElement,
   EditorPage,
@@ -28,7 +29,11 @@ function ImageNode({ el, imageUrls, common }: { el: EditorElement; imageUrls: Re
   const content = el.content as ImageElementContent
   const [img] = useImage(imageUrls[content.path] ?? '', 'anonymous')
   const style = el.style as { opacity: number }
-  return <KonvaImage image={img} opacity={style.opacity} {...common} />
+  // "cover" real (nunca esticar): recorta a imagem de origem pra
+  // proporção da caixa de destino — mesmo cálculo usado no export PNG e
+  // no mesmo espírito do object-fit: cover já usado no Preview.
+  const crop = img ? getCoverCrop(img.naturalWidth || img.width, img.naturalHeight || img.height, el.width, el.height) : undefined
+  return <KonvaImage image={img} crop={crop} opacity={style.opacity} {...common} />
 }
 
 function ShapeNode({ el, common }: { el: EditorElement; common: Record<string, unknown> }) {

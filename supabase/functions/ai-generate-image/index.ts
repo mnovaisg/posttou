@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => null)
     if (!body) return json({ error: 'Corpo da requisição inválido.' }, 400)
 
-    const { workspaceId, contentId, prompt, format } = body as Record<string, unknown>
+    const { workspaceId, contentId, prompt, format, pageId } = body as Record<string, unknown>
 
     if (typeof workspaceId !== 'string' || !workspaceId) return json({ error: 'workspaceId é obrigatório.' }, 400)
     if (typeof prompt !== 'string' || !prompt.trim()) return json({ error: 'prompt é obrigatório.' }, 400)
@@ -181,6 +181,22 @@ Deno.serve(async (req) => {
 
     await admin.from('ai_generations').update({ status: 'processing', credit_ledger_id: ledgerRow.id }).eq('id', generationId)
 
+    // Opcional: quando o chamador já sabe a página de destino (ex.: fluxo
+    // automático da Etapa 3 do onboarding), liga a página a esta geração
+    // ANTES de chamar o provider — reaproveita literalmente os mesmos RPCs
+    // já usados pelo Piloto (pilot_mark_visual_asset_generating/failed, o
+    // nome é histórico, a lógica não depende de contents.origin) e o mesmo
+    // trigger sync_content_page_visual_asset que já insere o elemento de
+    // imagem e deixa a geração recuperável pelo cron existente, sem
+    // depender do navegador aberto — mesmo raciocínio da correção do DNA
+    // Visual. Se createTask() falhar antes deste link existir, a
+    // atualização de ai_generations para 'failed' não teria como achar a
+    // página.
+    const linkedPageId = typeof pageId === 'string' && pageId ? pageId : null
+    if (linkedPageId) {
+      await admin.rpc('pilot_mark_visual_asset_generating', { p_page_id: linkedPageId, p_ai_generation_id: generationId })
+    }
+
     try {
       const task = await mediaProvider.createTask({
         model: 'gpt4o-image',
@@ -205,6 +221,9 @@ Deno.serve(async (req) => {
         .update({ status: 'failed', error_code: 'provider_error', error_message: message, completed_at: new Date().toISOString() })
         .eq('id', generationId)
       await userClient.rpc('refund_failed_ai_generation', { p_generation_id: generationId })
+      // JÁ passou por 'processing' — se linkado, isso dispara o trigger de
+      // propagação, que marca a página 'failed'. Nunca chamar
+      // pilot_mark_visual_asset_failed aqui também (bookkeeping 2x).
       return json({ error: message, generationId }, 502)
     }
   } catch (err) {

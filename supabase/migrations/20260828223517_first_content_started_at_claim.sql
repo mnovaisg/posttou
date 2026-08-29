@@ -1,0 +1,11 @@
+-- Etapa 3 — proteção de idempotência real (banco, não só desabilitar
+-- botão) contra clique duplo em "Criar este conteúdo" ou refresh durante a
+-- criação do primeiro conteúdo do onboarding. O cliente faz um UPDATE
+-- condicional atômico (WHERE first_content_started_at IS NULL OR muito
+-- antigo) — só quem "ganha" essa corrida prossegue para gerar/gravar
+-- conteúdo; o perdedor (segundo clique, aba duplicada) recua e tenta
+-- reaproveitar o conteúdo que o vencedor está criando, em vez de duplicar.
+-- Considerar uma claim "abandonada" depois de 2 minutos permite retry
+-- depois de um reload/crash real no meio da criação, sem travar o usuário
+-- para sempre.
+alter table public.brand_profiles add column first_content_started_at timestamptz;

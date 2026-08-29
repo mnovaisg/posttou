@@ -35,6 +35,47 @@ Vocabulário fixo — cada atributo DEVE usar exatamente um dos valores permitid
 ${VOCAB_BLOCK}
 As 3 opções devem compartilhar o MESMO tema/mensagem/objetivo (shared_brief) — a variação entre elas deve estar SOMENTE nos atributos visuais (direção, hierarquia, composição, densidade, contraste, tipografia, tratamento gráfico, papel da imagem). Nunca gere 3 assuntos diferentes.`
 
+// Etapa 3, Decisão 2 (Opção A) — não gera uma imagem nova nem 3 opções:
+// interpreta em texto a arte que JÁ foi criada para o primeiro conteúdo
+// (a partir do mesmo contexto usado pra gerá-la), produzindo só os
+// atributos estruturados de UMA direção, no mesmo vocabulário fixo.
+export interface VisualDnaInterpretationInput {
+  brandText: string
+  /** Tema/prompt que já gerou a arte do primeiro conteúdo — a interpretação parte disso, não de uma imagem nova. */
+  contentContext: string
+}
+
+const INTERPRETATION_RESPONSE_SCHEMA = `Responda APENAS com um JSON válido no formato exato:
+{
+  "attributes": { ${Object.keys(VISUAL_DNA_VOCABULARY).map((k) => `"${k}": "string"`).join(', ')} },
+  "attributes_summary": "string curta pra UI, ex: 'acolhedor, orgânico, limpo, baixo contraste'"
+}
+Vocabulário fixo — cada atributo DEVE usar exatamente um dos valores permitidos, nunca um valor livre:
+${VOCAB_BLOCK}`
+
+export function buildVisualDnaInterpretationPrompt(input: VisualDnaInterpretationInput): { systemPrompt: string; userPrompt: string } {
+  const systemPrompt = [
+    'Você é o motor de direção criativa visual do POSTTOU, um SaaS de gestão de Instagram.',
+    'Sua tarefa AGORA é interpretar, em atributos estruturados, o estilo visual de uma arte que JÁ foi criada para esta marca — você não está propondo uma imagem nova, só classificando a direção visual que ela representa.',
+    '',
+    'Sempre responda em português do Brasil.',
+  ].join('\n')
+
+  const userPrompt = [
+    '=== DNA DA MARCA ===',
+    input.brandText,
+    '',
+    '=== CONTEXTO/TEMA DA ARTE JÁ CRIADA ===',
+    input.contentContext,
+    '',
+    INTERPRETATION_RESPONSE_SCHEMA,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  return { systemPrompt, userPrompt }
+}
+
 export function buildVisualDnaPrompt(input: VisualDnaPromptInput): { systemPrompt: string; userPrompt: string } {
   const systemPrompt = [
     'Você é o motor de direção criativa visual do POSTTOU, um SaaS de gestão de Instagram.',

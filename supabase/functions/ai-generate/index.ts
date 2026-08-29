@@ -11,7 +11,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { getTextProvider, ProviderNotConfiguredError, ProviderRequestError } from '../_shared/ai-gateway/gateway.ts'
 import { buildPrompt, type GenerationType, type HistoryItem } from '../_shared/ai-gateway/prompts.ts'
 
-const GENERATION_TYPES: GenerationType[] = ['post_unico', 'carrossel', 'reels_roteiro', 'legenda', 'ideias_conteudo']
+const GENERATION_TYPES: GenerationType[] = ['post_unico', 'carrossel', 'reels_roteiro', 'legenda', 'ideias_conteudo', 'ideias_onboarding']
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

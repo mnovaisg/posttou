@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
+import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
   getContent,
@@ -125,8 +126,17 @@ export function EditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pages])
 
+  // Callers assíncronos (ex.: sincronização de fundo de imagem gerada) podem
+  // rodar bem depois do render em que foram agendados — usar sempre a
+  // referência mais recente de `pages` evita que um mutator atrasado
+  // sobrescreva edições feitas pelo usuário nesse meio-tempo.
+  const pagesRef = React.useRef(pages)
+  React.useEffect(() => {
+    pagesRef.current = pages
+  }, [pages])
+
   function updatePages(mutator: (pages: EditorPageModel[]) => EditorPageModel[], { toHistory = true }: { toHistory?: boolean } = {}) {
-    const next = mutator(pages)
+    const next = mutator(pagesRef.current)
     if (toHistory) commit(next)
     setDirty(true)
   }
@@ -275,24 +285,83 @@ export function EditorPage() {
     }
   }
 
-  function handleGeneratedImage(assetPath: string) {
-    getContentAssetSignedUrl(assetPath).then((url) => {
-      if (url) setImageUrls((prev) => ({ ...prev, [assetPath]: url }))
-    })
-    if (!activePage) return
-    addElement({
-      type: 'image',
-      position_x: 60,
-      position_y: 60,
-      width: Math.min(activePage.width - 120, 600),
-      height: Math.min(activePage.height - 120, 600),
-      rotation: 0,
-      locked: false,
-      hidden: false,
-      content: { path: assetPath },
-      style: { ...DEFAULT_IMAGE_STYLE },
-    })
+  // A imagem gerada por IA é anexada no servidor (RPC + trigger, ligados via
+  // pageId) independente deste cliente continuar aberto — aqui só buscamos o
+  // que já foi persistido e mesclamos no estado local como elementos
+  // existentes (isNew: false). Nunca fabricamos um elemento novo local: isso
+  // duplicaria a linha que o servidor já inseriu no próximo autosave.
+  async function syncPageElementsFromServer(pageId: string) {
+    const { data: elements, error } = await supabase
+      .from('content_elements')
+      .select('*')
+      .eq('page_id', pageId)
+      .order('z_index', { ascending: true })
+    if (error || !elements) return
+    updatePages((prev) =>
+      prev.map((p) => {
+        if (p.id !== pageId) return p
+        const localIds = new Set(p.elements.map((el) => el.id))
+        const newOnes = (elements as unknown as EditorElement[]).filter((el) => !localIds.has(el.id)).map((el) => ({ ...el, isNew: false }))
+        return newOnes.length ? { ...p, elements: [...p.elements, ...newOnes] } : p
+      }),
+    )
   }
+
+  function markPageGenerating(pageId: string) {
+    updatePages((prev) => prev.map((p) => (p.id === pageId ? { ...p, visual_asset_status: 'generating' } : p)))
+  }
+
+  // Sincronização de fundo: enquanto alguma página estiver com uma geração de
+  // imagem em andamento, acompanha o status real no servidor — garante que o
+  // elemento apareça mesmo se o diálogo de geração foi fechado, a aba
+  // recarregada, ou o usuário trocou de página no meio da espera.
+  const generatingPageIds = pages.filter((p) => p.visual_asset_status === 'generating').map((p) => p.id)
+  const generatingKey = generatingPageIds.join(',')
+  React.useEffect(() => {
+    if (!generatingPageIds.length) return
+    let cancelled = false
+    const interval = setInterval(async () => {
+      for (const pid of generatingPageIds) {
+        const { data: pageRow } = await supabase.from('content_pages').select('visual_asset_status').eq('id', pid).maybeSingle()
+        if (cancelled || !pageRow || pageRow.visual_asset_status === 'generating') continue
+
+        // Busca os elementos ANTES de tocar no estado local, e aplica status +
+        // elementos mesclados num único updatePages — duas chamadas
+        // separadas aqui reintroduziriam a mesma condição de corrida que
+        // updatePages foi corrigido para evitar (a segunda chamada leria
+        // pagesRef.current desatualizado, sem o merge da primeira, e o
+        // sobrescreveria).
+        let newElements: EditorElement[] = []
+        if (pageRow.visual_asset_status === 'ready') {
+          const { data: elements } = await supabase
+            .from('content_elements')
+            .select('*')
+            .eq('page_id', pid)
+            .order('z_index', { ascending: true })
+          newElements = (elements as unknown as EditorElement[] | null) ?? []
+        }
+        if (cancelled) return
+
+        updatePages((prev) =>
+          prev.map((p) => {
+            if (p.id !== pid) return p
+            const localIds = new Set(p.elements.map((el) => el.id))
+            const merged = newElements.filter((el) => !localIds.has(el.id)).map((el) => ({ ...el, isNew: false }))
+            return {
+              ...p,
+              visual_asset_status: pageRow.visual_asset_status as EditorPageModel['visual_asset_status'],
+              elements: merged.length ? [...p.elements, ...merged] : p.elements,
+            }
+          }),
+        )
+      }
+    }, 4000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatingKey])
 
   function removeElement(elementId: string) {
     if (!activePage) return
@@ -572,15 +641,17 @@ export function EditorPage() {
         </div>
       )}
 
-      {activeWorkspace && (
+      {activeWorkspace && activePage && (
         <GenerateImageDialog
           open={showGenerateDialog}
           onOpenChange={setShowGenerateDialog}
           workspaceId={activeWorkspace.id}
           contentId={id!}
+          pageId={activePage.id}
           format={content?.format ?? '1:1'}
           creditCost={operationCosts?.imagem ?? null}
-          onGenerated={handleGeneratedImage}
+          onStarted={() => markPageGenerating(activePage.id)}
+          onGenerated={() => syncPageElementsFromServer(activePage.id)}
         />
       )}
 

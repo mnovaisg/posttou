@@ -4,7 +4,7 @@
 // chama buildPrompt() e envia o resultado ao provider via gateway.
 import { brandProfileToPromptText } from './brand-context.ts'
 
-export type GenerationType = 'post_unico' | 'carrossel' | 'reels_roteiro' | 'legenda' | 'ideias_conteudo'
+export type GenerationType = 'post_unico' | 'carrossel' | 'reels_roteiro' | 'legenda' | 'ideias_conteudo' | 'ideias_onboarding'
 
 export interface HistoryItem {
   title: string | null
@@ -60,6 +60,21 @@ const RESPONSE_SCHEMA: Record<GenerationType, string> = {
   ]
 }
 Gere entre 5 e 8 ideias.`,
+  // Etapa 3 do onboarding — só 3 ideias (não 5-8), uma por objetivo,
+  // pensadas para o primeiro conteúdo real do usuário (rápido, sem
+  // sobrecarregar com opções).
+  ideias_onboarding: `Responda APENAS com um JSON válido no formato exato:
+{
+  "ideas": [
+    {
+      "title": "string",
+      "description": "string",
+      "suggested_type": "post" | "carrossel" | "reel",
+      "objective": "vender" | "educar" | "autoridade" | "relacionamento" | "leads" | "alcance" | "engajamento" | "divulgar"
+    }
+  ]
+}
+Gere EXATAMENTE 3 ideias. Cada uma deve ter um "objective" DIFERENTE das outras duas — escolha os 3 objetivos mais relevantes para esta marca especificamente (ex.: uma ideia para atrair/alcançar novas pessoas, outra para engajar quem já segue, outra para gerar vendas/leads — adapte à realidade real da marca, não force um roteiro genérico). "suggested_type" deve ser "post" para todas as 3 (formato simples, gerado rápido — nunca "carrossel" ou "reel" aqui).`,
 }
 
 const OBJECTIVE_INSTRUCTION: Record<string, string> = {

@@ -36,7 +36,10 @@ export async function fetchInstagramAccounts(workspaceId: string): Promise<Insta
 
 export class InstagramNotConfiguredError extends Error {}
 
-export async function startInstagramOAuth(workspaceId: string): Promise<string> {
+/** Destino interno pra onde o callback do OAuth deve voltar — allowlist fechada, validada de novo no servidor (instagram-oauth-start nunca confia só nisto). */
+export type InstagramOauthReturnTo = 'onboarding' | 'settings' | 'dashboard'
+
+export async function startInstagramOAuth(workspaceId: string, returnTo: InstagramOauthReturnTo = 'settings'): Promise<string> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) throw new Error('Sessão expirada. Faça login novamente.')
@@ -44,7 +47,7 @@ export async function startInstagramOAuth(workspaceId: string): Promise<string> 
   const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/instagram-oauth-start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ workspaceId }),
+    body: JSON.stringify({ workspaceId, returnTo }),
   })
   const body = await res.json()
   if (!res.ok) {

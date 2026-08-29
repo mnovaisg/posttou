@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
 import { BillingError, isBillingError, mapBillingError } from '@/lib/billingErrors'
 import { DEFAULT_FORMAT_BY_TYPE, PAGE_DIMENSIONS_BY_FORMAT } from '@/features/content/types'
-import type { ContentOrigin, ContentRow, ContentType } from '@/features/content/types'
+import type { ContentFormat, ContentOrigin, ContentRow, ContentType } from '@/features/content/types'
 import type {
   AiGenerateResponse,
   CarrosselGenerationResult,
@@ -93,11 +93,13 @@ export async function saveAiGenerationAsDraft(
   themeInput: string,
   origin: ContentOrigin = 'ia',
   radarOpportunityId?: string,
+  /** Formato escolhido pelo usuário — se omitido, mantém o default histórico por tipo. */
+  formatOverride?: ContentFormat,
 ): Promise<ContentRow> {
   const type = CONTENT_TYPE_BY_GENERATION[generationType]
   if (!type) throw new Error('Este tipo de geração não gera um rascunho diretamente.')
 
-  const format = DEFAULT_FORMAT_BY_TYPE[type]
+  const format = formatOverride ?? DEFAULT_FORMAT_BY_TYPE[type]
   const title = themeInput.length > 60 ? `${themeInput.slice(0, 57)}...` : themeInput
 
   const { data: content, error } = await supabase

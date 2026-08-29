@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import * as React from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
@@ -8,11 +9,14 @@ import { STATUS_LABEL, TYPE_ICON } from '@/features/content/types'
 import type { ContentRow } from '@/features/content/types'
 import { formatInTimeZone } from '@/lib/timezone'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { NAV_ITEMS } from '@/app/nav-items'
 import { OnboardingWidget } from '@/features/onboarding/OnboardingWidget'
 import { fetchOnboardingState } from '@/features/onboarding/api'
+import { InstagramNotConfiguredError, startInstagramOAuth } from '@/features/instagram/api'
+import { INSTAGRAM_ERROR_MESSAGES } from '@/features/instagram/types'
 
 interface DashboardData {
   creditBalance: number
@@ -62,7 +66,40 @@ export function DashboardPage() {
   const { user } = useAuth()
   const { activeWorkspace, isLoading: workspaceLoading } = useWorkspace()
   const { data, isLoading } = useDashboardData(activeWorkspace?.id ?? null)
+  const queryClient = useQueryClient()
   const fullName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email
+
+  // Etapa 4A — CTA discreto pós-onboarding: reutiliza a MESMA função OAuth
+  // do onboarding/Configurações (nenhuma segunda implementação), com
+  // return_to='dashboard' pra voltar aqui depois do callback. Some
+  // sozinho assim que existir alguma conta conectada — não depende de
+  // estado em memória, só do que `useDashboardData` já lê do banco.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const instagramSuccess = searchParams.get('instagram') === 'success'
+  const instagramErrorCode = searchParams.get('instagram_error')
+
+  function clearInstagramParams() {
+    const next = new URLSearchParams(searchParams)
+    next.delete('instagram')
+    next.delete('instagram_error')
+    next.delete('instagram_error_detail')
+    setSearchParams(next, { replace: true })
+  }
+
+  React.useEffect(() => {
+    if ((instagramSuccess || instagramErrorCode) && activeWorkspace) {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', activeWorkspace.id] })
+      queryClient.invalidateQueries({ queryKey: ['onboarding-state', activeWorkspace.id] })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const connectMutation = useMutation({
+    mutationFn: () => startInstagramOAuth(activeWorkspace!.id, 'dashboard'),
+    onSuccess: (authorizeUrl) => {
+      window.location.href = authorizeUrl
+    },
+  })
 
   // Mesma queryKey do OnboardingWidget — o React Query dedupe a chamada,
   // nenhuma requisição extra. Só usada aqui para decidir a ordem do
@@ -102,6 +139,44 @@ export function DashboardPage() {
           {activeWorkspace ? activeWorkspace.name : 'Nenhum workspace ativo'}
         </p>
       </div>
+
+      {instagramSuccess && (
+        <div className="flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
+          <span>Instagram conectado com sucesso!</span>
+          <button type="button" onClick={clearInstagramParams} className="text-xs underline">fechar</button>
+        </div>
+      )}
+      {instagramErrorCode && (
+        <div className="flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-sm text-danger-500 dark:bg-red-950">
+          <span>{INSTAGRAM_ERROR_MESSAGES[instagramErrorCode] ?? `Não foi possível conectar (${instagramErrorCode}).`}</span>
+          <button type="button" onClick={clearInstagramParams} className="text-xs underline">fechar</button>
+        </div>
+      )}
+
+      {!onboardingActive && activeWorkspace && !isLoading && data?.instagramConnectedCount === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-ink-800 dark:text-ink-100">Seu conteúdo já está pronto.</p>
+              <p className="text-sm text-ink-500">Conecte seu Instagram para publicar pelo POSTTOU.</p>
+            </div>
+            <div className="flex flex-col items-start gap-1">
+              <Button size="sm" onClick={() => connectMutation.mutate()} disabled={connectMutation.isPending}>
+                {connectMutation.isPending ? 'Redirecionando…' : 'Conectar Instagram'}
+              </Button>
+              {connectMutation.isError && (
+                <p className="text-xs text-danger-500">
+                  {connectMutation.error instanceof InstagramNotConfiguredError
+                    ? connectMutation.error.message
+                    : connectMutation.error instanceof Error
+                      ? connectMutation.error.message
+                      : 'Erro inesperado.'}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {onboardingActive && activeWorkspace && (
         <div className="mx-auto w-full max-w-2xl">

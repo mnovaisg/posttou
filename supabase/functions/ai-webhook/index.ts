@@ -25,21 +25,54 @@ function json(body: unknown, status = 200) {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const admin = createClient(supabaseUrl, serviceRoleKey)
+
+  // Diagnóstico de rejeições (ai_webhook_rejections) — só metadados seguros
+  // (presença de headers/taskId/motivo categorizado), nunca assinatura,
+  // HMAC key, token, payload bruto ou URL de imagem. Nunca deixa uma
+  // rejeição real (401/400) falhar por causa disto — é best-effort.
+  function logRejection(reason: string, details: { taskId?: string; hasTimestampHeader: boolean; hasSignatureHeader: boolean; hasHmacSecret: boolean }) {
+    admin
+      .from('ai_webhook_rejections')
+      .insert({
+        provider: 'kie',
+        task_id: details.taskId ?? null,
+        reason,
+        has_timestamp_header: details.hasTimestampHeader,
+        has_signature_header: details.hasSignatureHeader,
+        has_hmac_secret: details.hasHmacSecret,
+      })
+      .then(({ error }) => {
+        if (error) console.error('[ai-webhook] falha ao registrar rejeição', error)
+      })
+  }
+
   try {
+    const hasHmacSecret = !!Deno.env.get('KIE_WEBHOOK_HMAC_KEY')
     const timestamp = req.headers.get('X-Webhook-Timestamp')
     const signature = req.headers.get('X-Webhook-Signature')
-    if (!timestamp || !signature) return json({ error: 'Assinatura ausente.' }, 401)
+
+    if (!timestamp || !signature) {
+      logRejection('missing_signature_headers', { hasTimestampHeader: !!timestamp, hasSignatureHeader: !!signature, hasHmacSecret })
+      return json({ error: 'Assinatura ausente.' }, 401)
+    }
 
     const rawBody = await req.text()
     let payload: Record<string, unknown>
     try {
       payload = JSON.parse(rawBody)
     } catch {
+      logRejection('invalid_payload', { hasTimestampHeader: true, hasSignatureHeader: true, hasHmacSecret })
       return json({ error: 'Payload inválido.' }, 400)
     }
 
     const taskId = (payload?.data as Record<string, unknown> | undefined)?.taskId ?? payload?.taskId
-    if (typeof taskId !== 'string' || !taskId) return json({ error: 'taskId ausente no payload.' }, 400)
+    if (typeof taskId !== 'string' || !taskId) {
+      logRejection('missing_task_id', { hasTimestampHeader: true, hasSignatureHeader: true, hasHmacSecret })
+      return json({ error: 'taskId ausente no payload.' }, 400)
+    }
 
     let mediaProvider
     try {
@@ -50,11 +83,10 @@ Deno.serve(async (req) => {
     }
 
     const valid = await mediaProvider.verifyWebhookSignature(taskId, timestamp, signature)
-    if (!valid) return json({ error: 'Assinatura inválida.' }, 401)
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const admin = createClient(supabaseUrl, serviceRoleKey)
+    if (!valid) {
+      logRejection(hasHmacSecret ? 'invalid_signature' : 'missing_hmac_secret', { taskId, hasTimestampHeader: true, hasSignatureHeader: true, hasHmacSecret })
+      return json({ error: 'Assinatura inválida.' }, 401)
+    }
 
     const { error: insertError } = await admin.from('ai_webhook_events').insert({
       provider: mediaProvider.name,

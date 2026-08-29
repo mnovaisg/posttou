@@ -59,11 +59,36 @@ export async function completeImageGeneration(admin: SupabaseClient<any>, mediaP
       return { status: 'failed' }
     }
 
-    await admin
+    // Idempotência real: .update().eq('status','processing') sem checar o
+    // resultado deixava a função "achar" que persistiu mesmo quando a
+    // condição não bateu mais (corrida com outra chamada concorrente de
+    // completeImageGeneration para a mesma linha — webhook x recovery x
+    // polling do frontend podem, em teoria, chegar quase juntos). Nesse
+    // caso o código seguia como se tivesse dado certo, subia a imagem pro
+    // Storage sem necessidade e registrava sucesso — encontrado
+    // retroativamente via 2 arquivos idênticos no Storage para a mesma
+    // geração do DNA Visual (Fase 12), 74 minutos e uma reconciliação
+    // "fantasma" depois. Agora só seguimos se a linha realmente mudou aqui.
+    const { data: updatedRows, error: updateError } = await admin
       .from('ai_generations')
       .update({ status: 'success', result_asset_paths: assetPaths, completed_at: new Date().toISOString() })
       .eq('id', generation.id)
       .eq('status', 'processing')
+      .select('id')
+
+    if (updateError) {
+      console.error('completeImageGeneration: falha ao persistir sucesso', updateError)
+      return { status: 'processing' }
+    }
+    if (!updatedRows?.length) {
+      // Outra chamada concorrente já concluiu (ou alterou) esta geração
+      // entre a leitura e este update — não é nosso trabalho mais; a
+      // imagem que acabamos de baixar/subir fica órfã no Storage (aceito
+      // como custo do caso raro, não apagamos por segurança), mas não
+      // sobrescrevemos nem duplicamos o audit log.
+      console.warn('completeImageGeneration: update não afetou nenhuma linha (provável conclusão concorrente)', { generation_id: generation.id })
+      return { status: 'processing' }
+    }
 
     await admin.from('audit_logs').insert({
       workspace_id: generation.workspace_id,

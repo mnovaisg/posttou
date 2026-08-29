@@ -13,6 +13,23 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
+// Etapa 4B — bug real encontrado na auditoria: o catch abaixo marcava
+// QUALQUER falha (rede, timeout, 5xx da Meta, 429) como token_expirado,
+// exigindo reautorização de uma conexão saudável por causa de uma
+// instabilidade passageira. Só um erro 4xx real da Meta (exceto 429,
+// que é rate limit transitório) indica de fato token inválido/revogado —
+// nesse caso, e só nesse caso, a conta precisa reconectar. Qualquer outra
+// falha não mexe no status da conta: o token atual continua válido até
+// token_expires_at, e o cron de amanhã tenta de novo.
+function isPermanentAuthFailure(err: unknown): boolean {
+  if (err instanceof InstagramApiError) {
+    const status = err.status
+    if (typeof status === 'number' && status >= 400 && status < 500 && status !== 429) return true
+    return false
+  }
+  return false
+}
+
 // Refresca com folga — token de longa duração dura ~60 dias; renovar
 // quando faltam menos de 10 evita qualquer corrida com o worker de
 // publicação.
@@ -59,7 +76,7 @@ Deno.serve(async (req) => {
         .update({ access_token_encrypted: encrypted, token_expires_at: newExpiresAt })
         .eq('id', account.id)
 
-      await admin.rpc('log_audit_event', {
+      await admin.rpc('log_instagram_worker_audit_event', {
         p_workspace_id: account.workspace_id,
         p_action: 'instagram_token_refreshed',
         p_resource_type: 'instagram_accounts',
@@ -69,19 +86,32 @@ Deno.serve(async (req) => {
 
       results.push({ id: account.id, outcome: 'refreshed' })
     } catch (err) {
-      // Token já expirado/revogado não é renovável — marca para
-      // reautorização em vez de tentar de novo indefinidamente.
-      const isAuthError = err instanceof InstagramApiError
-      await admin.from('instagram_accounts').update({ status: 'token_expirado' }).eq('id', account.id)
-      await admin.rpc('log_audit_event', {
-        p_workspace_id: account.workspace_id,
-        p_action: 'instagram_reauthorization_required',
-        p_resource_type: 'instagram_accounts',
-        p_resource_id: account.id,
-        p_metadata: { reason: 'refresh_failed', is_auth_error: isAuthError },
-      }).catch(() => {})
       console.error(`instagram-token-refresh: falha ao renovar token da conta ${account.id}.`, err)
-      results.push({ id: account.id, outcome: 'reauthorization_required' })
+      if (isPermanentAuthFailure(err)) {
+        // Token realmente inválido/revogado (4xx real da Meta) — só aqui
+        // faz sentido exigir reautorização.
+        await admin.from('instagram_accounts').update({ status: 'token_expirado' }).eq('id', account.id)
+        await admin.rpc('log_instagram_worker_audit_event', {
+          p_workspace_id: account.workspace_id,
+          p_action: 'instagram_reauthorization_required',
+          p_resource_type: 'instagram_accounts',
+          p_resource_id: account.id,
+          p_metadata: { reason: 'refresh_failed_permanent' },
+        }).catch(() => {})
+        results.push({ id: account.id, outcome: 'reauthorization_required' })
+      } else {
+        // Falha transitória (rede, timeout, 5xx, 429) — NUNCA invalida uma
+        // conexão saudável; o token atual segue válido, o cron de amanhã
+        // tenta de novo.
+        await admin.rpc('log_instagram_worker_audit_event', {
+          p_workspace_id: account.workspace_id,
+          p_action: 'instagram_token_refresh_failed_temporary',
+          p_resource_type: 'instagram_accounts',
+          p_resource_id: account.id,
+          p_metadata: { reason: 'transient_error' },
+        }).catch(() => {})
+        results.push({ id: account.id, outcome: 'refresh_failed_temporary' })
+      }
     }
   }
 

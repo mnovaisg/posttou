@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -61,6 +61,8 @@ export type Database = {
           model: string
           objective: string | null
           provider: string
+          recovery_attempts: number
+          recovery_claimed_at: string | null
           request_payload: Json
           result_asset_paths: string[]
           result_payload: Json | null
@@ -88,6 +90,8 @@ export type Database = {
           model: string
           objective?: string | null
           provider: string
+          recovery_attempts?: number
+          recovery_claimed_at?: string | null
           request_payload?: Json
           result_asset_paths?: string[]
           result_payload?: Json | null
@@ -115,6 +119,8 @@ export type Database = {
           model?: string
           objective?: string | null
           provider?: string
+          recovery_attempts?: number
+          recovery_claimed_at?: string | null
           request_payload?: Json
           result_asset_paths?: string[]
           result_payload?: Json | null
@@ -286,6 +292,8 @@ export type Database = {
           created_at: string
           description: string | null
           differentiators: string | null
+          first_content_completed_at: string | null
+          first_content_started_at: string | null
           id: string
           instagram_handle: string | null
           location: string | null
@@ -313,6 +321,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           differentiators?: string | null
+          first_content_completed_at?: string | null
+          first_content_started_at?: string | null
           id?: string
           instagram_handle?: string | null
           location?: string | null
@@ -340,6 +350,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           differentiators?: string | null
+          first_content_completed_at?: string | null
+          first_content_started_at?: string | null
           id?: string
           instagram_handle?: string | null
           location?: string | null
@@ -560,6 +572,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_format_dimensions: {
+        Row: {
+          format: Database["public"]["Enums"]["content_format"]
+          height: number
+          width: number
+        }
+        Insert: {
+          format: Database["public"]["Enums"]["content_format"]
+          height: number
+          width: number
+        }
+        Update: {
+          format?: Database["public"]["Enums"]["content_format"]
+          height?: number
+          width?: number
+        }
+        Relationships: []
       }
       content_franchise_ledger: {
         Row: {
@@ -3695,6 +3725,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      check_brand_dna_ready: { Args: { p_workspace_id: string }; Returns: Json }
       check_pilot_activation_readiness: {
         Args: { p_workspace_id: string }
         Returns: Json
@@ -3838,6 +3869,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_stuck_image_generations: {
+        Args: {
+          p_limit?: number
+          p_max_attempts?: number
+          p_timeout_minutes?: number
+        }
+        Returns: {
+          id: string
+          task_id: string
+        }[]
+      }
       claim_visual_dna_generation: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -3936,6 +3978,31 @@ export type Database = {
       compute_performance_facts: {
         Args: { p_period_days?: number; p_workspace_id: string }
         Returns: Json
+      }
+      confirm_visual_dna_from_content: {
+        Args: {
+          p_attributes: Json
+          p_based_on_content_id?: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attributes: Json
+          based_on_option_id: string | null
+          confirmed_at: string
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          reference_ids: string[]
+          status: string
+          version: number
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "brand_visual_dna"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       confirm_visual_dna_option: {
         Args: { p_option_id: string }
@@ -4349,6 +4416,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_current_account_active: { Args: never; Returns: boolean }
       is_organization_member: {
         Args: { p_organization_id: string }
         Returns: boolean
@@ -4379,6 +4447,8 @@ export type Database = {
           model: string
           objective: string | null
           provider: string
+          recovery_attempts: number
+          recovery_claimed_at: string | null
           request_payload: Json
           result_asset_paths: string[]
           result_payload: Json | null
@@ -5353,6 +5423,7 @@ export type Database = {
         | "ideias_conteudo"
         | "imagem"
         | "performance_insight"
+        | "ideias_onboarding"
       billing_interval: "monthly" | "yearly"
       brand_reference_status:
         | "manual"
@@ -5600,6 +5671,7 @@ export const Constants = {
         "ideias_conteudo",
         "imagem",
         "performance_insight",
+        "ideias_onboarding",
       ],
       billing_interval: ["monthly", "yearly"],
       brand_reference_status: [

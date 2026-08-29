@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { ensureBrandProfile, updateBrandProfile } from '@/features/brand-dna/api'
@@ -17,6 +17,8 @@ import { StepReview } from '@/features/brand-dna/steps/StepReview'
 import { AiAssistDialog } from '@/features/brand-dna/AiAssistDialog'
 import { KnowYourBrandFlow } from '@/features/brand-dna/KnowYourBrandFlow'
 import { readPendingCreateIdea } from '@/features/instagram-discovery/session-token'
+import { FirstContentFlow } from '@/features/onboarding/FirstContentFlow'
+import { fetchOnboardingState } from '@/features/onboarding/api'
 import type { TablesUpdate } from '@/types/database'
 
 const STEPS = [
@@ -57,6 +59,26 @@ export function BrandDnaPage() {
     enabled: !!activeWorkspace,
     queryFn: () => ensureBrandProfile(activeWorkspace!.id),
   })
+
+  const [searchParams] = useSearchParams()
+  // Etapa 4A — mesma queryKey usada pelo OnboardingWidget/Dashboard: o
+  // React Query já dedupe, nenhuma chamada extra de verdade. Só usada
+  // aqui pra decidir se a ponte "conectar Instagram" do onboarding deve
+  // reaparecer num reload/reabertura — nunca em memória, sempre a partir
+  // do que está persistido (instagram_connected_done, dismissed_steps).
+  const { data: onboardingState } = useQuery({
+    queryKey: ['onboarding-state', activeWorkspace?.id],
+    queryFn: () => fetchOnboardingState(activeWorkspace!.id),
+    enabled: !!activeWorkspace && !!profile?.first_content_completed_at,
+  })
+  const hasInstagramReturnParams = !!(searchParams.get('instagram') || searchParams.get('instagram_error'))
+  const showInstagramBridge =
+    !!profile?.first_content_completed_at &&
+    (hasInstagramReturnParams ||
+      (!!onboardingState &&
+        !onboardingState.onboarding_dismissed &&
+        !onboardingState.instagram_connected_done &&
+        !onboardingState.dismissed_steps.includes('instagram')))
 
   React.useEffect(() => {
     if (profile && !draft) {
@@ -188,6 +210,34 @@ export function BrandDnaPage() {
         >
           Prefiro preencher manualmente
         </button>
+      </div>
+    )
+  }
+
+  if (profile?.onboarding_completed_at && !profile.first_content_completed_at) {
+    // Etapa 3 — DNA concluído mas o "primeiro conteúdo automático" ainda
+    // não terminou (nunca começou, ou o usuário recarregou/fechou a tela no
+    // meio). Condição vem de colunas persistidas (não de estado em memória
+    // como `justCompleted`), então funciona igual em qualquer entrada na
+    // página — inclusive reload/fechar/reabrir, que é recuperável aqui.
+    return (
+      <div className="mx-auto max-w-lg">
+        <FirstContentFlow workspaceId={activeWorkspace!.id} onDone={() => navigate('/')} />
+      </div>
+    )
+  }
+
+  if (showInstagramBridge) {
+    // Etapa 4A — primeiro conteúdo já concluído (first_content_completed_at
+    // persistido), mas a ponte de conexão do Instagram ainda não foi
+    // resolvida (não conectado, não "fazer isso depois"), OU o navegador
+    // acabou de voltar do callback do OAuth (instagram=success/instagram_error
+    // na querystring). As duas situações precisam funcionar igual num
+    // reload — por isso vêm de estado persistido (onboarding_state) e da
+    // própria URL, nunca de estado em memória.
+    return (
+      <div className="mx-auto max-w-lg">
+        <FirstContentFlow workspaceId={activeWorkspace!.id} onDone={() => navigate('/')} startAtConnectInstagram />
       </div>
     )
   }

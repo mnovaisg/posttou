@@ -13,17 +13,24 @@ export function GenerateImageDialog({
   onOpenChange,
   workspaceId,
   contentId,
+  pageId,
   format,
   creditCost,
+  onStarted,
   onGenerated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   workspaceId: string
   contentId: string
+  /** Liga a geração à página via os RPCs/trigger do Piloto — garante que o elemento seja anexado no servidor mesmo se este diálogo for fechado antes de terminar. */
+  pageId: string
   format: string
   creditCost: number | null
-  onGenerated: (assetPath: string) => void
+  /** Chamado assim que a geração é aceita pelo servidor (antes do polling) — usado para marcar a página como "gerando" localmente. */
+  onStarted: () => void
+  /** Chamado quando a geração termina com sucesso enquanto o diálogo ainda está aberto — apenas um atalho para não esperar o próximo tick da sincronização de fundo; o elemento em si já foi anexado no servidor independente disto. */
+  onGenerated: () => void
 }) {
   const [prompt, setPrompt] = React.useState('')
   const [phase, setPhase] = React.useState<'idle' | 'starting' | 'processing' | 'error'>('idle')
@@ -33,14 +40,15 @@ export function GenerateImageDialog({
     setPhase('starting')
     setError(null)
     try {
-      const { generationId } = await generateImageWithAi({ workspaceId, contentId, prompt, format })
+      const { generationId } = await generateImageWithAi({ workspaceId, contentId, prompt, format, pageId })
+      onStarted()
       setPhase('processing')
 
       for (let i = 0; i < MAX_POLLS; i++) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
         const result = await checkImageGeneration(generationId)
         if (result.status === 'success' && result.resultAssetPaths[0]) {
-          onGenerated(result.resultAssetPaths[0])
+          onGenerated()
           onOpenChange(false)
           setPrompt('')
           setPhase('idle')

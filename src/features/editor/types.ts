@@ -1,4 +1,4 @@
-import type { ContentFormat, ContentType } from '@/features/content/types'
+import type { ContentType } from '@/features/content/types'
 import type { Tables } from '@/types/database'
 
 export type ElementType = 'text' | 'image' | 'shape'
@@ -89,18 +89,10 @@ export interface EditorPage {
   visual_asset_status?: 'not_requested' | 'pending' | 'generating' | 'ready' | 'failed'
 }
 
-export interface EditorFormatSpec {
-  format: ContentFormat
-  label: string
-  width: number
-  height: number
-}
-
-export const EDITOR_FORMATS: EditorFormatSpec[] = [
-  { format: '1:1', label: 'Post', width: 1080, height: 1080 },
-  { format: '4:5', label: 'Post/Carrossel', width: 1080, height: 1350 },
-  { format: '9:16', label: 'Story/Reels', width: 1080, height: 1920 },
-]
+// Dimensões canônicas por formato: fonte única em @/features/content/types
+// (PAGE_DIMENSIONS_BY_FORMAT) — havia uma segunda tabela idêntica aqui
+// (EDITOR_FORMATS) sem nenhum importador, removida para não divergir
+// silenciosamente (achado real da auditoria da Etapa 3).
 
 export type ContentRow = Tables<'contents'>
 

@@ -37,6 +37,7 @@ import { clearPendingCreateIdea, readPendingCreateIdea } from '@/features/instag
 import type { DiscoveryIdea } from '@/features/instagram-discovery/types'
 import { clearPendingRadarIdea, readPendingRadarIdea } from '@/features/radar/session-token'
 import type { PendingRadarIdea } from '@/features/radar/session-token'
+import type { ContentFormat } from '@/features/content/types'
 
 const GENERATION_TYPES: GenerationType[] = ['post_unico', 'carrossel', 'reels_roteiro', 'legenda', 'ideias_conteudo']
 const OBJECTIVES: Objective[] = ['vender', 'educar', 'autoridade', 'relacionamento', 'leads', 'alcance', 'engajamento', 'divulgar']
@@ -63,7 +64,7 @@ export function AiCreatePage() {
 
   const [generationType, setGenerationType] = React.useState<GenerationType | null>(null)
   const [objective, setObjective] = React.useState<Objective | ''>('')
-  const [format, setFormat] = React.useState<string>('4:5')
+  const [format, setFormat] = React.useState<ContentFormat>('4:5')
   const [themeInput, setThemeInput] = React.useState('')
   const [response, setResponse] = React.useState<AiGenerateResponse | null>(null)
   const [editedResult, setEditedResult] = React.useState<TextGenerationResult | CarrosselGenerationResult | ReelsGenerationResult | null>(null)
@@ -115,6 +116,7 @@ export function AiCreatePage() {
         themeInput,
         radarOpportunityId ? 'radar' : 'ia',
         radarOpportunityId ?? undefined,
+        ['post_unico', 'carrossel', 'reels_roteiro'].includes(generationType!) ? format : undefined,
       )
     },
     onSuccess: (content) => {
@@ -276,7 +278,7 @@ export function AiCreatePage() {
                   {['post_unico', 'carrossel', 'reels_roteiro'].includes(generationType) && (
                     <div className="flex flex-col gap-2">
                       <Label htmlFor="format">Formato</Label>
-                      <Select id="format" value={format} onChange={(e) => setFormat(e.target.value)}>
+                      <Select id="format" value={format} onChange={(e) => setFormat(e.target.value as ContentFormat)}>
                         {FORMATS.map((f) => (
                           <option key={f} value={f}>
                             {f}

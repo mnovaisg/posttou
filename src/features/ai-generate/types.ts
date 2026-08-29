@@ -11,6 +11,7 @@ export const GENERATION_TYPE_LABEL: Record<GenerationType, string> = {
   reels_roteiro: 'Reels (roteiro)',
   legenda: 'Legenda',
   ideias_conteudo: 'Ideias de conteúdo',
+  ideias_onboarding: 'Ideias do onboarding',
   imagem: 'Imagem',
 }
 
@@ -20,6 +21,7 @@ export const GENERATION_TYPE_ICON: Record<GenerationType, string> = {
   reels_roteiro: '🎬',
   legenda: '✍️',
   ideias_conteudo: '💡',
+  ideias_onboarding: '✨',
   imagem: '🎨',
 }
 
@@ -30,6 +32,9 @@ export const GENERATION_TYPE_DESCRIPTION: Record<GenerationType, string> = {
   legenda: 'Só a legenda, hashtags e CTA — você já tem a imagem.',
   imagem: 'Gerada dentro do Editor Visual.',
   ideias_conteudo: 'Uma lista de ideias para não travar na criação.',
+  // Não aparece no seletor "O que você quer criar?" — usado só pelo
+  // primeiro passo do onboarding (3 ideias com objetivos diferentes).
+  ideias_onboarding: 'Primeiras ideias personalizadas do onboarding.',
 }
 
 export type Objective = 'vender' | 'educar' | 'autoridade' | 'relacionamento' | 'leads' | 'alcance' | 'engajamento' | 'divulgar'
@@ -67,6 +72,8 @@ export interface ContentIdea {
   title: string
   description: string
   suggested_type: 'post' | 'carrossel' | 'reel'
+  /** Só preenchido por ideias_onboarding — cada uma das 3 ideias tem um objetivo diferente. */
+  objective?: Objective
 }
 
 export interface IdeasGenerationResult {
