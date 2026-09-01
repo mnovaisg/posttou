@@ -8,8 +8,18 @@
 // 14B não usa produção do Asaas sem autorização explícita.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
+// Bug real encontrado no teste do Gate 1 (release candidate): esta function
+// nunca teve suporte a CORS — o navegador manda um preflight OPTIONS antes
+// do POST real, e sem isto ele sempre recebia 405, bloqueando QUALQUER
+// checkout feito pela UI (só funcionava via curl/server-to-server). Mesmo
+// padrão de corsHeaders já usado em instagram-oauth-start/instagram-oauth-disconnect.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
 
 interface CheckoutRequest {
@@ -20,6 +30,7 @@ interface CheckoutRequest {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
 
   const authHeader = req.headers.get('Authorization')

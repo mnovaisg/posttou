@@ -5,11 +5,20 @@
 // período já pago terminar (billing-cron-dispatcher aplica a transição).
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
+// Bug real encontrado no teste do Gate 1: nunca teve suporte a CORS —
+// bloqueava qualquer chamada real do navegador (mesmo achado de
+// billing-create-checkout).
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
 
   const authHeader = req.headers.get('Authorization')

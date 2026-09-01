@@ -55,11 +55,17 @@ export function SignupPage() {
   }
 
   if (done) {
+    // Mensagem deliberadamente neutra e IDÊNTICA para e-mail novo e para
+    // e-mail já cadastrado (confirmado ou não) — signUp() do Supabase nunca
+    // retorna erro nesse caso (anti-enumeração por design: data.user.identities
+    // vem vazio pra e-mail existente, mas isso nunca deve virar um sinal
+    // visual aqui). Nenhuma ramificação de UI baseada em identities, em
+    // consulta própria, ou em qualquer outro sinal — a tela é sempre esta.
     return (
       <AuthLayout title="Confirme seu e-mail">
         <p className="text-sm text-ink-600 dark:text-ink-300">
-          Enviamos um link de confirmação para <strong>{email}</strong>. Abra seu e-mail para ativar a
-          conta e acessar o POSTTOU.
+          Se <strong>{email}</strong> ainda não estiver cadastrado, enviaremos uma mensagem para confirmar
+          sua conta. Se você já possui uma conta, acesse o login ou recupere sua senha.
         </p>
         <button
           className="mt-4 text-sm font-medium text-brand-600 hover:underline disabled:opacity-50"
@@ -69,9 +75,14 @@ export function SignupPage() {
           {resendStatus === 'sent' ? 'E-mail reenviado.' : resendStatus === 'sending' ? 'Reenviando…' : 'Não recebeu? Reenviar e-mail'}
         </button>
         {resendStatus === 'error' && <p className="mt-1 text-xs text-danger-500">Não foi possível reenviar agora. Tente de novo em instantes.</p>}
-        <Link to="/entrar" className="mt-6 block text-sm font-medium text-brand-600 hover:underline">
-          Voltar para o login
-        </Link>
+        <div className="mt-6 flex flex-col gap-2 text-sm font-medium text-brand-600">
+          <Link to="/entrar" className="hover:underline">
+            Ir para o login
+          </Link>
+          <Link to="/esqueci-senha" className="hover:underline">
+            Esqueci minha senha
+          </Link>
+        </div>
       </AuthLayout>
     )
   }
