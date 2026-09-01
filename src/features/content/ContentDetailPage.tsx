@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getContent,
   getContentPages,
+  getContentPageThumbnails,
   updateContent,
   transitionStatus,
   duplicateContent,
@@ -57,6 +58,14 @@ export function ContentDetailPage() {
     enabled: !!id,
     queryFn: () => getContentPages(id!),
   })
+
+  const { data: pageThumbnails } = useQuery({
+    queryKey: ['content-page-thumbnails', id, pages?.map((p) => `${p.id}:${p.visual_asset_status}:${p.visual_ai_generation_id}`).join(',')],
+    enabled: !!pages?.length,
+    queryFn: () => getContentPageThumbnails(pages!),
+  })
+
+  const [brokenThumbnails, setBrokenThumbnails] = React.useState<Record<string, true>>({})
 
   const { data: activePublication } = useQuery({
     queryKey: ['instagram-publication', id],
@@ -267,13 +276,40 @@ export function ContentDetailPage() {
           {(pages ?? []).map((page, idx) => {
             const dims = PAGE_DIMENSIONS_BY_FORMAT[content.format]
             const ratio = dims.height / dims.width
+            const thumbnailUrl = pageThumbnails?.[page.id]
+            const showImage = !!thumbnailUrl && !brokenThumbnails[page.id]
+
             return (
               <div
                 key={page.id}
                 style={{ width: 90, height: 90 * ratio }}
-                className="flex items-center justify-center rounded-lg border border-dashed border-ink-300 bg-ink-50 text-xs text-ink-400 dark:border-ink-600 dark:bg-ink-800"
+                className="relative flex items-center justify-center overflow-hidden rounded-lg border border-dashed border-ink-300 bg-ink-50 text-xs text-ink-400 dark:border-ink-600 dark:bg-ink-800"
               >
-                {idx + 1}
+                {showImage ? (
+                  <>
+                    <img
+                      src={thumbnailUrl}
+                      alt={`Página ${idx + 1}`}
+                      className="h-full w-full object-cover"
+                      onError={() => setBrokenThumbnails((prev) => ({ ...prev, [page.id]: true }))}
+                    />
+                    <span className="absolute left-1 top-1 rounded bg-black/50 px-1 py-0.5 text-[10px] font-medium leading-none text-white">
+                      {idx + 1}
+                    </span>
+                  </>
+                ) : page.visual_asset_status === 'generating' || page.visual_asset_status === 'pending' ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+                    <span>{idx + 1}</span>
+                  </div>
+                ) : page.visual_asset_status === 'failed' ? (
+                  <div className="flex flex-col items-center gap-0.5 text-danger-500">
+                    <span aria-hidden>⚠</span>
+                    <span>{idx + 1}</span>
+                  </div>
+                ) : (
+                  idx + 1
+                )}
               </div>
             )
           })}

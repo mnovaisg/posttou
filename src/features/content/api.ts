@@ -1,8 +1,12 @@
 import { supabase } from '@/lib/supabase/client'
 import { DEFAULT_FORMAT_BY_TYPE, PAGE_DIMENSIONS_BY_FORMAT } from '@/features/content/types'
 import type { ContentFilters, ContentRow, ContentStatus, ContentType } from '@/features/content/types'
+import type { Database } from '@/types/database'
 
 const PAGE_SIZE = 24
+const SIGNED_URL_TTL_SECONDS = 60 * 60
+
+type ContentPageRow = Database['public']['Tables']['content_pages']['Row']
 
 export interface ListContentsResult {
   rows: ContentRow[]
@@ -243,4 +247,51 @@ export async function getContentPages(contentId: string) {
     .order('position', { ascending: true })
   if (error) throw error
   return data ?? []
+}
+
+/**
+ * Resolve, em lote (nunca 1 request por página), a URL assinada da arte
+ * final de cada página que já tem imagem pronta (visual_asset_status
+ * 'ready'). content-assets é bucket privado — nunca expõe a URL pública
+ * do Storage, só signed URLs de curta duração. Qualquer falha em qualquer
+ * etapa (geração não encontrada, sem asset, erro ao assinar) simplesmente
+ * omite a página do mapa — quem chama trata a ausência como fallback, não
+ * como erro fatal.
+ */
+export async function getContentPageThumbnails(pages: ContentPageRow[]): Promise<Record<string, string>> {
+  const generationIds = Array.from(
+    new Set(
+      pages
+        .filter((page) => page.visual_asset_status === 'ready' && page.visual_ai_generation_id)
+        .map((page) => page.visual_ai_generation_id as string),
+    ),
+  )
+  if (!generationIds.length) return {}
+
+  const { data: generations } = await supabase.from('ai_generations').select('id, result_asset_paths').in('id', generationIds)
+  if (!generations?.length) return {}
+
+  const pathByGenerationId = new Map<string, string>()
+  for (const generation of generations) {
+    const path = generation.result_asset_paths[0]
+    if (path) pathByGenerationId.set(generation.id, path)
+  }
+  if (!pathByGenerationId.size) return {}
+
+  const paths = Array.from(new Set(pathByGenerationId.values()))
+  const { data: signedUrls } = await supabase.storage.from('content-assets').createSignedUrls(paths, SIGNED_URL_TTL_SECONDS)
+  if (!signedUrls?.length) return {}
+
+  const urlByPath = new Map<string, string>()
+  for (const item of signedUrls) {
+    if (item.path && item.signedUrl) urlByPath.set(item.path, item.signedUrl)
+  }
+
+  const urlByPageId: Record<string, string> = {}
+  for (const page of pages) {
+    const path = page.visual_ai_generation_id ? pathByGenerationId.get(page.visual_ai_generation_id) : undefined
+    const url = path ? urlByPath.get(path) : undefined
+    if (url) urlByPageId[page.id] = url
+  }
+  return urlByPageId
 }
