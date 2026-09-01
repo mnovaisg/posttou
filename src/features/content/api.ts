@@ -295,3 +295,29 @@ export async function getContentPageThumbnails(pages: ContentPageRow[]): Promise
   }
   return urlByPageId
 }
+
+/**
+ * Mesma resolução em lote de getContentPageThumbnails, mas para a capa
+ * (position 0) de vários conteúdos de uma vez — usado pelos cards da
+ * Grade. Sempre 3 queries no total (content_pages, ai_generations,
+ * signed URLs), nunca 1 por card.
+ */
+export async function getContentCoverThumbnails(contentIds: string[]): Promise<Record<string, string>> {
+  if (!contentIds.length) return {}
+
+  const { data: coverPages } = await supabase
+    .from('content_pages')
+    .select('*')
+    .in('content_id', contentIds)
+    .eq('position', 0)
+  if (!coverPages?.length) return {}
+
+  const urlByPageId = await getContentPageThumbnails(coverPages)
+
+  const urlByContentId: Record<string, string> = {}
+  for (const page of coverPages) {
+    const url = urlByPageId[page.id]
+    if (url) urlByContentId[page.content_id] = url
+  }
+  return urlByContentId
+}
