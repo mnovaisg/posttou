@@ -33,8 +33,7 @@ export function CreateContentDialog({
       navigate(`/conteudo/${content.id}`)
     },
     onError: (err) => {
-      const billingError = mapPostgrestFranchiseGateError(err instanceof Error ? { message: err.message } : null)
-      setError(billingError ?? GENERIC_ERROR)
+      setError(mapPostgrestFranchiseGateError(err) ?? GENERIC_ERROR)
     },
   })
 

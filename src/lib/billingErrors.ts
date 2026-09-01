@@ -64,13 +64,17 @@ export function mapBillingError(body: { error?: string; reason?: string; status?
  * protegida pelo gatilho content_franchise_gate (ex.: criação manual de
  * conteúdo) em vez de passar por uma Edge Function com corpo JSON
  * {error, reason}. O gatilho levanta RAISE EXCEPTION com o código como
- * mensagem literal (ex.: 'SUBSCRIPTION_EXPIRED'), que o supabase-js expõe
- * em error.message — reaproveita o mesmo REASON_MESSAGES, sem duplicar
- * texto. Retorna null quando a mensagem não é um código de billing
- * reconhecido, para o chamador usar seu próprio fallback genérico.
+ * mensagem literal (ex.: 'SUBSCRIPTION_EXPIRED'), e o supabase-js expõe
+ * isso em `error.message` — mas só como instância real de Error quando a
+ * chamada usa .throwOnError(); no padrão `const { error } = await ...`
+ * (usado por createContent), o erro chega como objeto plano
+ * {code,details,hint,message}, não `instanceof Error`. Por isso aceita
+ * `unknown` e lê `.message` por duck-typing, nunca por instanceof.
+ * Retorna null quando a mensagem não é um código de billing reconhecido,
+ * para o chamador usar seu próprio fallback genérico.
  */
-export function mapPostgrestFranchiseGateError(error: { message?: string } | null | undefined): BillingErrorInfo | null {
-  const code = error?.message
-  if (code && code in REASON_MESSAGES) return REASON_MESSAGES[code]
+export function mapPostgrestFranchiseGateError(error: unknown): BillingErrorInfo | null {
+  const code = error && typeof error === 'object' && 'message' in error ? (error as { message?: unknown }).message : undefined
+  if (typeof code === 'string' && code in REASON_MESSAGES) return REASON_MESSAGES[code]
   return null
 }
