@@ -1,12 +1,15 @@
 import * as React from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createContent } from '@/features/content/api'
 import { TYPE_ICON, TYPE_LABEL } from '@/features/content/types'
 import type { ContentType } from '@/features/content/types'
+import { mapPostgrestFranchiseGateError, type BillingErrorInfo } from '@/lib/billingErrors'
 
 const TYPES: ContentType[] = ['post', 'carrossel', 'reel']
+
+const GENERIC_ERROR: BillingErrorInfo = { message: 'Não foi possível criar o conteúdo.', cta: null }
 
 export function CreateContentDialog({
   open,
@@ -19,7 +22,7 @@ export function CreateContentDialog({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [error, setError] = React.useState<string | null>(null)
+  const [error, setError] = React.useState<BillingErrorInfo | null>(null)
 
   const mutation = useMutation({
     mutationFn: (type: ContentType) => createContent(workspaceId, type),
@@ -29,7 +32,10 @@ export function CreateContentDialog({
       onOpenChange(false)
       navigate(`/conteudo/${content.id}`)
     },
-    onError: (err) => setError(err instanceof Error ? err.message : 'Não foi possível criar o conteúdo.'),
+    onError: (err) => {
+      const billingError = mapPostgrestFranchiseGateError(err instanceof Error ? { message: err.message } : null)
+      setError(billingError ?? GENERIC_ERROR)
+    },
   })
 
   return (
@@ -62,7 +68,20 @@ export function CreateContentDialog({
             ))}
           </div>
 
-          {error && <p className="mt-3 text-sm text-danger-500">{error}</p>}
+          {error && (
+            <div className="mt-3">
+              <p className="text-sm text-danger-500">{error.message}</p>
+              {error.cta && (
+                <Link
+                  to={error.cta.to}
+                  onClick={() => onOpenChange(false)}
+                  className="mt-1 inline-block text-sm font-medium text-brand-600 hover:underline"
+                >
+                  {error.cta.label} →
+                </Link>
+              )}
+            </div>
+          )}
           {mutation.isPending && <p className="mt-3 text-sm text-ink-400">Criando…</p>}
 
           <Dialog.Close asChild>

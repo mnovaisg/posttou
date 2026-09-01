@@ -57,3 +57,20 @@ export function mapBillingError(body: { error?: string; reason?: string; status?
     cta: { label: 'Ver planos', to: '/plano-e-cobranca' },
   }
 }
+
+/**
+ * Converte um erro cru do PostgREST/Postgres para o mesmo modelo de erro de
+ * billing acima — usado por caminhos que inserem direto numa tabela
+ * protegida pelo gatilho content_franchise_gate (ex.: criação manual de
+ * conteúdo) em vez de passar por uma Edge Function com corpo JSON
+ * {error, reason}. O gatilho levanta RAISE EXCEPTION com o código como
+ * mensagem literal (ex.: 'SUBSCRIPTION_EXPIRED'), que o supabase-js expõe
+ * em error.message — reaproveita o mesmo REASON_MESSAGES, sem duplicar
+ * texto. Retorna null quando a mensagem não é um código de billing
+ * reconhecido, para o chamador usar seu próprio fallback genérico.
+ */
+export function mapPostgrestFranchiseGateError(error: { message?: string } | null | undefined): BillingErrorInfo | null {
+  const code = error?.message
+  if (code && code in REASON_MESSAGES) return REASON_MESSAGES[code]
+  return null
+}
