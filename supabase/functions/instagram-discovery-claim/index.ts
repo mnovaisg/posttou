@@ -69,11 +69,33 @@ interface ContentPreview {
   sourceIdeaIndex: number | null
 }
 
+// Réplica exata (Deno não importa src/ do frontend) da correção em
+// src/features/instagram-discovery/ContentPreviewCards.tsx — palavras
+// inteiras normalizadas, não substring regex (que disparava falso
+// positivo em "educação" → "conversão"). Qualquer mudança aqui precisa
+// ser espelhada lá.
+const CONVERSAO_WORDS = new Set([
+  'venda', 'vendas', 'vender', 'conversao', 'lead', 'leads', 'cta', 'agendar', 'agendamento', 'comprar', 'compra',
+])
+const AUTORIDADE_WORDS = new Set([
+  'autoridade', 'educacao', 'educar', 'educativo', 'conhecimento', 'ensinar', 'ensino', 'relacionamento',
+])
+const DESCOBERTA_WORDS = new Set(['alcance', 'descoberta', 'descobrir', 'engajamento', 'viral'])
+
+function normalizeWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+}
+
 function matchIdeaObjective(idea: DiscoveryIdea): PreviewObjective | null {
-  const text = `${idea.objetivo ?? ''} ${idea.pilar ?? ''}`.toLowerCase()
-  if (/(vend|convers|lead|a[cç][aã]o|agend|compr)/.test(text)) return 'conversao'
-  if (/(autorid|educ|conhec|ensin|relacion)/.test(text)) return 'autoridade'
-  if (/(alcance|descobert|engaj|viral)/.test(text)) return 'descoberta'
+  const words = normalizeWords(`${idea.objetivo ?? ''} ${idea.pilar ?? ''}`)
+  if (words.some((w) => CONVERSAO_WORDS.has(w))) return 'conversao'
+  if (words.some((w) => AUTORIDADE_WORDS.has(w))) return 'autoridade'
+  if (words.some((w) => DESCOBERTA_WORDS.has(w))) return 'descoberta'
   return null
 }
 
@@ -164,33 +186,26 @@ async function promoteContents(
     const format = DEFAULT_FORMAT_BY_TYPE[preview.format]
     const dims = PAGE_DIMENSIONS_BY_FORMAT[format]
 
-    const { data: content, error: contentError } = await admin
-      .from('contents')
-      .insert({
-        workspace_id: params.workspaceId,
-        title: preview.title || 'Sugestão do POSTTOU',
-        type: preview.format,
-        status: 'rascunho',
-        format,
-        origin: 'ia',
-        caption: preview.support || null,
-        created_by: params.userId,
-        discovery_session_id: params.sessionId,
-      })
-      .select('id')
-      .single()
-
-    if (contentError || !content) {
-      console.error('instagram-discovery-claim: falha ao promover sugestão.', contentError)
-      continue
-    }
-
-    await admin.from('content_pages').insert({
-      content_id: content.id,
-      position: 0,
-      width: dims.width,
-      height: dims.height,
+    // RPC dedicada (não .from('contents').insert direto): o trigger de
+    // auditoria de INSERT em contents chama log_audit_event, que exige
+    // o marcador posttou.system_actor='discovery_claim_worker' NA MESMA
+    // transação do INSERT — set_config de uma chamada REST anterior não
+    // persiste (mesmo padrão já usado por pilot_create_content).
+    const { error: rpcError } = await admin.rpc('discovery_claim_create_content', {
+      p_workspace_id: params.workspaceId,
+      p_type: preview.format,
+      p_format: format,
+      p_title: preview.title || 'Sugestão do POSTTOU',
+      p_caption: preview.support || null,
+      p_created_by: params.userId,
+      p_discovery_session_id: params.sessionId,
+      p_page_width: dims.width,
+      p_page_height: dims.height,
     })
+
+    if (rpcError) {
+      console.error('instagram-discovery-claim: falha ao promover sugestão.', rpcError)
+    }
   }
 }
 

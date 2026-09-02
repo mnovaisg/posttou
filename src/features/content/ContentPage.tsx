@@ -1,9 +1,11 @@
 import * as React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { getContentSummary } from '@/features/content/api'
 import { fetchOnboardingState } from '@/features/onboarding/api'
+import { fetchBrandProfile } from '@/features/brand-dna/api'
+import { resolveDnaColors } from '@/features/content/placeholder'
 import { DEFAULT_FILTERS } from '@/features/content/types'
 import type { ContentFilters, ViewMode } from '@/features/content/types'
 import { Button } from '@/components/ui/button'
@@ -12,6 +14,9 @@ import { Select } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { CreateContentDialog } from '@/features/content/components/CreateContentDialog'
+import { UndatedContentStrip } from '@/features/content/components/UndatedContentStrip'
+import { InstagramDisconnectedBanner } from '@/features/content/components/InstagramDisconnectedBanner'
+import { OnboardingWidget } from '@/features/onboarding/OnboardingWidget'
 import { ListView } from '@/features/content/views/ListView'
 import { GridView } from '@/features/content/views/GridView'
 import { CalendarView } from '@/features/content/views/CalendarView'
@@ -47,6 +52,16 @@ export function ContentPage() {
   })
   const hasBrandDna = onboarding?.brand_dna_done ?? true
 
+  const { data: brandProfile } = useQuery({
+    queryKey: ['brand-profile', activeWorkspace?.id],
+    queryFn: () => fetchBrandProfile(activeWorkspace!.id),
+    enabled: !!activeWorkspace,
+  })
+  const dnaColors = React.useMemo(
+    () => resolveDnaColors((brandProfile?.visual_identity as { colors?: string[] } | null)?.colors),
+    [brandProfile],
+  )
+
   // canCreate (owner/admin/editor) também governa a etapa de DNA — mesmo
   // papel exigido para escrever em brand_profiles (item 14: nunca mostrar
   // CTA que o papel do usuário não pode executar).
@@ -78,8 +93,23 @@ export function ContentPage() {
           <h1 className="text-2xl font-semibold text-ink-900 dark:text-ink-50">Meu Conteúdo</h1>
           <p className="text-sm text-ink-500">Organize, revise e agende tudo o que sua marca vai publicar.</p>
         </div>
-        {canCreate && <Button onClick={() => setCreateOpen(true)}>+ Criar conteúdo</Button>}
+        {canCreate && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setCreateOpen(true)}>
+              + Criar manualmente
+            </Button>
+            <Button asChild>
+              <Link to="/criar">✨ Criar com IA</Link>
+            </Button>
+          </div>
+        )}
       </div>
+
+      <InstagramDisconnectedBanner />
+
+      <UndatedContentStrip workspaceId={activeWorkspace.id} dnaColors={dnaColors} />
+
+      <OnboardingWidget workspaceId={activeWorkspace.id} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <SummaryCard label="Total" value={summary?.total} />
@@ -155,7 +185,7 @@ export function ContentPage() {
         <ListView workspaceId={activeWorkspace.id} filters={filters} emptyState={emptyState} />
       )}
       {view === 'grade' && (
-        <GridView workspaceId={activeWorkspace.id} filters={filters} emptyState={emptyState} />
+        <GridView workspaceId={activeWorkspace.id} filters={filters} emptyState={emptyState} dnaColors={dnaColors} />
       )}
       {view === 'calendario' && <CalendarView workspaceId={activeWorkspace.id} timezone={activeWorkspace.timezone} />}
 

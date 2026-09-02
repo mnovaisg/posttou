@@ -101,7 +101,14 @@ export function OnboardingWidget({ workspaceId }: { workspaceId: string }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>{allDone ? 'Seu POSTTOU está configurado 🎉' : 'Configure seu POSTTOU'}</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          {allDone ? 'Seu POSTTOU está configurado 🎉' : 'Comece por aqui'}
+          {!allDone && (
+            <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-900 dark:text-brand-200">
+              {doneCount}/{steps.length}
+            </span>
+          )}
+        </CardTitle>
         <button
           className="text-xs text-ink-400 hover:text-ink-600 dark:hover:text-ink-300"
           onClick={() => dismissOnboarding(workspaceId).then(invalidate)}
@@ -110,9 +117,6 @@ export function OnboardingWidget({ workspaceId }: { workspaceId: string }) {
         </button>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <p className="text-xs font-medium text-ink-500">
-          {doneCount} de {steps.length} etapas concluídas
-        </p>
 
         {currentStep && (
           <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-950">

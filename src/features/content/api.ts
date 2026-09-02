@@ -239,6 +239,24 @@ export async function getContentSummary(workspaceId: string): Promise<ContentSum
   }
 }
 
+/**
+ * Conteúdos ainda sem data (scheduled_at nulo) — inclui as sugestões
+ * promovidas no claim do Bloco 5, que nascem sem agendamento. Ordenado
+ * por criação mais recente primeiro, para as sugestões do onboarding
+ * aparecerem no topo logo após o cadastro.
+ */
+export async function listUndatedContents(workspaceId: string, limit = 12): Promise<ListContentsResult> {
+  const { data, error, count } = await supabase
+    .from('contents')
+    .select('*', { count: 'exact' })
+    .eq('workspace_id', workspaceId)
+    .is('scheduled_at', null)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return { rows: data ?? [], count: count ?? 0 }
+}
+
 export async function getContentPages(contentId: string) {
   const { data, error } = await supabase
     .from('content_pages')

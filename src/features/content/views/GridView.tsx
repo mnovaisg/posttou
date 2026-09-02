@@ -7,6 +7,7 @@ import type { ContentFilters, ContentType } from '@/features/content/types'
 import { ORIGIN_ICON } from '@/features/content/types'
 import { StatusBadge } from '@/features/content/components/StatusBadge'
 import { ContentEmptyState } from '@/features/content/components/ContentEmptyState'
+import { contentPlaceholderBackground } from '@/features/content/placeholder'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 
@@ -36,10 +37,13 @@ export function GridView({
   workspaceId,
   filters,
   emptyState,
+  dnaColors = [],
 }: {
   workspaceId: string
   filters: ContentFilters
   emptyState: EmptyStateConfig
+  /** Cores do DNA da marca (hex), para o placeholder de conteúdo sem arte final. */
+  dnaColors?: string[]
 }) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['contents', 'grade', workspaceId, filters],
@@ -99,10 +103,9 @@ export function GridView({
             >
               <div
                 className={`relative flex ${ASPECT_CLASS[row.format]} items-center justify-center overflow-hidden ${
-                  showImage
-                    ? 'bg-ink-100 dark:bg-ink-800'
-                    : 'bg-gradient-to-br from-brand-50 via-fuchsia-50 to-orange-50 dark:from-ink-800 dark:via-ink-800 dark:to-ink-900'
+                  showImage ? 'bg-ink-100 dark:bg-ink-800' : ''
                 }`}
+                style={showImage ? undefined : { background: contentPlaceholderBackground(row.id, dnaColors) }}
               >
                 {showImage ? (
                   <img
@@ -113,10 +116,10 @@ export function GridView({
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-2 px-3 text-center">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-brand-500 shadow-sm dark:bg-ink-700/70 dark:text-brand-300">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white shadow-sm backdrop-blur-sm">
                       <PlaceholderIcon className="h-5 w-5" />
                     </span>
-                    <span className="text-[11px] font-medium leading-tight text-ink-400 dark:text-ink-500">
+                    <span className="text-[11px] font-medium leading-tight text-white/80">
                       Arte ainda não criada
                     </span>
                   </div>

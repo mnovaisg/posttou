@@ -32,11 +32,37 @@ const FORMAT_LABEL: Record<ContentPreview['format'], string> = {
   reel: 'Reel',
 }
 
+// Palavras inteiras (não substrings) por objetivo — a versão anterior
+// usava regex de substring (ex.: /a[cç][aã]o/) que disparava em falso
+// positivo dentro de "educação" (contém "cação", que casava com o
+// padrão de "conversão"), classificando ideias de autoridade como
+// conversão. Normaliza acento e faz split por palavra antes de comparar,
+// então "educação" só bate com a lista de autoridade, nunca a de
+// conversão. Mesma função replicada (não importável entre frontend/Deno)
+// em supabase/functions/instagram-discovery-claim/index.ts — qualquer
+// mudança aqui precisa ser espelhada lá.
+const CONVERSAO_WORDS = new Set([
+  'venda', 'vendas', 'vender', 'conversao', 'lead', 'leads', 'cta', 'agendar', 'agendamento', 'comprar', 'compra',
+])
+const AUTORIDADE_WORDS = new Set([
+  'autoridade', 'educacao', 'educar', 'educativo', 'conhecimento', 'ensinar', 'ensino', 'relacionamento',
+])
+const DESCOBERTA_WORDS = new Set(['alcance', 'descoberta', 'descobrir', 'engajamento', 'viral'])
+
+function normalizeWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+}
+
 function matchIdeaObjective(idea: DiscoveryIdea): PreviewObjective | null {
-  const text = `${idea.objetivo ?? ''} ${idea.pilar ?? ''}`.toLowerCase()
-  if (/(vend|convers|lead|a[cç][aã]o|agend|compr)/.test(text)) return 'conversao'
-  if (/(autorid|educ|conhec|ensin|relacion)/.test(text)) return 'autoridade'
-  if (/(alcance|descobert|engaj|viral)/.test(text)) return 'descoberta'
+  const words = normalizeWords(`${idea.objetivo ?? ''} ${idea.pilar ?? ''}`)
+  if (words.some((w) => CONVERSAO_WORDS.has(w))) return 'conversao'
+  if (words.some((w) => AUTORIDADE_WORDS.has(w))) return 'autoridade'
+  if (words.some((w) => DESCOBERTA_WORDS.has(w))) return 'descoberta'
   return null
 }
 
