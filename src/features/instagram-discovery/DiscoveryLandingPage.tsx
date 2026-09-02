@@ -19,8 +19,9 @@ import {
   extractDiscoveryIdeas,
 } from '@/features/instagram-discovery/types'
 import type { DiscoveryDna, DiscoveryGetResult, DiscoveryStartResult } from '@/features/instagram-discovery/types'
+import { DnaReviewCards } from '@/features/instagram-discovery/DnaReviewCards'
 
-type Stage = 'handle' | 'loading' | 'result' | 'error' | 'not_configured'
+type Stage = 'handle' | 'loading' | 'dna' | 'result' | 'error' | 'not_configured'
 
 // Etapas puramente narrativas do processamento — nunca afirmam um dado
 // específico já encontrado (isso só aparece na tela de resultado, quando
@@ -54,7 +55,7 @@ export function DiscoveryLandingPage() {
       }
       saveDiscoveryToken(res.token)
       setResult(res)
-      setStage('result')
+      setStage(res.dna ? 'dna' : 'result')
     } catch (err) {
       if (err instanceof DiscoveryNotConfiguredError) {
         setStage('not_configured')
@@ -81,7 +82,7 @@ export function DiscoveryLandingPage() {
           if (cancelled) return
           if (res.status === 'ready' && res.dna) {
             setResult(res)
-            setStage('result')
+            setStage('dna')
             return
           }
           clearDiscoveryToken()
@@ -258,54 +259,23 @@ export function DiscoveryLandingPage() {
           </Card>
         )}
 
+        {stage === 'dna' && dna && (
+          <DnaReviewCards dna={dna} profile={profile} onContinue={() => setStage('result')} />
+        )}
+
         {stage === 'result' && dna && (
           <div className="flex flex-col gap-6">
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  {profile?.profilePictureUrl && (
-                    <img
-                      src={profile.profilePictureUrl}
-                      alt=""
-                      className="h-12 w-12 rounded-full object-cover"
-                    />
-                  )}
-                  <div>
-                    <p className="text-sm font-semibold text-ink-900 dark:text-ink-50">
-                      @{result?.handle}
-                    </p>
-                    {typeof profile?.followersCount === 'number' && (
-                      <p className="text-xs text-ink-400">
-                        {profile.followersCount.toLocaleString('pt-BR')} seguidores
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <h2 className="mt-5 text-lg font-semibold text-ink-900 dark:text-ink-50">Seu DNA preliminar</h2>
-                <p className="mt-1 text-sm text-ink-600 dark:text-ink-300">{dna.identidade?.descricao?.value}</p>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {dna.identidade?.nicho?.value && <Badge variant="brand">{dna.identidade.nicho.value}</Badge>}
-                  {dna.voz?.tom?.value && <Badge>{dna.voz.tom.value}</Badge>}
-                  {dna.voz?.personalidade?.slice(0, 4).map((trait) => (
-                    <Badge key={trait} variant="neutral">
-                      {trait}
-                    </Badge>
-                  ))}
-                </div>
-
-                {dna.publico?.publico_provavel?.value && (
-                  <p className="mt-4 text-sm text-ink-600 dark:text-ink-300">
-                    <span className="font-medium text-ink-800 dark:text-ink-100">Público provável: </span>
-                    {dna.publico.publico_provavel.value}
-                  </p>
+              <CardContent className="flex items-center gap-3 pt-6">
+                {profile?.profilePictureUrl && (
+                  <img src={profile.profilePictureUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
                 )}
-
-                <p className="mt-4 text-xs text-ink-400">
-                  Isso é uma sugestão preliminar da IA a partir de dados públicos — você vai poder revisar e
-                  ajustar tudo depois de criar sua conta.
-                </p>
+                <div>
+                  <p className="text-sm font-semibold text-ink-900 dark:text-ink-50">@{result?.handle}</p>
+                  {typeof profile?.followersCount === 'number' && (
+                    <p className="text-xs text-ink-400">{profile.followersCount.toLocaleString('pt-BR')} seguidores</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
