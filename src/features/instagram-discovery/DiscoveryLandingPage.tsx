@@ -3,25 +3,19 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PosttouMark } from '@/components/brand/PosttouMark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/features/auth/AuthProvider'
 import { DiscoveryNotConfiguredError, getDiscoveryStatus, startDiscovery } from '@/features/instagram-discovery/api'
-import {
-  clearDiscoveryToken,
-  readDiscoveryToken,
-  saveDiscoveryToken,
-  saveSelectedIdeaIndex,
-} from '@/features/instagram-discovery/session-token'
+import { clearDiscoveryToken, readDiscoveryToken, saveDiscoveryToken } from '@/features/instagram-discovery/session-token'
 import {
   DISCOVERY_ERROR_MESSAGES,
   extractDiscoveryIdeas,
 } from '@/features/instagram-discovery/types'
 import type { DiscoveryDna, DiscoveryGetResult, DiscoveryStartResult } from '@/features/instagram-discovery/types'
-import { DnaReviewCards } from '@/features/instagram-discovery/DnaReviewCards'
+import { DnaReviewCards, type DnaReviewState } from '@/features/instagram-discovery/DnaReviewCards'
+import { ContentPreviewCards } from '@/features/instagram-discovery/ContentPreviewCards'
 
-type Stage = 'handle' | 'loading' | 'dna' | 'result' | 'error' | 'not_configured'
+type Stage = 'handle' | 'loading' | 'dna' | 'previews' | 'result' | 'error' | 'not_configured'
 
 // Etapas puramente narrativas do processamento — nunca afirmam um dado
 // específico já encontrado (isso só aparece na tela de resultado, quando
@@ -36,12 +30,12 @@ const ANALYSIS_STEPS = [
 export function DiscoveryLandingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { user } = useAuth()
   const [stage, setStage] = React.useState<Stage>('handle')
   const [handleInput, setHandleInput] = React.useState('')
   const [progressIndex, setProgressIndex] = React.useState(0)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [result, setResult] = React.useState<DiscoveryStartResult | DiscoveryGetResult | null>(null)
+  const [dnaReview, setDnaReview] = React.useState<DnaReviewState | null>(null)
 
   async function runDiscovery(handle: string) {
     setErrorMessage(null)
@@ -127,21 +121,6 @@ export function DiscoveryLandingPage() {
     setResult(null)
     setErrorMessage(null)
     setStage('handle')
-  }
-
-  /**
-   * CTA "Criar este conteúdo" numa ideia específica. O token já está em
-   * sessionStorage (salvo assim que a análise ficou pronta); aqui só
-   * marcamos qual ideia foi escolhida, pelo índice — resolvida contra o
-   * array real de ideias retornado pelo claim, nunca confiado do
-   * cliente. Se o visitante já estiver autenticado, o mesmo hook de
-   * claim (montado no layout protegido) cuida do resto; se anônimo,
-   * segue para cadastro preservando a seleção.
-   */
-  function handleCreateFromIdea(index: number) {
-    if (!result || result.status === 'failed') return
-    saveSelectedIdeaIndex(index)
-    navigate(user ? '/' : '/cadastro')
   }
 
   const dna = result?.dna as DiscoveryDna | null | undefined
@@ -260,7 +239,18 @@ export function DiscoveryLandingPage() {
         )}
 
         {stage === 'dna' && dna && (
-          <DnaReviewCards dna={dna} profile={profile} onContinue={() => setStage('result')} />
+          <DnaReviewCards
+            dna={dna}
+            profile={profile}
+            onContinue={(editedState) => {
+              setDnaReview(editedState)
+              setStage('previews')
+            }}
+          />
+        )}
+
+        {stage === 'previews' && dnaReview && (
+          <ContentPreviewCards ideas={ideias} dna={dnaReview} onContinue={() => setStage('result')} />
         )}
 
         {stage === 'result' && dna && (
@@ -278,32 +268,6 @@ export function DiscoveryLandingPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {ideias.length > 0 && (
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">
-                  5 ideias de conteúdo para você
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {ideias.map((idea, i) => (
-                    <Card key={i}>
-                      <CardContent className="pt-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="font-medium text-ink-900 dark:text-ink-50">{idea.titulo}</p>
-                          <Badge variant="neutral">{idea.formato}</Badge>
-                        </div>
-                        <p className="mt-1 text-sm text-ink-600 dark:text-ink-300">{idea.resumo}</p>
-                        <div className="mt-3 flex justify-end">
-                          <Button size="sm" variant="outline" onClick={() => handleCreateFromIdea(i)}>
-                            Criar este conteúdo
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <Card>
               <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
