@@ -27,6 +27,10 @@ function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function formatWhole(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+}
+
 export function BillingPage() {
   const { activeWorkspace, activeRole } = useWorkspace()
   const queryClient = useQueryClient()
@@ -38,6 +42,7 @@ export function BillingPage() {
   const [couponInput, setCouponInput] = React.useState<Record<string, string>>({})
   const [couponStatus, setCouponStatus] = React.useState<Record<string, 'validating' | 'done'>>({})
   const [couponResult, setCouponResult] = React.useState<Record<string, CouponPreview>>({})
+  const [billingInterval, setBillingInterval] = React.useState<'monthly' | 'yearly'>('monthly')
 
   const organizationId = activeWorkspace?.organization_id ?? null
   const isOwner = activeRole === 'owner'
@@ -77,13 +82,22 @@ export function BillingPage() {
     if (!code || !organizationId) return
     setCouponStatus((s) => ({ ...s, [planId]: 'validating' }))
     try {
-      const result = await previewCoupon(organizationId, code, planId, 'monthly')
+      const result = await previewCoupon(organizationId, code, planId, billingInterval)
       setCouponResult((r) => ({ ...r, [planId]: result }))
     } catch {
       setCouponResult((r) => ({ ...r, [planId]: { valid: false, reason: 'not_found' } }))
     } finally {
       setCouponStatus((s) => ({ ...s, [planId]: 'done' }))
     }
+  }
+
+  // Um cupom validado é específico do ciclo (mensal/anual) — trocar o
+  // ciclo sem invalidar o resultado anterior poderia mostrar um desconto
+  // que não é mais o que será de fato aplicado no checkout.
+  function handleIntervalChange(next: 'monthly' | 'yearly') {
+    setBillingInterval(next)
+    setCouponResult({})
+    setCouponStatus({})
   }
 
   if (!activeWorkspace || entitlementsQuery.isLoading) {
@@ -182,10 +196,38 @@ export function BillingPage() {
 
       {isOwner && plansQuery.data && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Planos disponíveis</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-400">Planos disponíveis</h2>
+            <div className="flex w-fit items-center gap-1 rounded-lg border border-ink-200 p-1 dark:border-ink-700">
+              <button
+                type="button"
+                onClick={() => handleIntervalChange('monthly')}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  billingInterval === 'monthly' ? 'bg-brand-600 text-white' : 'text-ink-600 dark:text-ink-300'
+                }`}
+              >
+                Mensal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleIntervalChange('yearly')}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  billingInterval === 'yearly' ? 'bg-brand-600 text-white' : 'text-ink-600 dark:text-ink-300'
+                }`}
+              >
+                Anual · 2 meses grátis
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {plansQuery.data.map((plan) => {
               const isCurrent = ent?.plan_id === plan.id
+              // Apresentação apenas: no anual, mostramos o equivalente mensal
+              // (valor anual oficial ÷ 12) — a cobrança real (startCheckout/
+              // changePlan) sempre envia billingInterval e o servidor lê o
+              // valor cheio direto de price_yearly_cents, nunca este número.
+              const monthlyEquivalentCents = Math.round(plan.price_yearly_cents / 12)
+              const yearlySavingsCents = plan.price_monthly_cents * 12 - plan.price_yearly_cents
               return (
                 <div
                   key={plan.id}
@@ -194,8 +236,23 @@ export function BillingPage() {
                   }`}
                 >
                   <p className="font-semibold text-ink-900 dark:text-ink-50">{plan.name}</p>
-                  <p className="mt-1 text-2xl font-bold text-ink-900 dark:text-ink-50">{formatCents(plan.price_monthly_cents)}</p>
-                  <p className="text-xs text-ink-500">/mês, ou {formatCents(plan.price_yearly_cents)}/ano</p>
+                  {billingInterval === 'monthly' ? (
+                    <p className="mt-1 text-2xl font-bold text-ink-900 dark:text-ink-50">
+                      {formatCents(plan.price_monthly_cents)}
+                      <span className="text-xs font-normal text-ink-500">/mês</span>
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-1 text-2xl font-bold text-ink-900 dark:text-ink-50">
+                        {formatCents(monthlyEquivalentCents)}
+                        <span className="text-xs font-normal text-ink-500">/mês</span>
+                      </p>
+                      <p className="text-xs text-ink-500">cobrado {formatWhole(plan.price_yearly_cents)} por ano</p>
+                      {yearlySavingsCents > 0 && (
+                        <p className="text-xs font-medium text-green-700 dark:text-green-400">Economize {formatWhole(yearlySavingsCents)}/ano</p>
+                      )}
+                    </>
+                  )}
                   <ul className="mt-3 space-y-1 text-sm text-ink-600 dark:text-ink-300">
                     <li>{plan.monthly_content_allowance} conteúdos/mês</li>
                     <li>Até {plan.max_workspaces} marca{plan.max_workspaces > 1 ? 's' : ''}</li>
@@ -251,7 +308,9 @@ export function BillingPage() {
                                     <p className="mt-0.5 font-semibold">Hoje: {formatCents(applied.finalAmountCents ?? 0)}</p>
                                     {applied.duration === 'first_payment' ? (
                                       <p className="mt-0.5 text-green-700 dark:text-green-400">
-                                        Próxima renovação: {formatCents(plan.price_monthly_cents)}/mês
+                                        {billingInterval === 'monthly'
+                                          ? `Próxima renovação: ${formatCents(plan.price_monthly_cents)}/mês`
+                                          : `Próxima renovação: ${formatWhole(plan.price_yearly_cents)}/ano`}
                                       </p>
                                     ) : (
                                       <p className="mt-0.5 text-green-700 dark:text-green-400">Desconto aplicado enquanto o cupom estiver ativo.</p>
@@ -268,10 +327,16 @@ export function BillingPage() {
                           onClick={() =>
                             handleAction(async () => {
                               if (needsCheckout) {
-                                const result = await startCheckout(organizationId!, plan.id, 'monthly', cpfCnpj, applied?.valid ? appliedCode : undefined)
+                                const result = await startCheckout(
+                                  organizationId!,
+                                  plan.id,
+                                  billingInterval,
+                                  cpfCnpj,
+                                  applied?.valid ? appliedCode : undefined,
+                                )
                                 if (result.invoiceUrl) window.open(result.invoiceUrl, '_blank')
                               } else {
-                                const result = await changePlan(organizationId!, plan.id, 'monthly')
+                                const result = await changePlan(organizationId!, plan.id, billingInterval)
                                 if (result.invoiceUrl) window.open(result.invoiceUrl, '_blank')
                               }
                             }, `plan-${plan.id}`)

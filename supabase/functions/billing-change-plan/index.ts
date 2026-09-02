@@ -92,5 +92,18 @@ Deno.serve(async (req) => {
     return json({ error: 'asaas_charge_failed', detail: chargeBody }, 502)
   }
 
+  // Bloco 11.1-B: grava a referência ESTRUTURADA (id exato da cobrança
+  // recém-criada) que o asaas-webhook usa pra reconhecer e confirmar este
+  // upgrade quando o pagamento chegar — sem isto, a cobrança avulsa (que
+  // não carrega payment.subscription) nunca era identificável no webhook.
+  const { error: recordError } = await admin.rpc('record_pending_upgrade_payment_system', {
+    p_organization_id: body.organizationId,
+    p_asaas_payment_id: chargeBody.id,
+  })
+  if (recordError) {
+    console.error('billing-change-plan: falha ao gravar referência da cobrança de upgrade.', recordError)
+    return json({ error: 'internal_error', message: 'Cobrança criada, mas não foi possível registrar a referência de confirmação. Contate o suporte.' }, 500)
+  }
+
   return json({ kind: 'upgrade', invoiceUrl: chargeBody.invoiceUrl ?? null, awaitingPaymentConfirmation: true })
 })

@@ -5,11 +5,20 @@
 // que nós definimos e cadastramos manualmente na configuração de webhook
 // do painel Asaas — não é algo que a API do Asaas gera sozinha).
 //
-// Idempotência: todo processamento passa pelas RPCs
-// process_asaas_payment_confirmed_system/process_asaas_payment_overdue_system,
-// que gravam o id do evento em asaas_webhook_events (unique) ANTES de
-// aplicar qualquer efeito — reentrega do mesmo evento nunca duplica
-// ativação de assinatura, franquia ou qualquer efeito financeiro.
+// Idempotência: todo processamento passa por RPCs que gravam o id do
+// evento em asaas_webhook_events (unique) ANTES de aplicar qualquer
+// efeito — reentrega do mesmo evento nunca duplica ativação de
+// assinatura, franquia, upgrade ou qualquer efeito financeiro.
+//
+// Bloco 11.1-B: duas famílias de cobrança chegam aqui —
+// (1) ciclo normal de uma subscription recorrente (`payment.subscription`
+//     presente) → process_asaas_payment_confirmed_system, como sempre;
+// (2) cobrança AVULSA de upgrade (sem `payment.subscription`, porque não
+//     é um ciclo de subscription nenhuma) → identificada por referência
+//     ESTRUTURADA: `payment.id` batendo com
+//     subscriptions.pending_change_payment_id (gravado no momento em que
+//     a cobrança foi criada) E `payment.externalReference` batendo com a
+//     organização — nunca por texto de descrição.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 function json(body: unknown, status = 200) {
@@ -27,7 +36,9 @@ interface AsaasWebhookPayload {
   id: string
   event: string
   payment?: {
+    id?: string
     subscription?: string
+    externalReference?: string
     dateCreated?: string
     paymentDate?: string
     nextDueDate?: string
@@ -53,43 +64,72 @@ Deno.serve(async (req) => {
   const admin = createClient(supabaseUrl, serviceRoleKey)
 
   const subscriptionId = payload.payment?.subscription
-  if (!subscriptionId) {
-    // Eventos sem assinatura associada (ex.: cobrança avulsa) não afetam
-    // o ciclo de vida — apenas confirmamos recebimento (200) para o Asaas
-    // não reentregar indefinidamente.
-    return json({ ok: true, ignored: true })
-  }
+  const paymentId = payload.payment?.id
+  const externalReference = payload.payment?.externalReference
 
-  if (payload.event === 'PAYMENT_CONFIRMED' || payload.event === 'PAYMENT_RECEIVED') {
-    const periodStart = payload.payment?.paymentDate ?? payload.payment?.dateCreated ?? new Date().toISOString()
-    const periodEnd = payload.payment?.nextDueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    const { data, error } = await admin.rpc('process_asaas_payment_confirmed_system', {
-      p_asaas_subscription_id: subscriptionId,
-      p_asaas_event_id: payload.id,
-      p_period_start: periodStart,
-      p_period_end: periodEnd,
-    })
-    if (error) {
-      console.error('asaas-webhook: falha ao processar PAYMENT_CONFIRMED.', error)
-      return json({ error: 'processing_failed', detail: error.message }, 500)
+  // ── Caminho 1: ciclo normal de uma subscription recorrente (checkout inicial, renovações) ──
+  if (subscriptionId) {
+    if (payload.event === 'PAYMENT_CONFIRMED' || payload.event === 'PAYMENT_RECEIVED') {
+      const periodStart = payload.payment?.paymentDate ?? payload.payment?.dateCreated ?? new Date().toISOString()
+      const periodEnd = payload.payment?.nextDueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const { data, error } = await admin.rpc('process_asaas_payment_confirmed_system', {
+        p_asaas_subscription_id: subscriptionId,
+        p_asaas_event_id: payload.id,
+        p_period_start: periodStart,
+        p_period_end: periodEnd,
+      })
+      if (error) {
+        console.error('asaas-webhook: falha ao processar PAYMENT_CONFIRMED.', error)
+        return json({ error: 'processing_failed', detail: error.message }, 500)
+      }
+      return json({ ok: true, result: data })
     }
-    return json({ ok: true, result: data })
-  }
 
-  if (payload.event === 'PAYMENT_OVERDUE') {
-    const { data, error } = await admin.rpc('process_asaas_payment_overdue_system', {
-      p_asaas_subscription_id: subscriptionId,
-      p_asaas_event_id: payload.id,
-    })
-    if (error) {
-      console.error('asaas-webhook: falha ao processar PAYMENT_OVERDUE.', error)
-      return json({ error: 'processing_failed', detail: error.message }, 500)
+    if (payload.event === 'PAYMENT_OVERDUE') {
+      const { data, error } = await admin.rpc('process_asaas_payment_overdue_system', {
+        p_asaas_subscription_id: subscriptionId,
+        p_asaas_event_id: payload.id,
+      })
+      if (error) {
+        console.error('asaas-webhook: falha ao processar PAYMENT_OVERDUE.', error)
+        return json({ error: 'processing_failed', detail: error.message }, 500)
+      }
+      return json({ ok: true, result: data })
     }
-    return json({ ok: true, result: data })
+
+    return json({ ok: true, ignored: true, event: payload.event })
   }
 
-  // Outros eventos (PAYMENT_REFUNDED, PAYMENT_DELETED, etc.) são
-  // reconhecidos mas ainda não acionam mudança de estado automática no V1
-  // — tratamento manual/suporte, conforme decisão da Fase 14B.
-  return json({ ok: true, ignored: true, event: payload.event })
+  // ── Caminho 2: cobrança avulsa de upgrade — sem payment.subscription, identificada por referência estruturada ──
+  if (paymentId && externalReference) {
+    if (payload.event === 'PAYMENT_CONFIRMED' || payload.event === 'PAYMENT_RECEIVED') {
+      const { data, error } = await admin.rpc('process_asaas_upgrade_payment_confirmed_system', {
+        p_asaas_payment_id: paymentId,
+        p_organization_id: externalReference,
+        p_asaas_event_id: payload.id,
+      })
+      if (error) {
+        console.error('asaas-webhook: falha ao processar confirmação de upgrade.', error)
+        return json({ error: 'processing_failed', detail: error.message }, 500)
+      }
+      return json({ ok: true, result: data })
+    }
+
+    if (payload.event === 'PAYMENT_OVERDUE' || payload.event === 'PAYMENT_DELETED' || payload.event === 'PAYMENT_CANCELED') {
+      const { data, error } = await admin.rpc('release_stale_upgrade_system', {
+        p_asaas_payment_id: paymentId,
+        p_organization_id: externalReference,
+        p_asaas_event_id: payload.id,
+      })
+      if (error) {
+        console.error('asaas-webhook: falha ao liberar upgrade vencido/cancelado.', error)
+        return json({ error: 'processing_failed', detail: error.message }, 500)
+      }
+      return json({ ok: true, result: data })
+    }
+
+    return json({ ok: true, ignored: true, event: payload.event })
+  }
+
+  return json({ ok: true, ignored: true })
 })
