@@ -6,18 +6,20 @@ import { PosttouMark } from '@/components/brand/PosttouMark'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { fetchOnboardingState } from '@/features/onboarding/api'
 
-// Item 11 do ajuste pré-beta: indicação discreta de "comece aqui" /
-// "próximo passo" no item do menu correspondente à primeira etapa
-// obrigatória pendente do onboarding — nunca vira outro sistema de
-// estado, só lê get_onboarding_state (mesma queryKey do
-// OnboardingWidget/Dashboard, dedupe via React Query). Some sozinho
-// quando a etapa correspondente é concluída ou o onboarding é ocultado.
+// Item 11 do ajuste pré-beta: indicação discreta de "próximo passo" no
+// item do menu correspondente à primeira etapa obrigatória pendente do
+// onboarding — nunca vira outro sistema de estado, só lê
+// get_onboarding_state (mesma queryKey do OnboardingWidget/Dashboard,
+// dedupe via React Query). Some sozinho quando a etapa correspondente é
+// concluída ou o onboarding é ocultado.
 // Bloco 7: "/criar" não tem mais item próprio no menu (vive dentro de
 // Meu Conteúdo desde o Bloco 6) — a etapa "criar primeira postagem"
 // aponta o destaque para "/conteudo", de onde os dois caminhos de
 // criação partem.
+// Bloco 7.1: removido o badge de "/dna-da-marca" — o guia "Comece por
+// aqui" em Meu Conteúdo já comunica isso, badge duplicado na sidebar
+// virou ruído.
 const STEP_HINT_BY_PATH: Record<string, string> = {
-  '/dna-da-marca': 'Comece aqui',
   '/configuracoes': 'Próximo passo',
   '/conteudo': 'Próximo passo',
 }
@@ -56,7 +58,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           }
         >
           <span className="flex items-center gap-3">
-            <span className="text-base">{item.icon}</span>
+            <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
             {item.label}
           </span>
           {!item.implemented && (
@@ -64,7 +66,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               em breve
             </span>
           )}
-          {item.implemented && item.path === currentStepPath && (
+          {item.implemented && item.path === currentStepPath && STEP_HINT_BY_PATH[item.path] && (
             <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-900 dark:text-brand-200">
               {STEP_HINT_BY_PATH[item.path]}
             </span>

@@ -80,7 +80,7 @@ function padPalette(colors: string[]): [string, string, string] {
 }
 
 /** Hash simples e determinístico (mesmo id sempre gera o mesmo índice). */
-function hashSeed(seed: string): number {
+export function hashSeed(seed: string): number {
   let h = 0
   for (let i = 0; i < seed.length; i++) {
     h = (h * 31 + seed.charCodeAt(i)) | 0
@@ -97,4 +97,51 @@ export function contentPlaceholderBackground(seed: string, dnaColors: string[]):
     `linear-gradient(210deg, ${c3} 0%, ${c1} 50%, ${c2} 100%)`,
   ]
   return variants[hashSeed(seed) % variants.length]
+}
+
+/** Mesma paleta (com fallback de marca) já resolvida em 3 tons — usada pelas formas abstratas do card. */
+export function contentPlaceholderPalette(dnaColors: string[]): [string, string, string] {
+  return padPalette(dnaColors)
+}
+
+// ---------------------------------------------------------------------
+// Objetivo exibido no card "Sem data" — não é um dado persistido à
+// parte (contents não guarda "objetivo"): é recalculado a partir do
+// título/legenda do próprio conteúdo, com a MESMA lista de palavras
+// usada em ContentPreviewCards.tsx/instagram-discovery-claim (Bloco 5/6)
+// — nunca um valor aleatório, sempre determinístico e ancorado no texto
+// real do card. Sem palavra-chave reconhecida, cai num terceiro
+// determinístico (hash do id) só para dar variedade visual, nunca some.
+export type ContentObjective = 'descoberta' | 'autoridade' | 'conversao'
+
+const CONVERSAO_WORDS = new Set([
+  'venda', 'vendas', 'vender', 'conversao', 'lead', 'leads', 'cta', 'agendar', 'agendamento', 'comprar', 'compra',
+])
+const AUTORIDADE_WORDS = new Set([
+  'autoridade', 'educacao', 'educar', 'educativo', 'conhecimento', 'ensinar', 'ensino', 'relacionamento',
+])
+const DESCOBERTA_WORDS = new Set(['alcance', 'descoberta', 'descobrir', 'engajamento', 'viral'])
+
+function normalizeWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+}
+
+export const OBJECTIVE_META: Record<ContentObjective, string> = {
+  descoberta: 'Descoberta',
+  autoridade: 'Autoridade',
+  conversao: 'Conversão',
+}
+
+export function classifyContentObjective(seed: string, title: string, caption: string | null): ContentObjective {
+  const words = normalizeWords(`${title} ${caption ?? ''}`)
+  if (words.some((w) => CONVERSAO_WORDS.has(w))) return 'conversao'
+  if (words.some((w) => AUTORIDADE_WORDS.has(w))) return 'autoridade'
+  if (words.some((w) => DESCOBERTA_WORDS.has(w))) return 'descoberta'
+  const order: ContentObjective[] = ['descoberta', 'autoridade', 'conversao']
+  return order[hashSeed(seed) % order.length]
 }

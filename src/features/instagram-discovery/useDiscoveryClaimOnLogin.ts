@@ -15,9 +15,15 @@ import type { DnaReviewState } from '@/features/instagram-discovery/DnaReviewCar
 /**
  * Dispara o claim de uma sessão de Discovery pendente assim que o
  * usuário autenticado tem um workspace ativo (logo após cadastro
- * confirmado ou login). O DNA reivindicado pré-preenche brand_profiles
- * — a revisão/aprovação continua acontecendo no wizard existente
- * (BrandDnaPage → "Conhecemos sua marca ✨"), nunca num editor paralelo.
+ * confirmado ou login). O DNA reivindicado pré-preenche brand_profiles.
+ *
+ * Bloco 7.1: quando existe dna_revisado (o usuário já reviu e aprovou o
+ * DNA em DnaReviewCards, antes do cadastro), o brand_profiles marcado
+ * como onboarding_completed_at/step 6 — a aprovação pré-cadastro já É a
+ * aprovação, então BrandDnaPage não pede a mesma confirmação de novo
+ * ("Conhecemos sua marca ✨"). Quando só existe dna_preliminar (sem
+ * revisão — sessão antiga ou caminho degradado), o comportamento
+ * anterior se mantém: cai no fluxo "Conhecer sua marca" do wizard.
  *
  * Fonte do token, em ordem: raw_user_meta_data do próprio usuário
  * (sobrevive à troca de aba/dispositivo no fluxo de confirmação de
@@ -67,8 +73,18 @@ export function useDiscoveryClaimOnLogin() {
         // revisar/preencher no wizard depois).
         try {
           await ensureBrandProfile(activeWorkspace.id)
+          // DNA revisado = o usuário já aprovou isso explicitamente em
+          // DnaReviewCards antes do cadastro (Bloco 2) — marca
+          // onboarding_completed_at na mesma escrita que persiste o DNA,
+          // a fonte de verdade lida por get_onboarding_state/
+          // check_brand_dna_ready. Sem isso, o guia "Comece por aqui"
+          // pedia pra "configurar o DNA" de novo mesmo com tudo pronto.
           const patch = result.dnaRevisado
-            ? mapDnaReviewStateToBrandProfilePatch(result.handle, result.dnaRevisado as DnaReviewState)
+            ? {
+                ...mapDnaReviewStateToBrandProfilePatch(result.handle, result.dnaRevisado as DnaReviewState),
+                onboarding_completed_at: new Date().toISOString(),
+                onboarding_step: 6,
+              }
             : mapDiscoveryDnaToBrandProfilePatch(result.handle, undefined, result.dna)
           await updateBrandProfile(activeWorkspace.id, patch)
         } catch (patchErr) {

@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { Camera } from 'lucide-react'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { Button } from '@/components/ui/button'
 import { fetchInstagramAccount, startInstagramOAuth } from '@/features/instagram/api'
@@ -32,15 +33,16 @@ export function InstagramDisconnectedBanner() {
   if (!canManage) return null
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-900 dark:bg-brand-950 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-brand-900 dark:text-brand-100">
+    <div className="flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 dark:border-brand-900 dark:bg-brand-950">
+      <Camera className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-300" />
+      <p className="min-w-0 flex-1 text-xs text-brand-900 dark:text-brand-100">
         Conecte seu Instagram para publicar, agendar e acompanhar seus resultados.
       </p>
       <Button
         size="sm"
         onClick={() => connectMutation.mutate()}
         disabled={connectMutation.isPending}
-        className="self-start sm:self-auto"
+        className="shrink-0"
       >
         {connectMutation.isPending ? 'Redirecionando…' : 'Conectar Instagram'}
       </Button>

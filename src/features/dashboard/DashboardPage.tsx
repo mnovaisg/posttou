@@ -246,7 +246,7 @@ export function DashboardPage() {
                   to={item.path}
                   className="flex items-center gap-3 rounded-lg border border-ink-200 p-3 text-sm font-medium text-ink-700 transition-colors hover:border-brand-300 hover:bg-brand-50 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
                   {item.label}
                 </Link>
               ))}
