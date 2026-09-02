@@ -13,25 +13,25 @@ const SLIDES: Slide[] = [
   {
     id: 'clinica',
     kind: 'Clínica',
-    image: '/images/carrossel/clinica.png',
+    image: '/images/carrossel/clinica.jpg',
     alt: 'Exemplo de conteúdo criado com o POSTTOU para uma clínica',
   },
   {
     id: 'advocacia',
     kind: 'Advocacia',
-    image: '/images/carrossel/advocacia.png',
+    image: '/images/carrossel/advocacia.jpg',
     alt: 'Exemplo de conteúdo criado com o POSTTOU para um escritório de advocacia',
   },
   {
     id: 'influencer',
     kind: 'Influencer',
-    image: '/images/carrossel/influencer.png',
+    image: '/images/carrossel/influencer.jpg',
     alt: 'Exemplo de conteúdo criado com o POSTTOU para um influenciador',
   },
   {
     id: 'negocios',
     kind: 'Outros Negócios',
-    image: '/images/carrossel/negocios.png',
+    image: '/images/carrossel/negocios.jpg',
     alt: 'Exemplo de conteúdo criado com o POSTTOU para outros negócios',
   },
 ]
