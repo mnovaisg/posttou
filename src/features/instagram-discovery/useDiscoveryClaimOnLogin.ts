@@ -25,6 +25,16 @@ import type { DnaReviewState } from '@/features/instagram-discovery/DnaReviewCar
  * revisão — sessão antiga ou caminho degradado), o comportamento
  * anterior se mantém: cai no fluxo "Conhecer sua marca" do wizard.
  *
+ * first_content_completed_at também é marcado junto: sem isso,
+ * BrandDnaPage (onboarding_completed_at preenchido + essa coluna nula)
+ * entra automaticamente no FirstContentFlow — que dispara geração REAL
+ * de texto+imagem por IA (mesmo pipeline do Criar com IA manual). Um
+ * usuário vindo da Discovery já tem seu "primeiro conteúdo" — as 3
+ * sugestões promovidas pelo claim — então essa etapa automática é
+ * redundante e, pior, geraria uma imagem via Kie.ai sem o usuário pedir
+ * (bug real encontrado testando este bloco). Mesmo padrão do backfill em
+ * add_first_content_completed_at_to_brand_profiles.sql.
+ *
  * Fonte do token, em ordem: raw_user_meta_data do próprio usuário
  * (sobrevive à troca de aba/dispositivo no fluxo de confirmação de
  * e-mail — sessionStorage não sobrevive) e, como fallback de
@@ -84,6 +94,7 @@ export function useDiscoveryClaimOnLogin() {
                 ...mapDnaReviewStateToBrandProfilePatch(result.handle, result.dnaRevisado as DnaReviewState),
                 onboarding_completed_at: new Date().toISOString(),
                 onboarding_step: 6,
+                first_content_completed_at: new Date().toISOString(),
               }
             : mapDiscoveryDnaToBrandProfilePatch(result.handle, undefined, result.dna)
           await updateBrandProfile(activeWorkspace.id, patch)
