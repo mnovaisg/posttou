@@ -23,16 +23,16 @@ export function StyleCardPicker<T extends string>({
             onClick={() => onChange(opt.value)}
             aria-pressed={selected}
             className={cn(
-              'flex flex-col gap-2 rounded-xl border p-2.5 text-left transition-colors',
+              'flex flex-col gap-1.5 rounded-xl border p-1.5 text-left transition-colors',
               selected
                 ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-950'
                 : 'border-ink-200 hover:border-brand-300 dark:border-ink-700 dark:hover:border-brand-700',
             )}
           >
             {renderPreview(opt.value)}
-            <div>
+            <div className="px-1 pb-0.5">
               <p className="text-sm font-medium text-ink-900 dark:text-ink-50">{opt.label}</p>
-              <p className="text-xs text-ink-500">{opt.description}</p>
+              <p className="truncate text-xs text-ink-500">{opt.description}</p>
             </div>
           </button>
         )
