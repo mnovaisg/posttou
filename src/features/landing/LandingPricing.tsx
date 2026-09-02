@@ -6,8 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { trackEvent } from '@/lib/analytics'
 
-function formatCents(cents: number): string {
+// Formatação de apresentação — nunca usada como valor efetivamente
+// cobrado. O checkout (BillingPage/startCheckout) sempre lê
+// price_monthly_cents/price_yearly_cents direto do banco, nunca este
+// equivalente mensal calculado aqui só para exibição.
+function formatWhole(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+}
+function formatPrecise(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 const HIGHLIGHTED_PLAN_ID = 'profissional'
@@ -47,7 +54,7 @@ export function LandingPricing() {
             interval === 'yearly' ? 'bg-brand-600 text-white' : 'text-ink-600 dark:text-ink-300'
           }`}
         >
-          Anual
+          Anual · 2 meses grátis
         </button>
       </div>
 
@@ -58,8 +65,13 @@ export function LandingPricing() {
         <div className="mx-auto mt-10 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-3">
           {plansQuery.data.map((plan) => {
             const highlighted = plan.id === HIGHLIGHTED_PLAN_ID
-            const priceCents = interval === 'monthly' ? plan.price_monthly_cents : plan.price_yearly_cents
             const capabilities = (plan.capabilities ?? {}) as Record<string, unknown>
+            // Apresentação apenas: no anual, mostramos o equivalente mensal
+            // (valor anual oficial ÷ 12) — a cobrança real continua sendo
+            // o valor anual cheio, lido direto de price_yearly_cents no
+            // checkout (não tocado aqui).
+            const monthlyEquivalentCents = Math.round(plan.price_yearly_cents / 12)
+            const yearlySavingsCents = plan.price_monthly_cents * 12 - plan.price_yearly_cents
             return (
               <div
                 key={plan.id}
@@ -75,10 +87,26 @@ export function LandingPricing() {
                   </Badge>
                 )}
                 <h3 className="text-lg font-semibold text-ink-900 dark:text-ink-50">{plan.name}</h3>
-                <p className="mt-3">
-                  <span className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{formatCents(priceCents)}</span>
-                  <span className="text-sm text-ink-500">/{interval === 'monthly' ? 'mês' : 'ano'}</span>
-                </p>
+
+                {interval === 'monthly' ? (
+                  <p className="mt-3">
+                    <span className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{formatWhole(plan.price_monthly_cents)}</span>
+                    <span className="text-sm text-ink-500">/mês</span>
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-3">
+                      <span className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{formatPrecise(monthlyEquivalentCents)}</span>
+                      <span className="text-sm text-ink-500">/mês</span>
+                    </p>
+                    <p className="mt-1 text-xs text-ink-500">cobrado {formatWhole(plan.price_yearly_cents)} por ano</p>
+                    {yearlySavingsCents > 0 && (
+                      <p className="mt-1 text-xs font-medium text-green-700 dark:text-green-400">
+                        Economize {formatWhole(yearlySavingsCents)}/ano
+                      </p>
+                    )}
+                  </>
+                )}
 
                 <ul className="mt-5 flex flex-col gap-2 text-sm text-ink-600 dark:text-ink-300">
                   <li>{plan.monthly_content_allowance} conteúdos por mês</li>
