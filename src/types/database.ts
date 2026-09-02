@@ -1144,6 +1144,173 @@ export type Database = {
           },
         ]
       }
+      coupon_redemptions: {
+        Row: {
+          asaas_payment_id: string | null
+          asaas_subscription_id: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          coupon_id: string
+          created_at: string
+          created_by: string | null
+          discount_amount_cents: number
+          failure_reason: string | null
+          final_amount_cents: number
+          id: string
+          organization_id: string
+          original_amount_cents: number
+          plan_id: string
+          status: Database["public"]["Enums"]["coupon_redemption_status"]
+          subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          asaas_payment_id?: string | null
+          asaas_subscription_id?: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          coupon_id: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount_cents: number
+          failure_reason?: string | null
+          final_amount_cents: number
+          id?: string
+          organization_id: string
+          original_amount_cents: number
+          plan_id: string
+          status?: Database["public"]["Enums"]["coupon_redemption_status"]
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asaas_payment_id?: string | null
+          asaas_subscription_id?: string | null
+          billing_interval?: Database["public"]["Enums"]["billing_interval"]
+          coupon_id?: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount_cents?: number
+          failure_reason?: string | null
+          final_amount_cents?: number
+          id?: string
+          organization_id?: string
+          original_amount_cents?: number
+          plan_id?: string
+          status?: Database["public"]["Enums"]["coupon_redemption_status"]
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          code_normalized: string | null
+          created_at: string
+          created_by: string | null
+          discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          discount_value: number
+          duration: Database["public"]["Enums"]["coupon_duration"]
+          eligible_billing_intervals:
+            | Database["public"]["Enums"]["billing_interval"][]
+            | null
+          eligible_plan_ids: string[] | null
+          expires_at: string | null
+          id: string
+          max_redemptions: number | null
+          max_redemptions_per_organization: number
+          metadata: Json
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          code_normalized?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          discount_value: number
+          duration?: Database["public"]["Enums"]["coupon_duration"]
+          eligible_billing_intervals?:
+            | Database["public"]["Enums"]["billing_interval"][]
+            | null
+          eligible_plan_ids?: string[] | null
+          expires_at?: string | null
+          id?: string
+          max_redemptions?: number | null
+          max_redemptions_per_organization?: number
+          metadata?: Json
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          code_normalized?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_type?: Database["public"]["Enums"]["coupon_discount_type"]
+          discount_value?: number
+          duration?: Database["public"]["Enums"]["coupon_duration"]
+          eligible_billing_intervals?:
+            | Database["public"]["Enums"]["billing_interval"][]
+            | null
+          eligible_plan_ids?: string[] | null
+          expires_at?: string | null
+          id?: string
+          max_redemptions?: number | null
+          max_redemptions_per_organization?: number
+          metadata?: Json
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_accounts: {
         Row: {
           balance: number
@@ -3669,9 +3836,25 @@ export type Database = {
       }
     }
     Functions: {
+      _compute_coupon_discount: {
+        Args: {
+          p_coupon: Database["public"]["Tables"]["coupons"]["Row"]
+          p_original_amount_cents: number
+        }
+        Returns: number
+      }
       _pilot_submit_content_if_visual_complete: {
         Args: { p_content_id: string }
         Returns: undefined
+      }
+      _validate_coupon_eligibility: {
+        Args: {
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_coupon: Database["public"]["Tables"]["coupons"]["Row"]
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: string
       }
       accept_organization_invite: { Args: { p_token: string }; Returns: Json }
       activate_pilot: {
@@ -4689,6 +4872,40 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      finalize_coupon_redemption_system: {
+        Args: {
+          p_asaas_payment_id?: string
+          p_asaas_subscription_id?: string
+          p_failure_reason?: string
+          p_redemption_id: string
+          p_status: Database["public"]["Enums"]["coupon_redemption_status"]
+          p_subscription_id?: string
+        }
+        Returns: {
+          asaas_payment_id: string | null
+          asaas_subscription_id: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          coupon_id: string
+          created_at: string
+          created_by: string | null
+          discount_amount_cents: number
+          failure_reason: string | null
+          final_amount_cents: number
+          id: string
+          organization_id: string
+          original_amount_cents: number
+          plan_id: string
+          status: Database["public"]["Enums"]["coupon_redemption_status"]
+          subscription_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "coupon_redemptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       finalize_pilot_plan: {
         Args: { p_plan_id: string }
         Returns: {
@@ -5125,6 +5342,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      preview_coupon: {
+        Args: {
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_code: string
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: Json
+      }
       process_asaas_payment_confirmed_system: {
         Args: {
           p_asaas_event_id: string
@@ -5296,6 +5522,15 @@ export type Database = {
           invite_id: string
           token: string
         }[]
+      }
+      reserve_coupon_redemption_system: {
+        Args: {
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_code: string
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: Json
       }
       resolve_pilot_plan_item: {
         Args: {
@@ -5743,114 +5978,60 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      upsert_pilot_settings:
-        | {
-            Args: {
-              p_allowed_formats: Database["public"]["Enums"]["content_type"][]
-              p_allowed_weekdays: number[]
-              p_auto_generate_art?: boolean
-              p_default_instagram_account_id: string
-              p_editorial_mix: Json
-              p_format_mix?: Json
-              p_max_credits_per_window: number
-              p_max_posts_per_window: number
-              p_max_radar_per_window: number
-              p_mode: Database["public"]["Enums"]["pilot_mode"]
-              p_planning_window_days: number
-              p_preferred_times: Json
-              p_radar_min_confidence: string
-              p_radar_min_opportunity_score: number
-              p_temporary_objective: string
-              p_temporary_objective_expires_at: string
-              p_use_radar: boolean
-              p_workspace_id: string
-            }
-            Returns: {
-              allowed_formats: Database["public"]["Enums"]["content_type"][]
-              allowed_weekdays: number[]
-              always_require_approval: boolean
-              auto_generate_art: boolean
-              created_at: string
-              default_instagram_account_id: string | null
-              editorial_mix: Json
-              format_mix: Json | null
-              id: string
-              max_credits_per_window: number | null
-              max_posts_per_window: number
-              max_radar_per_window: number
-              mode: Database["public"]["Enums"]["pilot_mode"]
-              planning_window_days: number
-              preferred_times: Json
-              radar_min_confidence: string
-              radar_min_opportunity_score: number
-              status: Database["public"]["Enums"]["pilot_status"]
-              temporary_objective: string | null
-              temporary_objective_expires_at: string | null
-              updated_at: string
-              use_radar: boolean
-              workspace_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "pilot_settings"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_allowed_formats: Database["public"]["Enums"]["content_type"][]
-              p_allowed_weekdays: number[]
-              p_always_require_approval?: boolean
-              p_auto_generate_art?: boolean
-              p_default_instagram_account_id: string
-              p_editorial_mix: Json
-              p_format_mix?: Json
-              p_max_credits_per_window: number
-              p_max_posts_per_window: number
-              p_max_radar_per_window: number
-              p_mode: Database["public"]["Enums"]["pilot_mode"]
-              p_planning_window_days: number
-              p_preferred_times: Json
-              p_radar_min_confidence: string
-              p_radar_min_opportunity_score: number
-              p_temporary_objective: string
-              p_temporary_objective_expires_at: string
-              p_use_radar: boolean
-              p_workspace_id: string
-            }
-            Returns: {
-              allowed_formats: Database["public"]["Enums"]["content_type"][]
-              allowed_weekdays: number[]
-              always_require_approval: boolean
-              auto_generate_art: boolean
-              created_at: string
-              default_instagram_account_id: string | null
-              editorial_mix: Json
-              format_mix: Json | null
-              id: string
-              max_credits_per_window: number | null
-              max_posts_per_window: number
-              max_radar_per_window: number
-              mode: Database["public"]["Enums"]["pilot_mode"]
-              planning_window_days: number
-              preferred_times: Json
-              radar_min_confidence: string
-              radar_min_opportunity_score: number
-              status: Database["public"]["Enums"]["pilot_status"]
-              temporary_objective: string | null
-              temporary_objective_expires_at: string | null
-              updated_at: string
-              use_radar: boolean
-              workspace_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "pilot_settings"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      upsert_pilot_settings: {
+        Args: {
+          p_allowed_formats: Database["public"]["Enums"]["content_type"][]
+          p_allowed_weekdays: number[]
+          p_always_require_approval?: boolean
+          p_auto_generate_art?: boolean
+          p_default_instagram_account_id: string
+          p_editorial_mix: Json
+          p_format_mix?: Json
+          p_max_credits_per_window: number
+          p_max_posts_per_window: number
+          p_max_radar_per_window: number
+          p_mode: Database["public"]["Enums"]["pilot_mode"]
+          p_planning_window_days: number
+          p_preferred_times: Json
+          p_radar_min_confidence: string
+          p_radar_min_opportunity_score: number
+          p_temporary_objective: string
+          p_temporary_objective_expires_at: string
+          p_use_radar: boolean
+          p_workspace_id: string
+        }
+        Returns: {
+          allowed_formats: Database["public"]["Enums"]["content_type"][]
+          allowed_weekdays: number[]
+          always_require_approval: boolean
+          auto_generate_art: boolean
+          created_at: string
+          default_instagram_account_id: string | null
+          editorial_mix: Json
+          format_mix: Json | null
+          id: string
+          max_credits_per_window: number | null
+          max_posts_per_window: number
+          max_radar_per_window: number
+          mode: Database["public"]["Enums"]["pilot_mode"]
+          planning_window_days: number
+          preferred_times: Json
+          radar_min_confidence: string
+          radar_min_opportunity_score: number
+          status: Database["public"]["Enums"]["pilot_status"]
+          temporary_objective: string | null
+          temporary_objective_expires_at: string | null
+          updated_at: string
+          use_radar: boolean
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pilot_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_radar_opportunity: {
         Args: {
           p_ai_generation_id: string
@@ -5939,6 +6120,9 @@ export type Database = {
         | "generating"
         | "ready"
         | "failed"
+      coupon_discount_type: "percentage" | "fixed"
+      coupon_duration: "first_payment" | "recurring"
+      coupon_redemption_status: "reserved" | "applied" | "failed" | "released"
       instagram_account_status:
         | "conectado"
         | "token_expirado"
@@ -6192,6 +6376,9 @@ export const Constants = {
         "ready",
         "failed",
       ],
+      coupon_discount_type: ["percentage", "fixed"],
+      coupon_duration: ["first_payment", "recurring"],
+      coupon_redemption_status: ["reserved", "applied", "failed", "released"],
       instagram_account_status: [
         "conectado",
         "token_expirado",

@@ -4,12 +4,15 @@ import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import {
   cancelSubscription,
   changePlan,
+  COUPON_REASON_LABEL,
   createWorkspaceInOrganization,
   fetchOrganizationWorkspaces,
   fetchPlans,
   fetchWorkspaceEntitlements,
+  previewCoupon,
   startCheckout,
 } from '@/features/billing/api'
+import type { CouponPreview } from '@/features/billing/api'
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: 'Em teste grátis',
@@ -31,6 +34,10 @@ export function BillingPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [newWorkspaceName, setNewWorkspaceName] = React.useState('')
   const [cpfCnpj, setCpfCnpj] = React.useState('')
+  const [couponOpenFor, setCouponOpenFor] = React.useState<string | null>(null)
+  const [couponInput, setCouponInput] = React.useState<Record<string, string>>({})
+  const [couponStatus, setCouponStatus] = React.useState<Record<string, 'validating' | 'done'>>({})
+  const [couponResult, setCouponResult] = React.useState<Record<string, CouponPreview>>({})
 
   const organizationId = activeWorkspace?.organization_id ?? null
   const isOwner = activeRole === 'owner'
@@ -62,6 +69,20 @@ export function BillingPage() {
       setError(err instanceof Error ? err.message : 'Erro inesperado.')
     } finally {
       setBusy(null)
+    }
+  }
+
+  async function handleApplyCoupon(planId: string) {
+    const code = (couponInput[planId] ?? '').trim()
+    if (!code || !organizationId) return
+    setCouponStatus((s) => ({ ...s, [planId]: 'validating' }))
+    try {
+      const result = await previewCoupon(organizationId, code, planId, 'monthly')
+      setCouponResult((r) => ({ ...r, [planId]: result }))
+    } catch {
+      setCouponResult((r) => ({ ...r, [planId]: { valid: false, reason: 'not_found' } }))
+    } finally {
+      setCouponStatus((s) => ({ ...s, [planId]: 'done' }))
     }
   }
 
@@ -183,24 +204,82 @@ export function BillingPage() {
                   {!isCurrent && (() => {
                     const needsCheckout = !ent?.status || ent.status === 'trialing' || ent.status === 'expired' || ent.status === 'cancelled'
                     const disabled = busy === `plan-${plan.id}` || (needsCheckout && !cpfCnpj.trim())
+                    const applied = couponResult[plan.id]
+                    const appliedCode = couponInput[plan.id]?.trim()
                     return (
-                      <button
-                        className="mt-4 w-full rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
-                        disabled={disabled}
-                        onClick={() =>
-                          handleAction(async () => {
-                            if (needsCheckout) {
-                              const result = await startCheckout(organizationId!, plan.id, 'monthly', cpfCnpj)
-                              if (result.invoiceUrl) window.open(result.invoiceUrl, '_blank')
-                            } else {
-                              const result = await changePlan(organizationId!, plan.id, 'monthly')
-                              if (result.invoiceUrl) window.open(result.invoiceUrl, '_blank')
-                            }
-                          }, `plan-${plan.id}`)
-                        }
-                      >
-                        {needsCheckout ? 'Assinar' : 'Trocar para este plano'}
-                      </button>
+                      <>
+                        {needsCheckout && (
+                          <div className="mt-3 border-t border-ink-100 pt-3 dark:border-ink-800">
+                            {couponOpenFor !== plan.id && !applied?.valid && (
+                              <button
+                                type="button"
+                                className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
+                                onClick={() => setCouponOpenFor(plan.id)}
+                              >
+                                Tem um cupom?
+                              </button>
+                            )}
+                            {(couponOpenFor === plan.id || applied?.valid) && (
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex gap-1.5">
+                                  <input
+                                    className="min-w-0 flex-1 rounded-lg border border-ink-200 px-2 py-1.5 text-xs uppercase dark:border-ink-800 dark:bg-ink-950"
+                                    placeholder="DIGITE SEU CUPOM"
+                                    value={couponInput[plan.id] ?? ''}
+                                    disabled={!!applied?.valid}
+                                    onChange={(e) => setCouponInput((s) => ({ ...s, [plan.id]: e.target.value }))}
+                                  />
+                                  {!applied?.valid && (
+                                    <button
+                                      type="button"
+                                      className="shrink-0 rounded-lg border border-ink-200 px-2.5 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-50 disabled:opacity-50 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
+                                      disabled={couponStatus[plan.id] === 'validating' || !couponInput[plan.id]?.trim()}
+                                      onClick={() => handleApplyCoupon(plan.id)}
+                                    >
+                                      {couponStatus[plan.id] === 'validating' ? 'Validando…' : 'Aplicar'}
+                                    </button>
+                                  )}
+                                </div>
+                                {applied && !applied.valid && (
+                                  <p className="text-xs text-danger-500">{COUPON_REASON_LABEL[applied.reason ?? ''] ?? 'Cupom inválido.'}</p>
+                                )}
+                                {applied?.valid && (
+                                  <div className="rounded-lg bg-green-50 p-2 text-xs text-green-900 dark:bg-green-950 dark:text-green-200">
+                                    <p>
+                                      Cupom {applied.code} − {formatCents(applied.discountAmountCents ?? 0)}
+                                    </p>
+                                    <p className="mt-0.5 font-semibold">Hoje: {formatCents(applied.finalAmountCents ?? 0)}</p>
+                                    {applied.duration === 'first_payment' ? (
+                                      <p className="mt-0.5 text-green-700 dark:text-green-400">
+                                        Próxima renovação: {formatCents(plan.price_monthly_cents)}/mês
+                                      </p>
+                                    ) : (
+                                      <p className="mt-0.5 text-green-700 dark:text-green-400">Desconto aplicado enquanto o cupom estiver ativo.</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <button
+                          className="mt-4 w-full rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+                          disabled={disabled}
+                          onClick={() =>
+                            handleAction(async () => {
+                              if (needsCheckout) {
+                                const result = await startCheckout(organizationId!, plan.id, 'monthly', cpfCnpj, applied?.valid ? appliedCode : undefined)
+                                if (result.invoiceUrl) window.open(result.invoiceUrl, '_blank')
+                              } else {
+                                const result = await changePlan(organizationId!, plan.id, 'monthly')
+                                if (result.invoiceUrl) window.open(result.invoiceUrl, '_blank')
+                              }
+                            }, `plan-${plan.id}`)
+                          }
+                        >
+                          {needsCheckout ? 'Assinar' : 'Trocar para este plano'}
+                        </button>
+                      </>
                     )
                   })()}
                   {isCurrent && <p className="mt-4 text-center text-sm text-brand-600 dark:text-brand-400">Plano atual</p>}
