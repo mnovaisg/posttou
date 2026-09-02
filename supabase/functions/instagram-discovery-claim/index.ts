@@ -3,7 +3,9 @@
 // JWT — chamada logo após o usuário criar conta ou logar. Claim é
 // atômico e single-use: UPDATE condicional (status='ready' AND
 // claimed_at IS NULL AND expires_at > now()) — só passa uma vez, mesmo
-// padrão já validado em instagram_oauth_states.
+// padrão já validado em instagram_oauth_states. Também promove, de
+// forma idempotente, as 3 sugestões de conteúdo exatamente como o
+// visitante as viu antes do cadastro (nunca gera novas ideias por IA).
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sha256Hex } from '../_shared/instagram/crypto.ts'
 
@@ -14,6 +16,182 @@ const corsHeaders = {
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+}
+
+// ---------------------------------------------------------------------
+// Réplica exata (Deno não importa src/ do frontend) de
+// src/features/content/types.ts — mantenha em sincronia se aqueles
+// valores mudarem.
+type ContentType = 'post' | 'carrossel' | 'reel'
+type ContentFormat = '1:1' | '4:5' | '9:16'
+
+const DEFAULT_FORMAT_BY_TYPE: Record<ContentType, ContentFormat> = {
+  post: '4:5',
+  carrossel: '4:5',
+  reel: '9:16',
+}
+
+const PAGE_DIMENSIONS_BY_FORMAT: Record<ContentFormat, { width: number; height: number }> = {
+  '1:1': { width: 1080, height: 1080 },
+  '4:5': { width: 1080, height: 1350 },
+  '9:16': { width: 1080, height: 1920 },
+}
+
+// ---------------------------------------------------------------------
+// Réplica exata (mesma razão) da lógica de bucketing por objetivo de
+// src/features/instagram-discovery/ContentPreviewCards.tsx — garante
+// que os conteúdos promovidos no claim sejam EXATAMENTE os 3 previews
+// que o visitante viu antes do cadastro, não um novo lote.
+interface DiscoveryIdea {
+  titulo: string
+  gancho: string
+  formato: ContentType
+  pilar: string
+  objetivo: string
+  resumo: string
+}
+
+interface DnaReviewStateLike {
+  name?: string
+  description?: string
+  themes?: string[]
+  objectives?: string[]
+  tone?: string
+}
+
+type PreviewObjective = 'descoberta' | 'autoridade' | 'conversao'
+
+interface ContentPreview {
+  objective: PreviewObjective
+  title: string
+  support: string
+  format: ContentType
+  sourceIdeaIndex: number | null
+}
+
+function matchIdeaObjective(idea: DiscoveryIdea): PreviewObjective | null {
+  const text = `${idea.objetivo ?? ''} ${idea.pilar ?? ''}`.toLowerCase()
+  if (/(vend|convers|lead|a[cç][aã]o|agend|compr)/.test(text)) return 'conversao'
+  if (/(autorid|educ|conhec|ensin|relacion)/.test(text)) return 'autoridade'
+  if (/(alcance|descobert|engaj|viral)/.test(text)) return 'descoberta'
+  return null
+}
+
+function firstNonEmpty(...values: (string | undefined | null)[]): string {
+  for (const v of values) {
+    if (v && v.trim()) return v.trim()
+  }
+  return ''
+}
+
+function fallbackPreview(objective: PreviewObjective, dna: DnaReviewStateLike, format: ContentType): ContentPreview {
+  const name = firstNonEmpty(dna.name, 'sua marca')
+  const theme = dna.themes?.[0]
+  const objectiveText = dna.objectives?.[0]
+
+  const titleByObjective: Record<PreviewObjective, string> = {
+    descoberta: theme ? `Conheça a ${name}: ${theme}` : `Conheça a ${name}`,
+    autoridade: theme ? `O que guia a ${name} em ${theme}` : `Por dentro da ${name}`,
+    conversao: objectiveText ? `Pronto para ${objectiveText.toLowerCase()}?` : `Fale com a ${name}`,
+  }
+
+  const supportByObjective: Record<PreviewObjective, string> = {
+    descoberta: dna.description || 'Uma primeira apresentação para quem ainda não te conhece.',
+    autoridade: dna.tone ? `Tom ${dna.tone.toLowerCase()}, direto ao ponto.` : 'Mostrando como sua marca pensa.',
+    conversao: 'Um convite claro para dar o próximo passo.',
+  }
+
+  return {
+    objective,
+    title: titleByObjective[objective],
+    support: supportByObjective[objective],
+    format,
+    sourceIdeaIndex: null,
+  }
+}
+
+function buildContentPreviews(ideas: DiscoveryIdea[], dna: DnaReviewStateLike): ContentPreview[] {
+  const order: PreviewObjective[] = ['descoberta', 'autoridade', 'conversao']
+  const fallbackFormats: ContentType[] = ['post', 'carrossel', 'reel']
+  const usedIdeaIndexes = new Set<number>()
+
+  return order.map((objective, i) => {
+    const matchIndex = ideas.findIndex((idea, idx) => !usedIdeaIndexes.has(idx) && matchIdeaObjective(idea) === objective)
+    if (matchIndex !== -1) {
+      usedIdeaIndexes.add(matchIndex)
+      const idea = ideas[matchIndex]
+      return {
+        objective,
+        title: firstNonEmpty(idea.titulo, idea.gancho),
+        support: firstNonEmpty(idea.gancho !== idea.titulo ? idea.gancho : '', idea.resumo),
+        format: idea.formato,
+        sourceIdeaIndex: matchIndex,
+      }
+    }
+    return fallbackPreview(objective, dna, fallbackFormats[i])
+  })
+}
+
+// ---------------------------------------------------------------------
+
+/**
+ * Promove, de forma idempotente, as 3 sugestões pré-cadastro em
+ * `contents` (+ 1 `content_pages` cada, sem imagem solicitada). Se já
+ * existir qualquer conteúdo vinculado a esta sessão, não promove de
+ * novo — proteção no banco, não só no React.
+ */
+async function promoteContents(
+  admin: ReturnType<typeof createClient>,
+  params: {
+    sessionId: string
+    workspaceId: string
+    userId: string
+    handle: string
+    ideias: DiscoveryIdea[] | null
+    dnaForPreviews: DnaReviewStateLike
+  },
+) {
+  const { data: already } = await admin
+    .from('contents')
+    .select('id')
+    .eq('discovery_session_id', params.sessionId)
+    .limit(1)
+  if (already && already.length > 0) return
+
+  const previews = buildContentPreviews(params.ideias ?? [], params.dnaForPreviews)
+
+  for (const preview of previews) {
+    const format = DEFAULT_FORMAT_BY_TYPE[preview.format]
+    const dims = PAGE_DIMENSIONS_BY_FORMAT[format]
+
+    const { data: content, error: contentError } = await admin
+      .from('contents')
+      .insert({
+        workspace_id: params.workspaceId,
+        title: preview.title || 'Sugestão do POSTTOU',
+        type: preview.format,
+        status: 'rascunho',
+        format,
+        origin: 'ia',
+        caption: preview.support || null,
+        created_by: params.userId,
+        discovery_session_id: params.sessionId,
+      })
+      .select('id')
+      .single()
+
+    if (contentError || !content) {
+      console.error('instagram-discovery-claim: falha ao promover sugestão.', contentError)
+      continue
+    }
+
+    await admin.from('content_pages').insert({
+      content_id: content.id,
+      position: 0,
+      width: dims.width,
+      height: dims.height,
+    })
+  }
 }
 
 Deno.serve(async (req) => {
@@ -58,26 +236,79 @@ Deno.serve(async (req) => {
       .eq('status', 'ready')
       .is('claimed_at', null)
       .gt('expires_at', new Date().toISOString())
-      .select('id, handle, dna_preliminar, ideias_preliminares')
+      .select('id, handle, dna_preliminar, dna_revisado, ideias_preliminares')
       .maybeSingle()
 
     if (claimError) {
       console.error('instagram-discovery-claim: erro ao reivindicar.', claimError)
       return json({ error: 'internal_error' }, 500)
     }
-    if (!claimed) {
+
+    let session = claimed
+
+    // Tolerância a retry: se o UPDATE condicional não encontrou linha
+    // 'ready', pode ser porque ESTE MESMO usuário já reivindicou esta
+    // sessão antes (refresh, duas abas, retry de rede) — nesse caso
+    // trata como sucesso idempotente em vez de 410, sem nunca permitir
+    // que outro usuário reivindique uma sessão já reivindicada.
+    if (!session) {
+      const { data: existing } = await admin
+        .from('pre_onboarding_sessions')
+        .select('id, handle, dna_preliminar, dna_revisado, ideias_preliminares, claimed_by_user_id, claimed_workspace_id')
+        .eq('token_hash', tokenHash)
+        .maybeSingle()
+
+      const alreadyClaimedBySameUser =
+        existing && existing.claimed_by_user_id === userData.user.id && existing.claimed_workspace_id === workspaceId
+
+      if (!alreadyClaimedBySameUser) {
+        return json({ error: 'invalid_session', message: 'Essa análise não existe mais, já foi usada, ou expirou.' }, 410)
+      }
+      session = existing
+    }
+
+    if (!session) {
       return json({ error: 'invalid_session', message: 'Essa análise não existe mais, já foi usada, ou expirou.' }, 410)
     }
+
+    // DNA revisado tem prioridade sobre o preliminar (usuário editou
+    // antes do cadastro); o preliminar original nunca é sobrescrito na
+    // sessão, só usado aqui como respaldo quando não há revisão.
+    const dnaRevisado = session.dna_revisado as DnaReviewStateLike | null
+    const dnaForPreviews: DnaReviewStateLike = dnaRevisado ?? {
+      name: undefined,
+      description: (session.dna_preliminar as Record<string, unknown> | null)?.identidade
+        ? ((session.dna_preliminar as any)?.identidade?.descricao?.value as string | undefined)
+        : undefined,
+      themes: (session.dna_preliminar as any)?.estrategia?.temas_recorrentes ?? [],
+      objectives: (session.dna_preliminar as any)?.estrategia?.objetivos_provaveis ?? [],
+      tone: (session.dna_preliminar as any)?.voz?.tom?.value,
+    }
+
+    await promoteContents(admin, {
+      sessionId: session.id,
+      workspaceId,
+      userId: userData.user.id,
+      handle: session.handle,
+      ideias: session.ideias_preliminares as DiscoveryIdea[] | null,
+      dnaForPreviews,
+    })
 
     await userClient.rpc('log_audit_event', {
       p_workspace_id: workspaceId,
       p_action: 'instagram_discovery_claimed',
       p_resource_type: 'pre_onboarding_sessions',
-      p_resource_id: claimed.id,
-      p_metadata: { handle: claimed.handle },
+      p_resource_id: session.id,
+      p_metadata: { handle: session.handle },
     })
 
-    return json({ success: true, handle: claimed.handle, dna: claimed.dna_preliminar, ideias: claimed.ideias_preliminares })
+    return json({
+      success: true,
+      handle: session.handle,
+      dna: session.dna_preliminar,
+      dnaRevisado: session.dna_revisado ?? null,
+      ideias: session.ideias_preliminares,
+    })
   } catch (err) {
     console.error('instagram-discovery-claim: erro inesperado.', err)
     return json({ error: 'internal_error' }, 500)

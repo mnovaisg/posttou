@@ -5,14 +5,12 @@ import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { supabase } from '@/lib/supabase/client'
 import { ensureBrandProfile, fetchBrandProfile, updateBrandProfile } from '@/features/brand-dna/api'
 import { claimDiscovery } from '@/features/instagram-discovery/api'
+import { clearDiscoveryToken, readDiscoveryToken } from '@/features/instagram-discovery/session-token'
 import {
-  clearDiscoveryToken,
-  clearSelectedIdeaIndex,
-  readDiscoveryToken,
-  readSelectedIdeaIndex,
-  savePendingCreateIdea,
-} from '@/features/instagram-discovery/session-token'
-import { mapDiscoveryDnaToBrandProfilePatch } from '@/features/instagram-discovery/mapDnaToBrandProfilePatch'
+  mapDiscoveryDnaToBrandProfilePatch,
+  mapDnaReviewStateToBrandProfilePatch,
+} from '@/features/instagram-discovery/mapDnaToBrandProfilePatch'
+import type { DnaReviewState } from '@/features/instagram-discovery/DnaReviewCards'
 
 /**
  * Dispara o claim de uma sessão de Discovery pendente assim que o
@@ -62,17 +60,25 @@ export function useDiscoveryClaimOnLogin() {
           await supabase.auth.updateUser({ data: { discovery_token: null } }).catch(() => {})
         }
 
-        await ensureBrandProfile(activeWorkspace.id)
-        const patch = mapDiscoveryDnaToBrandProfilePatch(result.handle, undefined, result.dna)
-        await updateBrandProfile(activeWorkspace.id, patch)
-
-        const selectedIdeaIndex = readSelectedIdeaIndex()
-        clearSelectedIdeaIndex()
-        if (selectedIdeaIndex !== null && result.ideias?.[selectedIdeaIndex]) {
-          savePendingCreateIdea(result.ideias[selectedIdeaIndex])
+        // Melhor esforço: os 3 conteúdos já foram promovidos no backend
+        // pelo próprio claim, então uma falha aqui não deve bloquear a
+        // navegação — só significa que o brand_profile não foi
+        // pré-preenchido automaticamente desta vez (usuário ainda pode
+        // revisar/preencher no wizard depois).
+        try {
+          await ensureBrandProfile(activeWorkspace.id)
+          const patch = result.dnaRevisado
+            ? mapDnaReviewStateToBrandProfilePatch(result.handle, result.dnaRevisado as DnaReviewState)
+            : mapDiscoveryDnaToBrandProfilePatch(result.handle, undefined, result.dna)
+          await updateBrandProfile(activeWorkspace.id, patch)
+        } catch (patchErr) {
+          console.error('useDiscoveryClaimOnLogin: falha ao pré-preencher brand_profile (não bloqueante).', patchErr)
         }
 
-        navigate('/dna-da-marca', { replace: true })
+        // O usuário já viu DNA, previews e passou pelo cadastro antes de
+        // chegar aqui — o destino é o conteúdo já populado com as 3
+        // sugestões, nunca de volta a uma tela que ele já concluiu.
+        navigate('/conteudo', { replace: true })
       } catch (err) {
         // Falha de rede/sessão expirada: não limpamos o token dos
         // metadados aqui de propósito — tenta de novo no próximo login,

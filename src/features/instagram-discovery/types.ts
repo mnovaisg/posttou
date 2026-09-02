@@ -98,6 +98,9 @@ export interface ClaimDiscoveryResult {
   success: true
   handle: string
   dna: DiscoveryDna
+  /** DNA revisado pelo usuário na tela de cards, quando existir —
+   * prioridade sobre `dna` (preliminar) ao montar o brand_profile. */
+  dnaRevisado?: unknown
   ideias: DiscoveryIdea[]
 }
 
