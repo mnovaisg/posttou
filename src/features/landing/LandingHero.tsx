@@ -40,11 +40,10 @@ export function LandingHero() {
             Pensou. Criou. POSTTOU.
           </p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-ink-900 dark:text-ink-50 sm:text-5xl">
-            Seu Instagram no <span className="brand-gradient-text">piloto automático</span> em cerca de 5
-            minutos.
+            Seu próximo <span className="brand-gradient-text">conteúdo</span> começa pelo seu Instagram.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-ink-600 dark:text-ink-300 lg:mx-0">
-            Conteúdo bonito, estratégico e com a sua cara todos os dias — sem equipe e sem complicação.
+            Digite seu @ e descubra como o POSTTOU entende sua marca e transforma isso em conteúdo.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 flex flex-col items-center gap-3 lg:items-start">
@@ -60,7 +59,7 @@ export function LandingHero() {
                 className="sm:flex-1"
               />
               <Button type="submit" size="lg">
-                Testar sem cartão →
+                Analisar meu perfil
               </Button>
             </div>
             {error && <p className="text-sm text-danger-500">{error}</p>}

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { DiscoveryNotConfiguredError, getDiscoveryStatus, startDiscovery } from '@/features/instagram-discovery/api'
 import {
@@ -21,10 +22,14 @@ import type { DiscoveryDna, DiscoveryGetResult, DiscoveryStartResult } from '@/f
 
 type Stage = 'handle' | 'loading' | 'result' | 'error' | 'not_configured'
 
-const PROGRESS_MESSAGES = [
-  'Buscando o perfil no Instagram…',
-  'Lendo posts públicos e legendas recentes…',
-  'Montando seu DNA de marca com IA…',
+// Etapas puramente narrativas do processamento — nunca afirmam um dado
+// específico já encontrado (isso só aparece na tela de resultado, quando
+// já é real). Servem só para a espera parecer intencional, não travada.
+const ANALYSIS_STEPS = [
+  'Entendendo seu posicionamento',
+  'Identificando seus principais assuntos',
+  'Conhecendo o público da sua marca',
+  'Preparando seu DNA',
 ]
 
 export function DiscoveryLandingPage() {
@@ -106,8 +111,8 @@ export function DiscoveryLandingPage() {
     if (stage !== 'loading') return
     setProgressIndex(0)
     const interval = window.setInterval(() => {
-      setProgressIndex((i) => Math.min(i + 1, PROGRESS_MESSAGES.length - 1))
-    }, 1800)
+      setProgressIndex((i) => Math.min(i + 1, ANALYSIS_STEPS.length - 1))
+    }, 1400)
     return () => window.clearInterval(interval)
   }, [stage])
 
@@ -180,9 +185,49 @@ export function DiscoveryLandingPage() {
 
         {stage === 'loading' && (
           <Card>
-            <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
-              <p className="text-sm text-ink-600 dark:text-ink-300">{PROGRESS_MESSAGES[progressIndex]}</p>
+            <CardContent className="flex flex-col items-center gap-6 px-4 py-10 text-center sm:py-12">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+                <span className="absolute inset-0 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600 dark:border-brand-900 dark:border-t-brand-400" />
+                <PosttouMark size={26} />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-ink-900 dark:text-ink-50">
+                  Estamos conhecendo sua marca…
+                </h2>
+                <p className="mt-1 text-sm text-ink-500">Isso leva só alguns segundos.</p>
+              </div>
+              <ul className="flex w-full max-w-xs flex-col gap-3 text-left">
+                {ANALYSIS_STEPS.map((step, i) => {
+                  const isDone = i < progressIndex
+                  const isCurrent = i === progressIndex
+                  return (
+                    <li key={step} className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors',
+                          isDone && 'bg-brand-600 text-white',
+                          isCurrent && !isDone && 'border-2 border-brand-500',
+                          !isDone && !isCurrent && 'border border-ink-200 dark:border-ink-700',
+                        )}
+                      >
+                        {isDone ? '✓' : isCurrent ? (
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
+                        ) : null}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-sm transition-colors',
+                          isCurrent && 'font-medium text-ink-900 dark:text-ink-50',
+                          isDone && 'text-ink-500 dark:text-ink-400',
+                          !isDone && !isCurrent && 'text-ink-300 dark:text-ink-600',
+                        )}
+                      >
+                        {step}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
             </CardContent>
           </Card>
         )}
