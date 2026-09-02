@@ -2777,6 +2777,44 @@ export type Database = {
           },
         ]
       }
+      radar_targets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          source: string
+          value: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          source?: string
+          value: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          source?: string
+          value?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radar_targets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       strategy_experiments: {
         Row: {
           actual_sample_size: number

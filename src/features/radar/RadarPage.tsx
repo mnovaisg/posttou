@@ -10,6 +10,7 @@ import type { ContentType } from '@/features/content/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { RadarConfig } from '@/features/radar/RadarConfig'
 
 const CONFIDENCE_VARIANT: Record<RadarConfidence, 'neutral' | 'brand' | 'success' | 'warning' | 'danger'> = {
   low: 'neutral',
@@ -70,6 +71,8 @@ export function RadarPage() {
           Oportunidades de conteúdo original a partir de sinais reais — baseado em vídeos em alta no YouTube, cruzados com o DNA da sua marca.
         </p>
       </div>
+
+      <RadarConfig />
 
       {lastRun && (
         <p className="text-xs text-ink-400">

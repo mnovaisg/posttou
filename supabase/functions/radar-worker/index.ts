@@ -256,6 +256,23 @@ Deno.serve(async (req) => {
       .order('viral_score', { ascending: false })
       .limit(limits.max_clusters_per_run)
 
+    // Bloco 9 — termos/hashtags configurados manualmente (ou aceitos a
+    // partir de sugestão do DNA) na tela de configuração do Radar
+    // também entram no filtro léxico determinístico, junto com o que já
+    // vinha só do DNA. Concorrentes não entram aqui: não há fonte de
+    // sinal por perfil hoje (só YouTube), fica só como registro
+    // preparado para quando houver enriquecimento por Business Discovery.
+    const { data: allTargets } = await admin
+      .from('radar_targets')
+      .select('workspace_id, kind, value')
+      .in('kind', ['termo', 'hashtag'])
+    const targetsByWorkspace = new Map<string, string[]>()
+    for (const t of allTargets ?? []) {
+      const list = targetsByWorkspace.get(t.workspace_id) ?? []
+      list.push(t.value)
+      targetsByWorkspace.set(t.workspace_id, list)
+    }
+
     for (const profile of brandProfiles ?? []) {
       if (!isBrandProfileReady(profile)) continue
       workspacesProcessed += 1
@@ -265,6 +282,7 @@ Deno.serve(async (req) => {
           ...(profile.content_strategy?.priority_themes ?? []),
           ...(profile.vocabulary?.preferred_words ?? []),
           ...(profile.audience?.interests ?? []),
+          ...(targetsByWorkspace.get(profile.workspace_id) ?? []),
         ].map((k: string) => k.toLowerCase().trim()).filter(Boolean),
       )
 
