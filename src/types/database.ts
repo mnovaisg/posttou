@@ -2510,6 +2510,39 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_admins_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_admins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pre_onboarding_sessions: {
         Row: {
           ai_model: string | null
@@ -3433,6 +3466,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
           plan_id: string
@@ -3458,6 +3492,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind?: string | null
+          pending_change_payment_id?: string | null
           pending_change_price_cents?: number | null
           pending_plan_id?: string | null
           plan_id: string
@@ -3483,6 +3518,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind?: string | null
+          pending_change_payment_id?: string | null
           pending_change_price_cents?: number | null
           pending_plan_id?: string | null
           plan_id?: string
@@ -3843,10 +3879,18 @@ export type Database = {
         }
         Returns: number
       }
+      _coupon_derived_status: {
+        Args: {
+          p_coupon: Database["public"]["Tables"]["coupons"]["Row"]
+          p_used_count: number
+        }
+        Returns: string
+      }
       _pilot_submit_content_if_visual_complete: {
         Args: { p_content_id: string }
         Returns: undefined
       }
+      _require_platform_admin: { Args: never; Returns: undefined }
       _validate_coupon_eligibility: {
         Args: {
           p_billing_interval: Database["public"]["Enums"]["billing_interval"]
@@ -3989,6 +4033,137 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_create_coupon_system: {
+        Args: {
+          p_active?: boolean
+          p_code: string
+          p_discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          p_discount_value: number
+          p_duration: Database["public"]["Enums"]["coupon_duration"]
+          p_eligible_billing_intervals?: Database["public"]["Enums"]["billing_interval"][]
+          p_eligible_plan_ids?: string[]
+          p_expires_at?: string
+          p_max_redemptions?: number
+          p_max_redemptions_per_organization?: number
+          p_starts_at?: string
+        }
+        Returns: {
+          active: boolean
+          code: string
+          code_normalized: string | null
+          created_at: string
+          created_by: string | null
+          discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          discount_value: number
+          duration: Database["public"]["Enums"]["coupon_duration"]
+          eligible_billing_intervals:
+            | Database["public"]["Enums"]["billing_interval"][]
+            | null
+          eligible_plan_ids: string[] | null
+          expires_at: string | null
+          id: string
+          max_redemptions: number | null
+          max_redemptions_per_organization: number
+          metadata: Json
+          starts_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "coupons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_dashboard_metrics_system: { Args: never; Returns: Json }
+      admin_delete_coupon_system: {
+        Args: { p_coupon_id: string }
+        Returns: undefined
+      }
+      admin_get_coupon_detail_system: {
+        Args: { p_coupon_id: string }
+        Returns: Json
+      }
+      admin_list_coupons_system: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      admin_set_coupon_active_system: {
+        Args: { p_active: boolean; p_coupon_id: string }
+        Returns: {
+          active: boolean
+          code: string
+          code_normalized: string | null
+          created_at: string
+          created_by: string | null
+          discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          discount_value: number
+          duration: Database["public"]["Enums"]["coupon_duration"]
+          eligible_billing_intervals:
+            | Database["public"]["Enums"]["billing_interval"][]
+            | null
+          eligible_plan_ids: string[] | null
+          expires_at: string | null
+          id: string
+          max_redemptions: number | null
+          max_redemptions_per_organization: number
+          metadata: Json
+          starts_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "coupons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_update_coupon_system: {
+        Args: {
+          p_coupon_id: string
+          p_discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          p_discount_value: number
+          p_duration: Database["public"]["Enums"]["coupon_duration"]
+          p_eligible_billing_intervals: Database["public"]["Enums"]["billing_interval"][]
+          p_eligible_plan_ids: string[]
+          p_expires_at: string
+          p_max_redemptions: number
+          p_max_redemptions_per_organization: number
+          p_starts_at: string
+        }
+        Returns: {
+          active: boolean
+          code: string
+          code_normalized: string | null
+          created_at: string
+          created_by: string | null
+          discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          discount_value: number
+          duration: Database["public"]["Enums"]["coupon_duration"]
+          eligible_billing_intervals:
+            | Database["public"]["Enums"]["billing_interval"][]
+            | null
+          eligible_plan_ids: string[] | null
+          expires_at: string | null
+          id: string
+          max_redemptions: number | null
+          max_redemptions_per_organization: number
+          metadata: Json
+          starts_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "coupons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_confirmed_plan_change_system: {
         Args: { p_organization_id: string }
         Returns: {
@@ -4009,6 +4184,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
           plan_id: string
@@ -4997,6 +5173,7 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: { p_user_id?: string }; Returns: boolean }
       is_workspace_member: {
         Args: { p_workspace_id: string }
         Returns: boolean
@@ -5364,6 +5541,14 @@ export type Database = {
         Args: { p_asaas_event_id: string; p_asaas_subscription_id: string }
         Returns: Json
       }
+      process_asaas_upgrade_payment_confirmed_system: {
+        Args: {
+          p_asaas_event_id: string
+          p_asaas_payment_id: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       radar_claim_match_jobs: {
         Args: { p_batch_size: number; p_lease_minutes?: number }
         Returns: {
@@ -5430,6 +5615,41 @@ export type Database = {
         Args: { p_document_type: string; p_document_version: string }
         Returns: undefined
       }
+      record_pending_upgrade_payment_system: {
+        Args: { p_asaas_payment_id: string; p_organization_id: string }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_payment_id: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       refund_ai_generation_system: {
         Args: { p_generation_id: string }
         Returns: {
@@ -5473,6 +5693,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      release_stale_upgrade_system: {
+        Args: {
+          p_asaas_event_id: string
+          p_asaas_payment_id: string
+          p_organization_id: string
+        }
+        Returns: Json
       }
       remove_brand_reference: {
         Args: { p_reference_id: string }
@@ -5669,6 +5897,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
           plan_id: string
@@ -5940,6 +6169,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
           plan_id: string

@@ -23,6 +23,8 @@ import { TeamPage } from '@/features/team/TeamPage'
 import { AcceptInvitePage } from '@/features/team/AcceptInvitePage'
 import { PrivacyPolicyPage } from '@/features/legal/PrivacyPolicyPage'
 import { TermsOfServicePage } from '@/features/legal/TermsOfServicePage'
+import { AdminGuard } from '@/features/admin/AdminGuard'
+import { AdminLayout } from '@/features/admin/AdminLayout'
 
 // Fase 14C — code-splitting das rotas mais pesadas (Editor, Performance,
 // Radar, Piloto, Billing, DNA Visual). Cada uma vira seu próprio chunk,
@@ -34,6 +36,10 @@ const RadarPage = React.lazy(() => import('@/features/radar/RadarPage').then((m)
 const PilotPage = React.lazy(() => import('@/features/pilot/PilotPage').then((m) => ({ default: m.PilotPage })))
 const ReportsPage = React.lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const BillingPage = React.lazy(() => import('@/features/billing/BillingPage').then((m) => ({ default: m.BillingPage })))
+const AdminDashboardPage = React.lazy(() => import('@/features/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })))
+const AdminCouponsPage = React.lazy(() => import('@/features/admin/AdminCouponsPage').then((m) => ({ default: m.AdminCouponsPage })))
+const AdminCouponFormPage = React.lazy(() => import('@/features/admin/AdminCouponFormPage').then((m) => ({ default: m.AdminCouponFormPage })))
+const AdminCouponDetailPage = React.lazy(() => import('@/features/admin/AdminCouponDetailPage').then((m) => ({ default: m.AdminCouponDetailPage })))
 
 function RouteFallback() {
   return (
@@ -69,6 +75,61 @@ function App() {
             <Route path="/aceitar-convite" element={<AcceptInvitePage />} />
             <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
             <Route path="/termos-de-uso" element={<TermsOfServicePage />} />
+
+            {/* Área administrativa da plataforma — fora do AppLayout do
+                cliente (sem sidebar de workspace) e sem entrada em
+                nav-items.ts (nunca aparece na navegação normal). Proteção
+                de UX aqui; a autorização real é sempre revalidada no
+                servidor por cada RPC admin_*_system. */}
+            <Route
+              path="/admin"
+              element={
+                <AdminGuard>
+                  <AdminLayout />
+                </AdminGuard>
+              }
+            >
+              <Route
+                index
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminDashboardPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="cupons"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminCouponsPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="cupons/novo"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminCouponFormPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="cupons/:id"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminCouponDetailPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="cupons/:id/editar"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminCouponFormPage />
+                  </React.Suspense>
+                }
+              />
+            </Route>
 
             <Route
               element={
