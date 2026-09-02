@@ -10,6 +10,7 @@ import type * as React from 'react'
 import fotograficoImg from '@/assets/brand-style/fotografico.png'
 import modernoImg from '@/assets/brand-style/moderno.png'
 import editorialImg from '@/assets/brand-style/editorial.png'
+import popImg from '@/assets/brand-style/pop.png'
 import { Badge } from '@/components/ui/badge'
 
 function MockCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -46,7 +47,7 @@ export function CreateMockup() {
     <MockCard>
       <p className="text-xs font-semibold text-ink-400">Criação com IA</p>
       <div className="mt-3 flex gap-3">
-        <div className="h-16 w-16 shrink-0 rounded-lg" style={{ background: 'linear-gradient(135deg, #6748fa 0%, #ec4899 100%)' }} />
+        <img src={popImg} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" loading="lazy" decoding="async" />
         <div className="flex-1 space-y-2 pt-1">
           <p className="text-sm font-medium text-ink-900 dark:text-ink-50">5 dicas para vender mais</p>
           <div className="h-2 w-full rounded-full bg-ink-100 dark:bg-ink-800" />
