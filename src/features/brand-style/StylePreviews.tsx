@@ -14,6 +14,7 @@ import editorialImg from '@/assets/brand-style/editorial.png'
 import popImg from '@/assets/brand-style/pop.png'
 import minimalistaImg from '@/assets/brand-style/minimalista.png'
 import impactanteImg from '@/assets/brand-style/impactante.png'
+import socialImg from '@/assets/brand-style/social.png'
 
 const IMAGE_STYLE_SRC: Record<'fotografico' | 'ilustracao' | '3d', string> = {
   fotografico: fotograficoImg,
@@ -34,22 +35,24 @@ export function ImageStylePreview({ style }: { style: 'fotografico' | 'ilustraca
   return <img src={IMAGE_STYLE_SRC[style]} alt={IMAGE_STYLE_ALT[style]} className="aspect-square w-full rounded-lg object-cover" loading="lazy" />
 }
 
-const DESIGN_STYLE_SRC: Record<'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante', string> = {
+const DESIGN_STYLE_SRC: Record<'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante' | 'social', string> = {
   moderno: modernoImg,
   editorial: editorialImg,
   pop: popImg,
   minimalista: minimalistaImg,
   impactante: impactanteImg,
+  social: socialImg,
 }
 
-const DESIGN_STYLE_ALT: Record<'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante', string> = {
+const DESIGN_STYLE_ALT: Record<'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante' | 'social', string> = {
   moderno: 'Exemplo de estilo moderno: post de Instagram com tipografia grande sobre gradiente diagonal',
   editorial: 'Exemplo de estilo editorial: post de Instagram com composição de revista, serifa e linhas finas',
   pop: 'Exemplo de estilo pop: post de Instagram com cores saturadas, contraste alto e padrão de bolinhas',
   minimalista: 'Exemplo de estilo minimalista: post de Instagram com espaço em branco generoso e poucos elementos',
   impactante: 'Exemplo de estilo impactante: post de Instagram com blocos diagonais e tipografia de alto contraste',
+  social: 'Exemplo de estilo social: post com cara de rede social nativa, avatar, @ da marca e texto curto',
 }
 
-export function DesignStylePreview({ style }: { style: 'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante'; primary: string }) {
+export function DesignStylePreview({ style }: { style: 'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante' | 'social'; primary: string }) {
   return <img src={DESIGN_STYLE_SRC[style]} alt={DESIGN_STYLE_ALT[style]} className="aspect-[4/5] w-full rounded-lg object-cover" loading="lazy" />
 }

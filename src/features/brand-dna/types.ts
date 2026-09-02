@@ -56,7 +56,7 @@ export interface VocabularySection {
 }
 
 export type ImageStyle = 'fotografico' | 'ilustracao' | '3d'
-export type DesignStyle = 'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante'
+export type DesignStyle = 'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante' | 'social'
 
 export interface VisualIdentitySection {
   colors: string[]
@@ -136,6 +136,7 @@ export const DESIGN_STYLE_OPTIONS: { value: DesignStyle; label: string; descript
   { value: 'pop', label: 'Pop', description: 'Cores saturadas, contraste alto, energia.' },
   { value: 'minimalista', label: 'Minimalista', description: 'Muito espaço em branco, poucos elementos.' },
   { value: 'impactante', label: 'Impactante', description: 'Blocos grandes, diagonais, alto contraste.' },
+  { value: 'social', label: 'Social', description: 'Cara de post nativo de rede social — avatar, @, texto curto.' },
 ]
 
 export const PERSONALITY_TRAITS = [
