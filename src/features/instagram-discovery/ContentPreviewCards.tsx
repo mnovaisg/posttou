@@ -145,11 +145,38 @@ function resolveColors(colors: string[]): string[] {
 
 const BRAND_PALETTE = ['#6748fa', '#c026d3', '#f97316']
 
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace('#', '')
+  const value = parseInt(clean, 16)
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`
+}
+
+/** Clareia (amount > 0) ou escurece (amount < 0) um hex — usado só para
+ * dar variação de tom quando o DNA tem poucas cores (1 ou 2), pra não
+ * repetir a cor idêntica nos 3 cards. */
+function adjustHex(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex)
+  const target = amount > 0 ? 255 : 0
+  const p = Math.abs(amount)
+  return rgbToHex(r + (target - r) * p, g + (target - g) * p, b + (target - b) * p)
+}
+
+/** Sempre devolve 3 tons — quando o DNA só tem 1-2 cores, completa com
+ * variações de claridade da mesma cor (mesma família, nunca idêntica),
+ * em vez de repetir o hex cru nos 3 cards. */
+function padPalette(colors: string[]): [string, string, string] {
+  if (colors.length >= 3) return [colors[0], colors[1], colors[2]]
+  if (colors.length === 2) return [colors[0], colors[1], adjustHex(colors[0], -0.35)]
+  if (colors.length === 1) return [colors[0], adjustHex(colors[0], 0.3), adjustHex(colors[0], -0.35)]
+  return [BRAND_PALETTE[0], BRAND_PALETTE[1], BRAND_PALETTE[2]]
+}
+
 function cardBackground(index: number, resolvedColors: string[]): string {
-  const palette = resolvedColors.length ? resolvedColors : BRAND_PALETTE
-  const c1 = palette[0]
-  const c2 = palette[1] ?? palette[0]
-  const c3 = palette[2] ?? c2
+  const [c1, c2, c3] = padPalette(resolvedColors)
   const variants = [
     `linear-gradient(135deg, ${c1} 0%, ${c2} 60%, ${c3} 100%)`,
     `radial-gradient(circle at 25% 15%, ${c1} 0%, ${c2} 55%, ${c3} 100%)`,
