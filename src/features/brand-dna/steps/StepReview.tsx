@@ -86,6 +86,19 @@ export function StepReview({ draft }: { draft: BrandDnaDraft }) {
       </section>
 
       <section className="flex flex-col gap-2 rounded-xl border border-ink-200 p-4 dark:border-ink-700">
+        <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Estilo da marca</h4>
+        <p className="text-sm text-ink-500">
+          Cores estruturadas, logo, estilo de imagem/design e a Biblioteca da Marca — o que guia a geração visual dos
+          seus conteúdos.
+        </p>
+        <div>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/dna-da-marca/estilo">Configurar estilo da marca</Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-xl border border-ink-200 p-4 dark:border-ink-700">
         <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">DNA visual & referências</h4>
         <p className="text-sm text-ink-500">
           Defina 3 direções visuais reais para sua marca e adicione perfis de referência que representam a direção

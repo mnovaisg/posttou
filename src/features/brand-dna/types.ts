@@ -55,11 +55,21 @@ export interface VocabularySection {
   signature_expressions: string[]
 }
 
+export type ImageStyle = 'fotografico' | 'ilustracao' | '3d'
+export type DesignStyle = 'moderno' | 'editorial' | 'pop' | 'minimalista' | 'impactante'
+
 export interface VisualIdentitySection {
   colors: string[]
   typography: string
   visual_style: string
   references: string[]
+  /** Bloco 8 — Estilo da Marca: cores estruturadas (hex), além de `colors` livre. */
+  primary_color: string
+  background_color: string
+  text_color: string
+  /** Bloco 8: escolhas que alimentam a futura direção de geração visual (não é só cosmético). */
+  image_style: ImageStyle | ''
+  design_style: DesignStyle | ''
 }
 
 export const EMPTY_AUDIENCE: AudienceSection = {
@@ -107,7 +117,26 @@ export const EMPTY_VISUAL_IDENTITY: VisualIdentitySection = {
   typography: '',
   visual_style: '',
   references: [],
+  primary_color: '',
+  background_color: '',
+  text_color: '',
+  image_style: '',
+  design_style: '',
 }
+
+export const IMAGE_STYLE_OPTIONS: { value: ImageStyle; label: string; description: string }[] = [
+  { value: 'fotografico', label: 'Fotográfico', description: 'Fotos reais, luz natural, sensação de jornalismo/documentário.' },
+  { value: 'ilustracao', label: 'Ilustração', description: 'Desenho, traço e cor chapada — não parece foto.' },
+  { value: '3d', label: '3D', description: 'Formas renderizadas, profundidade e volume.' },
+]
+
+export const DESIGN_STYLE_OPTIONS: { value: DesignStyle; label: string; description: string }[] = [
+  { value: 'moderno', label: 'Moderno', description: 'Limpo, geométrico, tipografia grande.' },
+  { value: 'editorial', label: 'Editorial', description: 'Muito texto, linhas finas, proporção de revista.' },
+  { value: 'pop', label: 'Pop', description: 'Cores saturadas, contraste alto, energia.' },
+  { value: 'minimalista', label: 'Minimalista', description: 'Muito espaço em branco, poucos elementos.' },
+  { value: 'impactante', label: 'Impactante', description: 'Blocos grandes, diagonais, alto contraste.' },
+]
 
 export const PERSONALITY_TRAITS = [
   'Autoridade',

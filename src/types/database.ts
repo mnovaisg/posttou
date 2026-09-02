@@ -211,6 +211,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_webhook_rejections: {
+        Row: {
+          created_at: string
+          has_hmac_secret: boolean
+          has_signature_header: boolean
+          has_timestamp_header: boolean
+          id: string
+          provider: string
+          reason: string
+          task_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          has_hmac_secret?: boolean
+          has_signature_header?: boolean
+          has_timestamp_header?: boolean
+          id?: string
+          provider: string
+          reason: string
+          task_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          has_hmac_secret?: boolean
+          has_signature_header?: boolean
+          has_timestamp_header?: boolean
+          id?: string
+          provider?: string
+          reason?: string
+          task_id?: string | null
+        }
+        Relationships: []
+      }
       asaas_webhook_events: {
         Row: {
           asaas_event_id: string
@@ -276,6 +309,50 @@ export type Database = {
           },
           {
             foreignKeyName: "audit_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_assets: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          storage_path: string
+          title: string | null
+          workspace_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path: string
+          title?: string | null
+          workspace_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path?: string
+          title?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_assets_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -959,6 +1036,7 @@ export type Database = {
           created_by: string | null
           cta: string | null
           deleted_at: string | null
+          discovery_session_id: string | null
           duplicated_from: string | null
           format: Database["public"]["Enums"]["content_format"]
           hashtags: string[]
@@ -981,6 +1059,7 @@ export type Database = {
           created_by?: string | null
           cta?: string | null
           deleted_at?: string | null
+          discovery_session_id?: string | null
           duplicated_from?: string | null
           format?: Database["public"]["Enums"]["content_format"]
           hashtags?: string[]
@@ -1003,6 +1082,7 @@ export type Database = {
           created_by?: string | null
           cta?: string | null
           deleted_at?: string | null
+          discovery_session_id?: string | null
           duplicated_from?: string | null
           format?: Database["public"]["Enums"]["content_format"]
           hashtags?: string[]
@@ -1025,6 +1105,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contents_discovery_session_id_fkey"
+            columns: ["discovery_session_id"]
+            isOneToOne: false
+            referencedRelation: "pre_onboarding_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -1263,6 +1350,7 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          return_to: Database["public"]["Enums"]["instagram_oauth_return_to"]
           state: string
           used_at: string | null
           user_id: string
@@ -1272,6 +1360,7 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
+          return_to?: Database["public"]["Enums"]["instagram_oauth_return_to"]
           state: string
           used_at?: string | null
           user_id: string
@@ -1281,6 +1370,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          return_to?: Database["public"]["Enums"]["instagram_oauth_return_to"]
           state?: string
           used_at?: string | null
           user_id?: string
@@ -2219,9 +2309,11 @@ export type Database = {
           claimed_workspace_id: string | null
           created_at: string
           dna_preliminar: Json | null
+          dna_revisado: Json | null
           error_code: string | null
           error_message: string | null
           expires_at: string
+          flow_stage: string | null
           handle: string
           id: string
           ideias_preliminares: Json | null
@@ -2241,9 +2333,11 @@ export type Database = {
           claimed_workspace_id?: string | null
           created_at?: string
           dna_preliminar?: Json | null
+          dna_revisado?: Json | null
           error_code?: string | null
           error_message?: string | null
           expires_at?: string
+          flow_stage?: string | null
           handle: string
           id?: string
           ideias_preliminares?: Json | null
@@ -2263,9 +2357,11 @@ export type Database = {
           claimed_workspace_id?: string | null
           created_at?: string
           dna_preliminar?: Json | null
+          dna_revisado?: Json | null
           error_code?: string | null
           error_message?: string | null
           expires_at?: string
+          flow_stage?: string | null
           handle?: string
           id?: string
           ideias_preliminares?: Json | null
@@ -3112,6 +3208,24 @@ export type Database = {
           },
         ]
       }
+      temp_backup_sub: {
+        Row: {
+          id: string | null
+          organization_id: string | null
+          status: Database["public"]["Enums"]["subscription_status"] | null
+        }
+        Insert: {
+          id?: string | null
+          organization_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"] | null
+        }
+        Update: {
+          id?: string | null
+          organization_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"] | null
+        }
+        Relationships: []
+      }
       visual_dna_generation_runs: {
         Row: {
           credit_cost: number
@@ -3869,17 +3983,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      claim_stuck_image_generations: {
-        Args: {
-          p_limit?: number
-          p_max_attempts?: number
-          p_timeout_minutes?: number
-        }
-        Returns: {
-          id: string
-          task_id: string
-        }[]
-      }
+      claim_stuck_image_generations:
+        | {
+            Args: {
+              p_limit?: number
+              p_max_attempts?: number
+              p_timeout_minutes?: number
+            }
+            Returns: {
+              id: string
+              task_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_max_attempts?: number
+              p_retry_timeout_minutes?: number
+              p_timeout_minutes?: number
+            }
+            Returns: {
+              id: string
+              task_id: string
+            }[]
+          }
       claim_visual_dna_generation: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -3904,6 +4031,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cleanup_ai_webhook_rejections: { Args: never; Returns: undefined }
       cleanup_expired_discovery_data: { Args: never; Returns: undefined }
       complete_instagram_publication: {
         Args: {
@@ -4148,6 +4276,85 @@ export type Database = {
           to: "pilot_settings"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      discovery_claim_create_content: {
+        Args: {
+          p_caption: string
+          p_created_by: string
+          p_discovery_session_id: string
+          p_format: Database["public"]["Enums"]["content_format"]
+          p_page_height: number
+          p_page_width: number
+          p_title: string
+          p_type: Database["public"]["Enums"]["content_type"]
+          p_workspace_id: string
+        }
+        Returns: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          cta: string | null
+          deleted_at: string | null
+          discovery_session_id: string | null
+          duplicated_from: string | null
+          format: Database["public"]["Enums"]["content_format"]
+          hashtags: string[]
+          id: string
+          origin: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id: string | null
+          published_at: string | null
+          radar_opportunity_id: string | null
+          rejection_reason: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["content_status"]
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      discovery_claim_promote_contents: {
+        Args: {
+          p_created_by: string
+          p_previews: Json
+          p_session_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          cta: string | null
+          deleted_at: string | null
+          discovery_session_id: string | null
+          duplicated_from: string | null
+          format: Database["public"]["Enums"]["content_format"]
+          hashtags: string[]
+          id: string
+          origin: Database["public"]["Enums"]["content_origin"]
+          pilot_plan_item_id: string | null
+          published_at: string | null
+          radar_opportunity_id: string | null
+          rejection_reason: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["content_status"]
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at: string
+          workspace_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contents"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       dismiss_onboarding: {
@@ -4522,6 +4729,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      log_instagram_worker_audit_event: {
+        Args: {
+          p_action: string
+          p_metadata?: Json
+          p_resource_id?: string
+          p_resource_type: string
+          p_workspace_id: string
+        }
+        Returns: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json
+          resource_id: string | null
+          resource_type: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "audit_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       pause_pilot: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -4628,6 +4860,7 @@ export type Database = {
           created_by: string | null
           cta: string | null
           deleted_at: string | null
+          discovery_session_id: string | null
           duplicated_from: string | null
           format: Database["public"]["Enums"]["content_format"]
           hashtags: string[]
@@ -4719,6 +4952,7 @@ export type Database = {
           created_by: string | null
           cta: string | null
           deleted_at: string | null
+          discovery_session_id: string | null
           duplicated_from: string | null
           format: Database["public"]["Enums"]["content_format"]
           hashtags: string[]
@@ -5156,6 +5390,7 @@ export type Database = {
           created_by: string | null
           cta: string | null
           deleted_at: string | null
+          discovery_session_id: string | null
           duplicated_from: string | null
           format: Database["public"]["Enums"]["content_format"]
           hashtags: string[]
@@ -5460,6 +5695,7 @@ export type Database = {
         | "permission_required"
         | "available"
         | "not_supported"
+      instagram_oauth_return_to: "onboarding" | "settings" | "dashboard"
       instagram_publication_status:
         | "pending"
         | "processing"
@@ -5550,12 +5786,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5579,11 +5815,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5604,11 +5840,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5629,11 +5865,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5646,11 +5882,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5714,6 +5950,7 @@ export const Constants = {
         "available",
         "not_supported",
       ],
+      instagram_oauth_return_to: ["onboarding", "settings", "dashboard"],
       instagram_publication_status: [
         "pending",
         "processing",

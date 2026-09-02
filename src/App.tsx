@@ -28,6 +28,7 @@ import { TermsOfServicePage } from '@/features/legal/TermsOfServicePage'
 // Radar, Piloto, Billing, DNA Visual). Cada uma vira seu próprio chunk,
 // baixado só quando o usuário realmente navega até ela.
 const VisualDnaPage = React.lazy(() => import('@/features/brand-visual-dna/VisualDnaPage').then((m) => ({ default: m.VisualDnaPage })))
+const BrandStylePage = React.lazy(() => import('@/features/brand-style/BrandStylePage').then((m) => ({ default: m.BrandStylePage })))
 const EditorPage = React.lazy(() => import('@/features/editor/EditorPage').then((m) => ({ default: m.EditorPage })))
 const RadarPage = React.lazy(() => import('@/features/radar/RadarPage').then((m) => ({ default: m.RadarPage })))
 const PilotPage = React.lazy(() => import('@/features/pilot/PilotPage').then((m) => ({ default: m.PilotPage })))
@@ -85,6 +86,14 @@ function App() {
                 element={
                   <React.Suspense fallback={<RouteFallback />}>
                     <VisualDnaPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="/dna-da-marca/estilo"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <BrandStylePage />
                   </React.Suspense>
                 }
               />

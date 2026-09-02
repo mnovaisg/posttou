@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { ensureBrandProfile, updateBrandProfile } from '@/features/brand-dna/api'
@@ -269,11 +269,16 @@ export function BrandDnaPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink-900 dark:text-ink-50">DNA da Marca</h1>
-        <p className="text-sm text-ink-500">
-          Vamos conhecer sua marca para criar conteúdos que realmente pareçam feitos por você.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900 dark:text-ink-50">DNA da Marca</h1>
+          <p className="text-sm text-ink-500">
+            Vamos conhecer sua marca para criar conteúdos que realmente pareçam feitos por você.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/dna-da-marca/estilo">Estilo da Marca</Link>
+        </Button>
       </div>
 
       <Stepper current={step} onSelect={(s) => (profile?.onboarding_completed_at || s <= draft.onboardingStep) && setStep(s)} />
