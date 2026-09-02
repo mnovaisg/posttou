@@ -12,6 +12,17 @@ export type PilotEditorialRole = Enums<'pilot_editorial_role'>
 
 export const WEEKDAY_LABEL = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+/** Bloco 10: agenda semanal exibida Segunda→Domingo — mapeia pra weekday 0=domingo..6=sábado já usado no banco/Radar-plan-generate. */
+export const WEEKDAY_ORDER_MON_FIRST: { weekday: number; label: string }[] = [
+  { weekday: 1, label: 'Segunda' },
+  { weekday: 2, label: 'Terça' },
+  { weekday: 3, label: 'Quarta' },
+  { weekday: 4, label: 'Quinta' },
+  { weekday: 5, label: 'Sexta' },
+  { weekday: 6, label: 'Sábado' },
+  { weekday: 0, label: 'Domingo' },
+]
+
 export const EDITORIAL_ROLE_LABEL: Record<PilotEditorialRole, string> = {
   educativo: 'Educativo',
   autoridade: 'Autoridade',
@@ -54,4 +65,5 @@ export interface PilotSettingsInput {
   defaultInstagramAccountId: string | null
   maxCreditsPerWindow: number | null
   autoGenerateArt: boolean
+  alwaysRequireApproval: boolean
 }

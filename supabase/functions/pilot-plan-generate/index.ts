@@ -80,20 +80,33 @@ Deno.serve(async (req) => {
       return json({ error: 'plan_in_progress', message: claimError?.message ?? 'Já existe um plano em andamento.' }, 409)
     }
 
-    // ── candidatos de slot: dias no período × dias/horários permitidos, já livres de conflito ──
+    // ── candidatos de slot (Bloco 10): agenda semanal explícita do usuário
+    // (pilot_schedule_slots), não mais o cross-product allowed_weekdays x
+    // preferred_times.default. Cada slot pode carregar uma diretriz de
+    // conteúdo, que viaja até o item do plano e o prompt de geração.
+    const { data: scheduleSlots } = await admin
+      .from('pilot_schedule_slots')
+      .select('weekday, time_of_day, directive')
+      .eq('workspace_id', workspaceId)
+    const slotsByWeekday = new Map<number, { timeLabel: string; directive: string | null }[]>()
+    for (const s of scheduleSlots ?? []) {
+      const wd = s.weekday as number
+      const list = slotsByWeekday.get(wd) ?? []
+      list.push({ timeLabel: (s.time_of_day as string).slice(0, 5), directive: s.directive })
+      slotsByWeekday.set(wd, list)
+    }
+
     const slots: SlotCandidate[] = []
     let cursor = periodStart
     const now = Date.now()
     while (cursor <= periodEnd) {
       const wd = weekdayInTimeZone(cursor, timezone)
-      if ((settings.allowed_weekdays as number[]).includes(wd)) {
-        const times = settings.preferred_times as Record<string, string>
-        const timeLabel = times.overrides?.[String(wd)] ?? times.default ?? '18:00'
-        const scheduledFor = zonedTimeToUtc(cursor, timeLabel, timezone)
+      for (const daySlot of slotsByWeekday.get(wd) ?? []) {
+        const scheduledFor = zonedTimeToUtc(cursor, daySlot.timeLabel, timezone)
         if (scheduledFor.getTime() > now) {
           const { data: hasConflict } = await admin.rpc('pilot_check_slot_conflict', { p_workspace_id: workspaceId, p_scheduled_for: scheduledFor.toISOString(), p_exclude_plan_item_id: null })
           if (!hasConflict) {
-            slots.push({ index: slots.length, scheduledForIso: scheduledFor.toISOString(), weekdayLabel: WEEKDAY_LABEL[wd], timeLabel })
+            slots.push({ index: slots.length, scheduledForIso: scheduledFor.toISOString(), weekdayLabel: WEEKDAY_LABEL[wd], timeLabel: daySlot.timeLabel, directive: daySlot.directive })
           }
         }
       }
@@ -267,6 +280,7 @@ Deno.serve(async (req) => {
         status: 'planned',
         source: 'pilot',
         experiment_id: matchesExperiment ? activeExperiment!.id : null,
+        directive: slot.directive ?? null,
       })
       if (insertError) continue
       if (matchesExperiment) experimentTagged += 1

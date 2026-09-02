@@ -39,6 +39,7 @@ export async function upsertPilotSettings(workspaceId: string, input: PilotSetti
     p_default_instagram_account_id: input.defaultInstagramAccountId,
     p_max_credits_per_window: input.maxCreditsPerWindow,
     p_auto_generate_art: input.autoGenerateArt,
+    p_always_require_approval: input.alwaysRequireApproval,
   } as never)
   if (error) throw error
   return data

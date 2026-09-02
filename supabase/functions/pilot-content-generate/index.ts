@@ -27,6 +27,45 @@ function extractJson(text: string): unknown {
   return JSON.parse(match ? match[0] : text)
 }
 
+// Bloco 10, item 7: checa (e registra em audit_logs) se este conteúdo
+// poderia seguir para publicação automática. Hoje a resposta é sempre
+// "não" porque a infraestrutura de publicação real (instagram-schedule-
+// publication) exige um asset já renderizado pelo editor, que o Piloto
+// não produz sozinho — mas a checagem existe e fica pronta para quando
+// (se) um passo de renderização automática existir. Nunca lança exceção:
+// o conteúdo já está seguro em 'em_revisao' antes desta função rodar.
+// deno-lint-ignore no-explicit-any
+async function tryAutoPublishEligibility(admin: any, workspaceId: string, contentId: string, defaultInstagramAccountId: string | null) {
+  try {
+    if (!defaultInstagramAccountId) {
+      await logAutoPublishSkipped(admin, workspaceId, contentId, 'no_default_instagram_account')
+      return
+    }
+    const { data: account } = await admin.from('instagram_accounts').select('status').eq('id', defaultInstagramAccountId).eq('workspace_id', workspaceId).maybeSingle()
+    if (!account || account.status !== 'conectado') {
+      await logAutoPublishSkipped(admin, workspaceId, contentId, 'instagram_not_connected')
+      return
+    }
+    // Instagram conectado — mas ainda falta o pré-requisito de infraestrutura:
+    // nenhum asset renderizado existe para conteúdo gerado pelo Piloto.
+    await logAutoPublishSkipped(admin, workspaceId, contentId, 'no_rendered_asset_pipeline')
+  } catch (e) {
+    console.error('pilot-content-generate: falha ao checar elegibilidade de publicação automática (não afeta o conteúdo, que já está seguro em revisão).', e)
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function logAutoPublishSkipped(admin: any, workspaceId: string, contentId: string, reason: string) {
+  await admin.from('audit_logs').insert({
+    workspace_id: workspaceId,
+    user_id: null,
+    action: 'pilot_auto_publish_skipped',
+    resource_type: 'contents',
+    resource_id: contentId,
+    metadata: { reason, actor: 'pilot_worker' },
+  })
+}
+
 // deno-lint-ignore no-explicit-any
 async function refundGenerationBestEffort(admin: any, generationId: string) {
   // .rpc() do supabase-js é "thenable", não uma Promise real — nunca tem
@@ -172,7 +211,11 @@ Deno.serve(async (req) => {
 
     for (const item of claimedItems ?? []) {
       // item 44: pausa observada antes de CADA item — nenhum novo item começa depois que o Piloto foi pausado.
-      const { data: liveSettings } = await admin.from('pilot_settings').select('status, auto_generate_art').eq('workspace_id', plan.workspace_id).single()
+      const { data: liveSettings } = await admin
+        .from('pilot_settings')
+        .select('status, auto_generate_art, always_require_approval, default_instagram_account_id')
+        .eq('workspace_id', plan.workspace_id)
+        .single()
       if (liveSettings?.status !== 'active') {
         await admin.rpc('resolve_pilot_plan_item', { p_item_id: item.id, p_outcome: 'skipped', p_reason: 'pilot_paused' })
         continue
@@ -194,7 +237,14 @@ Deno.serve(async (req) => {
       const { data: costRow } = await admin.from('ai_operation_costs').select('credit_cost').eq('generation_type', generationType).single()
       const creditCost = costRow?.credit_cost as number
 
-      const themeInput = [item.topic, item.angle, item.radar_opportunity_id ? 'Não copie o conteúdo de origem. Crie uma abordagem original.' : null].filter(Boolean).join('\n\n')
+      const themeInput = [
+        item.topic,
+        item.angle,
+        item.directive ? `Diretriz de conteúdo definida pelo usuário para este slot: ${item.directive}` : null,
+        item.radar_opportunity_id ? 'Não copie o conteúdo de origem. Crie uma abordagem original.' : null,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
       const { systemPrompt, userPrompt } = buildPrompt({
         generationType,
         objective: ROLE_TO_OBJECTIVE[item.editorial_role],
@@ -370,6 +420,19 @@ Deno.serve(async (req) => {
       } else {
         // item 4/99: único caminho para sair de "rascunho" — nunca aprova, agenda ou publica.
         await admin.rpc('pilot_submit_content_for_review', { p_content_id: content.id })
+        // Bloco 10, item 7: quando "sempre aguardar aprovação" está desligado,
+        // tentamos elegibilidade de publicação automática — mas a infra de
+        // publicação existente (instagram-schedule-publication) exige um
+        // asset já RENDERIZADO (content_versions + rendered_asset_paths),
+        // que só existe depois de o usuário passar pelo editor. O Piloto
+        // não tem hoje um passo de renderização automática, então essa
+        // checagem sempre resulta em fallback seguro para revisão manual
+        // (o conteúdo já está em 'em_revisao' acima) — nunca perde nada,
+        // nunca promove sozinho, e fica registrado no audit log o motivo
+        // exato, em vez de fingir uma publicação automática que não existe.
+        if (!liveSettings.always_require_approval) {
+          await tryAutoPublishEligibility(admin, plan.workspace_id, content.id, liveSettings.default_instagram_account_id)
+        }
       }
 
       await admin.rpc('resolve_pilot_plan_item', { p_item_id: item.id, p_outcome: 'generated', p_content_id: content.id })

@@ -1904,6 +1904,7 @@ export type Database = {
           claimed_at: string | null
           content_id: string | null
           created_at: string
+          directive: string | null
           editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id: string | null
           format: Database["public"]["Enums"]["content_type"]
@@ -1930,6 +1931,7 @@ export type Database = {
           claimed_at?: string | null
           content_id?: string | null
           created_at?: string
+          directive?: string | null
           editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id?: string | null
           format: Database["public"]["Enums"]["content_type"]
@@ -1956,6 +1958,7 @@ export type Database = {
           claimed_at?: string | null
           content_id?: string | null
           created_at?: string
+          directive?: string | null
           editorial_role?: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id?: string | null
           format?: Database["public"]["Enums"]["content_type"]
@@ -2164,10 +2167,49 @@ export type Database = {
           },
         ]
       }
+      pilot_schedule_slots: {
+        Row: {
+          created_at: string
+          directive: string | null
+          id: string
+          time_of_day: string
+          updated_at: string
+          weekday: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          directive?: string | null
+          id?: string
+          time_of_day: string
+          updated_at?: string
+          weekday: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          directive?: string | null
+          id?: string
+          time_of_day?: string
+          updated_at?: string
+          weekday?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_schedule_slots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pilot_settings: {
         Row: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          always_require_approval: boolean
           auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
@@ -2192,6 +2234,7 @@ export type Database = {
         Insert: {
           allowed_formats?: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays?: number[]
+          always_require_approval?: boolean
           auto_generate_art?: boolean
           created_at?: string
           default_instagram_account_id?: string | null
@@ -2216,6 +2259,7 @@ export type Database = {
         Update: {
           allowed_formats?: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays?: number[]
+          always_require_approval?: boolean
           auto_generate_art?: boolean
           created_at?: string
           default_instagram_account_id?: string | null
@@ -2502,6 +2546,63 @@ export type Database = {
           viral_score_breakdown?: Json
         }
         Relationships: []
+      }
+      radar_match_jobs: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          cluster_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          cluster_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          cluster_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radar_match_jobs_cluster_id_fkey"
+            columns: ["cluster_id"]
+            isOneToOne: false
+            referencedRelation: "radar_clusters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radar_match_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       radar_opportunities: {
         Row: {
@@ -3578,6 +3679,7 @@ export type Database = {
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          always_require_approval: boolean
           auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
@@ -3656,6 +3758,7 @@ export type Database = {
           claimed_at: string | null
           content_id: string | null
           created_at: string
+          directive: string | null
           editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id: string | null
           format: Database["public"]["Enums"]["content_type"]
@@ -3965,6 +4068,7 @@ export type Database = {
           claimed_at: string | null
           content_id: string | null
           created_at: string
+          directive: string | null
           editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id: string | null
           format: Database["public"]["Enums"]["content_type"]
@@ -4283,11 +4387,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_pilot_schedule_slot: {
+        Args: { p_slot_id: string }
+        Returns: undefined
+      }
       disable_pilot: {
         Args: { p_workspace_id: string }
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          always_require_approval: boolean
           auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
@@ -4486,6 +4595,7 @@ export type Database = {
           claimed_at: string | null
           content_id: string | null
           created_at: string
+          directive: string | null
           editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id: string | null
           format: Database["public"]["Enums"]["content_type"]
@@ -4797,6 +4907,7 @@ export type Database = {
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          always_require_approval: boolean
           auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
@@ -5027,6 +5138,28 @@ export type Database = {
         Args: { p_asaas_event_id: string; p_asaas_subscription_id: string }
         Returns: Json
       }
+      radar_claim_match_jobs: {
+        Args: { p_batch_size: number; p_lease_minutes?: number }
+        Returns: {
+          attempts: number
+          claimed_at: string | null
+          cluster_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "radar_match_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       radar_compute_novelty: {
         Args: {
           p_lookback_days?: number
@@ -5178,6 +5311,7 @@ export type Database = {
           claimed_at: string | null
           content_id: string | null
           created_at: string
+          directive: string | null
           editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id: string | null
           format: Database["public"]["Enums"]["content_type"]
@@ -5209,6 +5343,7 @@ export type Database = {
         Returns: {
           allowed_formats: Database["public"]["Enums"]["content_type"][]
           allowed_weekdays: number[]
+          always_require_approval: boolean
           auto_generate_art: boolean
           created_at: string
           default_instagram_account_id: string | null
@@ -5393,6 +5528,7 @@ export type Database = {
           claimed_at: string | null
           content_id: string | null
           created_at: string
+          directive: string | null
           editorial_role: Database["public"]["Enums"]["pilot_editorial_role"]
           experiment_id: string | null
           format: Database["public"]["Enums"]["content_type"]
@@ -5583,58 +5719,138 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      upsert_pilot_settings: {
+      upsert_pilot_schedule_slot: {
         Args: {
-          p_allowed_formats: Database["public"]["Enums"]["content_type"][]
-          p_allowed_weekdays: number[]
-          p_auto_generate_art?: boolean
-          p_default_instagram_account_id: string
-          p_editorial_mix: Json
-          p_format_mix?: Json
-          p_max_credits_per_window: number
-          p_max_posts_per_window: number
-          p_max_radar_per_window: number
-          p_mode: Database["public"]["Enums"]["pilot_mode"]
-          p_planning_window_days: number
-          p_preferred_times: Json
-          p_radar_min_confidence: string
-          p_radar_min_opportunity_score: number
-          p_temporary_objective: string
-          p_temporary_objective_expires_at: string
-          p_use_radar: boolean
+          p_directive?: string
+          p_slot_id?: string
+          p_time_of_day: string
+          p_weekday: number
           p_workspace_id: string
         }
         Returns: {
-          allowed_formats: Database["public"]["Enums"]["content_type"][]
-          allowed_weekdays: number[]
-          auto_generate_art: boolean
           created_at: string
-          default_instagram_account_id: string | null
-          editorial_mix: Json
-          format_mix: Json | null
+          directive: string | null
           id: string
-          max_credits_per_window: number | null
-          max_posts_per_window: number
-          max_radar_per_window: number
-          mode: Database["public"]["Enums"]["pilot_mode"]
-          planning_window_days: number
-          preferred_times: Json
-          radar_min_confidence: string
-          radar_min_opportunity_score: number
-          status: Database["public"]["Enums"]["pilot_status"]
-          temporary_objective: string | null
-          temporary_objective_expires_at: string | null
+          time_of_day: string
           updated_at: string
-          use_radar: boolean
+          weekday: number
           workspace_id: string
         }
         SetofOptions: {
           from: "*"
-          to: "pilot_settings"
+          to: "pilot_schedule_slots"
           isOneToOne: true
           isSetofReturn: false
         }
       }
+      upsert_pilot_settings:
+        | {
+            Args: {
+              p_allowed_formats: Database["public"]["Enums"]["content_type"][]
+              p_allowed_weekdays: number[]
+              p_auto_generate_art?: boolean
+              p_default_instagram_account_id: string
+              p_editorial_mix: Json
+              p_format_mix?: Json
+              p_max_credits_per_window: number
+              p_max_posts_per_window: number
+              p_max_radar_per_window: number
+              p_mode: Database["public"]["Enums"]["pilot_mode"]
+              p_planning_window_days: number
+              p_preferred_times: Json
+              p_radar_min_confidence: string
+              p_radar_min_opportunity_score: number
+              p_temporary_objective: string
+              p_temporary_objective_expires_at: string
+              p_use_radar: boolean
+              p_workspace_id: string
+            }
+            Returns: {
+              allowed_formats: Database["public"]["Enums"]["content_type"][]
+              allowed_weekdays: number[]
+              always_require_approval: boolean
+              auto_generate_art: boolean
+              created_at: string
+              default_instagram_account_id: string | null
+              editorial_mix: Json
+              format_mix: Json | null
+              id: string
+              max_credits_per_window: number | null
+              max_posts_per_window: number
+              max_radar_per_window: number
+              mode: Database["public"]["Enums"]["pilot_mode"]
+              planning_window_days: number
+              preferred_times: Json
+              radar_min_confidence: string
+              radar_min_opportunity_score: number
+              status: Database["public"]["Enums"]["pilot_status"]
+              temporary_objective: string | null
+              temporary_objective_expires_at: string | null
+              updated_at: string
+              use_radar: boolean
+              workspace_id: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "pilot_settings"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_allowed_formats: Database["public"]["Enums"]["content_type"][]
+              p_allowed_weekdays: number[]
+              p_always_require_approval?: boolean
+              p_auto_generate_art?: boolean
+              p_default_instagram_account_id: string
+              p_editorial_mix: Json
+              p_format_mix?: Json
+              p_max_credits_per_window: number
+              p_max_posts_per_window: number
+              p_max_radar_per_window: number
+              p_mode: Database["public"]["Enums"]["pilot_mode"]
+              p_planning_window_days: number
+              p_preferred_times: Json
+              p_radar_min_confidence: string
+              p_radar_min_opportunity_score: number
+              p_temporary_objective: string
+              p_temporary_objective_expires_at: string
+              p_use_radar: boolean
+              p_workspace_id: string
+            }
+            Returns: {
+              allowed_formats: Database["public"]["Enums"]["content_type"][]
+              allowed_weekdays: number[]
+              always_require_approval: boolean
+              auto_generate_art: boolean
+              created_at: string
+              default_instagram_account_id: string | null
+              editorial_mix: Json
+              format_mix: Json | null
+              id: string
+              max_credits_per_window: number | null
+              max_posts_per_window: number
+              max_radar_per_window: number
+              mode: Database["public"]["Enums"]["pilot_mode"]
+              planning_window_days: number
+              preferred_times: Json
+              radar_min_confidence: string
+              radar_min_opportunity_score: number
+              status: Database["public"]["Enums"]["pilot_status"]
+              temporary_objective: string | null
+              temporary_objective_expires_at: string | null
+              updated_at: string
+              use_radar: boolean
+              workspace_id: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "pilot_settings"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       upsert_radar_opportunity: {
         Args: {
           p_ai_generation_id: string
