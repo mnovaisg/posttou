@@ -43,6 +43,28 @@ export async function getDiscoveryStatus(token: string): Promise<DiscoveryGetRes
 }
 
 /**
+ * Salva a revisão do DNA e/ou o estágio da experiência pré-cadastro na
+ * própria sessão de Discovery (nunca sobrescreve a sugestão original da
+ * IA). Best-effort por design do chamador — falha aqui não deve travar
+ * a navegação do visitante, só significa que um refresh eventual perde
+ * o que ainda não foi salvo.
+ */
+export async function saveDiscoveryReview(
+  token: string,
+  patch: { dnaRevisado?: Record<string, unknown>; stage?: 'dna' | 'previews' | 'signup' },
+): Promise<void> {
+  const res = await fetch(`${FUNCTIONS_URL}/instagram-discovery-save-review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, ...patch }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.message ?? 'Não foi possível salvar sua revisão agora.')
+  }
+}
+
+/**
  * Vincula (claim) uma sessão de Discovery anônima ao workspace do
  * usuário já autenticado. Requer JWT — o token opaco é lido do
  * sessionStorage pelo chamador e nunca trafega em query string.

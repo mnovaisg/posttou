@@ -15,7 +15,7 @@ import type { DiscoveryDna, DiscoveryGetResult, DiscoveryStartResult } from '@/f
 import { DnaReviewCards, type DnaReviewState } from '@/features/instagram-discovery/DnaReviewCards'
 import { ContentPreviewCards } from '@/features/instagram-discovery/ContentPreviewCards'
 
-type Stage = 'handle' | 'loading' | 'dna' | 'previews' | 'result' | 'error' | 'not_configured'
+type Stage = 'handle' | 'loading' | 'dna' | 'previews' | 'signup' | 'error' | 'not_configured'
 
 // Etapas puramente narrativas do processamento — nunca afirmam um dado
 // específico já encontrado (isso só aparece na tela de resultado, quando
@@ -36,6 +36,7 @@ export function DiscoveryLandingPage() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [result, setResult] = React.useState<DiscoveryStartResult | DiscoveryGetResult | null>(null)
   const [dnaReview, setDnaReview] = React.useState<DnaReviewState | null>(null)
+  const [token, setToken] = React.useState<string | null>(null)
 
   async function runDiscovery(handle: string) {
     setErrorMessage(null)
@@ -48,8 +49,10 @@ export function DiscoveryLandingPage() {
         return
       }
       saveDiscoveryToken(res.token)
+      setToken(res.token)
       setResult(res)
-      setStage(res.dna ? 'dna' : 'result')
+      setDnaReview(null)
+      setStage(res.dna ? 'dna' : 'error')
     } catch (err) {
       if (err instanceof DiscoveryNotConfiguredError) {
         setStage('not_configured')
@@ -63,7 +66,10 @@ export function DiscoveryLandingPage() {
   // Na entrada: primeiro tenta restaurar uma sessão já em andamento
   // (sessionStorage); só se não houver nenhuma é que considera o @ vindo
   // da landing (?handle=) e dispara a análise automaticamente — nunca
-  // sobrescreve uma sessão real já pronta.
+  // sobrescreve uma sessão real já pronta. Restaura também a revisão de
+  // DNA já salva (dnaRevisado) e o estágio onde o visitante parou
+  // (flowStage) — um refresh nunca deve voltar pra sugestão original
+  // nem para uma tela anterior à que ele já tinha alcançado.
   React.useEffect(() => {
     let cancelled = false
 
@@ -75,8 +81,14 @@ export function DiscoveryLandingPage() {
           const res = await getDiscoveryStatus(existingToken)
           if (cancelled) return
           if (res.status === 'ready' && res.dna) {
+            setToken(existingToken)
             setResult(res)
-            setStage('dna')
+            const restoredReview = (res.dnaRevisado as DnaReviewState | null | undefined) ?? null
+            setDnaReview(restoredReview)
+
+            const canRestoreTo = (target: Stage) => target !== 'previews' && target !== 'signup' ? true : !!restoredReview
+            const desired: Stage = res.flowStage === 'previews' || res.flowStage === 'signup' ? res.flowStage : 'dna'
+            setStage(canRestoreTo(desired) ? desired : 'dna')
             return
           }
           clearDiscoveryToken()
@@ -119,6 +131,8 @@ export function DiscoveryLandingPage() {
   function reset() {
     clearDiscoveryToken()
     setResult(null)
+    setDnaReview(null)
+    setToken(null)
     setErrorMessage(null)
     setStage('handle')
   }
@@ -238,10 +252,12 @@ export function DiscoveryLandingPage() {
           </Card>
         )}
 
-        {stage === 'dna' && dna && (
+        {stage === 'dna' && dna && token && (
           <DnaReviewCards
             dna={dna}
             profile={profile}
+            token={token}
+            initialState={dnaReview}
             onContinue={(editedState) => {
               setDnaReview(editedState)
               setStage('previews')
@@ -249,43 +265,46 @@ export function DiscoveryLandingPage() {
           />
         )}
 
-        {stage === 'previews' && dnaReview && (
-          <ContentPreviewCards ideas={ideias} dna={dnaReview} onContinue={() => setStage('result')} />
+        {stage === 'previews' && dnaReview && token && (
+          <ContentPreviewCards ideas={ideias} dna={dnaReview} token={token} onContinue={() => setStage('signup')} />
         )}
 
-        {stage === 'result' && dna && (
-          <div className="flex flex-col gap-6">
-            <Card>
-              <CardContent className="flex items-center gap-3 pt-6">
-                {profile?.profilePictureUrl && (
-                  <img src={profile.profilePictureUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
-                )}
-                <div>
-                  <p className="text-sm font-semibold text-ink-900 dark:text-ink-50">@{result?.handle}</p>
-                  {typeof profile?.followersCount === 'number' && (
-                    <p className="text-xs text-ink-400">{profile.followersCount.toLocaleString('pt-BR')} seguidores</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-                <p className="text-sm text-ink-600 dark:text-ink-300">
-                  Crie sua conta grátis para aprovar esse DNA e começar a gerar conteúdo com IA.
+        {stage === 'signup' && (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
+              {profile?.profilePictureUrl && (
+                <img src={profile.profilePictureUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+              )}
+              <div>
+                <p className="text-lg font-semibold text-ink-900 dark:text-ink-50">Seu conteúdo já começou. ✨</p>
+                <p className="mt-2 text-sm text-ink-600 dark:text-ink-300">
+                  Crie sua conta para salvar seu DNA, suas ideias e continuar criando com o POSTTOU.
                 </p>
-                <div className="flex gap-2">
-                  <Button onClick={() => navigate('/cadastro')}>Criar minha conta grátis</Button>
-                  <Button variant="outline" onClick={() => navigate('/entrar')}>
-                    Já tenho conta
-                  </Button>
-                </div>
-                <button type="button" className="text-xs text-ink-400 hover:underline" onClick={reset}>
-                  Analisar outro @
-                </button>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+              <ul className="flex flex-col gap-1.5 self-center text-sm text-ink-700 dark:text-ink-200">
+                <li className="flex items-center gap-2">
+                  <span className="font-bold text-brand-600">✓</span> 3 dias grátis
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="font-bold text-brand-600">✓</span> Sem cartão
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="font-bold text-brand-600">✓</span> 50 créditos para experimentar
+                </li>
+              </ul>
+              <div className="mt-2 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button size="lg" className="w-full sm:w-auto" onClick={() => navigate('/cadastro')}>
+                  Criar minha conta e continuar
+                </Button>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/entrar')}>
+                  Já tenho conta
+                </Button>
+              </div>
+              <button type="button" className="text-xs text-ink-400 hover:underline" onClick={reset}>
+                Analisar outro @
+              </button>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

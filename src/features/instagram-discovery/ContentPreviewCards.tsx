@@ -2,6 +2,7 @@ import * as React from 'react'
 import { PosttouMark } from '@/components/brand/PosttouMark'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { saveDiscoveryReview } from '@/features/instagram-discovery/api'
 import type { DnaReviewState } from '@/features/instagram-discovery/DnaReviewCards'
 import type { DiscoveryIdea } from '@/features/instagram-discovery/types'
 
@@ -239,15 +240,33 @@ function PreviewCard({
 export function ContentPreviewCards({
   ideas,
   dna,
+  token,
   onContinue,
 }: {
   ideas: DiscoveryIdea[]
   dna: DnaReviewState
+  /** Token opaco da sessão de Discovery — só para marcar em
+   * pre_onboarding_sessions.flow_stage que o visitante chegou aqui, pra
+   * um refresh voltar direto pros previews em vez do DNA. */
+  token: string
   onContinue: () => void
 }) {
   const previews = React.useMemo(() => buildContentPreviews(ideas, dna), [ideas, dna])
   const resolvedColors = React.useMemo(() => resolveColors(dna.colors), [dna.colors])
   const [expandedIndex, setExpandedIndex] = React.useState<number | null>(null)
+
+  // Melhor esforço: registra que o visitante chegou nos previews assim
+  // que a tela monta, não só quando ele clica Continuar — um refresh
+  // logo após ver os cards ainda deve voltar pra cá, não pro DNA.
+  React.useEffect(() => {
+    saveDiscoveryReview(token, { stage: 'previews' }).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  async function handleContinue() {
+    await saveDiscoveryReview(token, { stage: 'signup' }).catch(() => {})
+    onContinue()
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -276,7 +295,7 @@ export function ContentPreviewCards({
         Prévia ilustrativa da ideia — a arte final é gerada depois, já dentro do POSTTOU.
       </p>
 
-      <Button size="lg" className="w-full sm:w-auto sm:self-center" onClick={onContinue}>
+      <Button size="lg" className="w-full sm:w-auto sm:self-center" onClick={handleContinue}>
         Continuar
       </Button>
     </div>

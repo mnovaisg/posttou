@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { TagInput } from '@/features/brand-dna/components/TagInput'
+import { saveDiscoveryReview } from '@/features/instagram-discovery/api'
 import type { DiscoveryDna, DiscoveryProfileSummary } from '@/features/instagram-discovery/types'
 
 export interface DnaReviewState {
@@ -80,16 +81,41 @@ function EmptyHint({ children }: { children: React.ReactNode }) {
 export function DnaReviewCards({
   dna,
   profile,
+  token,
+  initialState,
   onContinue,
 }: {
   dna: DiscoveryDna
   profile?: DiscoveryProfileSummary
+  /** Token opaco da sessão de Discovery — usado só para persistir a
+   * revisão em pre_onboarding_sessions.dna_revisado, nunca exposto em URL. */
+  token: string
+  /** Revisão já salva de uma visita anterior (refresh) — quando presente,
+   * o formulário parte dela em vez da sugestão original da IA. */
+  initialState?: DnaReviewState | null
   onContinue: (state: DnaReviewState) => void
 }) {
-  const [state, setState] = React.useState<DnaReviewState>(() => buildDnaReviewState(dna, profile))
+  const [state, setState] = React.useState<DnaReviewState>(() => initialState ?? buildDnaReviewState(dna, profile))
 
   function patch(next: Partial<DnaReviewState>) {
     setState((prev) => ({ ...prev, ...next }))
+  }
+
+  // Auto-save discreto: qualquer edição é persistida em
+  // pre_onboarding_sessions.dna_revisado (nunca no dna_preliminar
+  // original) depois de uma pequena pausa de digitação, pra um refresh
+  // no meio da revisão nunca perder o que já foi editado. Best-effort —
+  // falha aqui não deve interromper a experiência do visitante.
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      saveDiscoveryReview(token, { dnaRevisado: state as unknown as Record<string, unknown> }).catch(() => {})
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [token, state])
+
+  async function handleContinue() {
+    await saveDiscoveryReview(token, { dnaRevisado: state as unknown as Record<string, unknown>, stage: 'previews' }).catch(() => {})
+    onContinue(state)
   }
 
   return (
@@ -213,7 +239,7 @@ export function DnaReviewCards({
         Isso é uma sugestão da IA a partir de dados públicos — você pode ajustar tudo, agora ou depois.
       </p>
 
-      <Button size="lg" className="w-full sm:w-auto sm:self-center" onClick={() => onContinue(state)}>
+      <Button size="lg" className="w-full sm:w-auto sm:self-center" onClick={handleContinue}>
         Continuar
       </Button>
     </div>

@@ -31,7 +31,9 @@ Deno.serve(async (req) => {
     const tokenHash = await sha256Hex(token)
     const { data: session, error } = await admin
       .from('pre_onboarding_sessions')
-      .select('status, handle, dna_preliminar, ideias_preliminares, error_code, error_message, claimed_at, expires_at')
+      .select(
+        'status, handle, dna_preliminar, dna_revisado, flow_stage, ideias_preliminares, error_code, error_message, claimed_at, expires_at',
+      )
       .eq('token_hash', tokenHash)
       .maybeSingle()
 
@@ -45,6 +47,8 @@ Deno.serve(async (req) => {
       status: session.status,
       handle: session.handle,
       dna: session.dna_preliminar,
+      dnaRevisado: session.dna_revisado,
+      flowStage: session.flow_stage,
       ideias: session.ideias_preliminares,
       errorCode: session.error_code,
       errorMessage: session.error_message,

@@ -62,6 +62,12 @@ export interface DiscoveryProfileSummary {
 
 export type DiscoveryFieldAvailability = Record<string, 'available' | 'unavailable'>
 
+/** Onde o visitante parou na experiência pré-cadastro — só para
+ * restaurar a tela certa depois de um refresh, nunca usado como
+ * controle de acesso (isso continua sendo status/claimed_at/expires_at
+ * no backend). */
+export type DiscoveryFlowStage = 'dna' | 'previews' | 'signup'
+
 export interface DiscoveryStartResult {
   token: string
   status: 'ready' | 'failed'
@@ -69,6 +75,8 @@ export interface DiscoveryStartResult {
   profile?: DiscoveryProfileSummary
   fieldsAvailability?: DiscoveryFieldAvailability
   dna?: DiscoveryDna
+  dnaRevisado?: unknown
+  flowStage?: DiscoveryFlowStage | null
   error?: string
   message?: string
 }
@@ -77,6 +85,8 @@ export interface DiscoveryGetResult {
   status: 'collecting' | 'analyzing' | 'ready' | 'failed' | 'claimed' | 'expired'
   handle: string
   dna: DiscoveryDna | null
+  dnaRevisado?: unknown
+  flowStage?: DiscoveryFlowStage | null
   ideias: DiscoveryIdea[] | null
   errorCode?: string | null
   errorMessage?: string | null
