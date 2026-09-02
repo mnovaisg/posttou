@@ -2,25 +2,32 @@ import * as React from 'react'
 import { LandingHeader } from '@/features/landing/LandingHeader'
 import { LandingHero } from '@/features/landing/LandingHero'
 import { LandingIndicators } from '@/features/landing/LandingIndicators'
+import { LandingPain } from '@/features/landing/LandingPain'
 import { LandingBenefits, LandingHowItWorks } from '@/features/landing/LandingBenefits'
 import { LandingFeatures } from '@/features/landing/LandingFeatures'
 import { LandingAudience } from '@/features/landing/LandingAudience'
+import { LandingComparison } from '@/features/landing/LandingComparison'
 import { LandingPricing } from '@/features/landing/LandingPricing'
 import { LandingFaq } from '@/features/landing/LandingFaq'
 import { LandingCta } from '@/features/landing/LandingCta'
 import { LandingFooter } from '@/features/landing/LandingFooter'
+import { trackEvent } from '@/lib/analytics'
 
-const TITLE = 'POSTTOU — Seu Instagram no piloto automático'
+const TITLE = 'POSTTOU — Seu Instagram trabalhando mesmo quando você não está'
 const DESCRIPTION =
-  'Crie conteúdos com texto e arte, publique no Instagram e acompanhe resultados com uma plataforma que entende a sua marca.'
+  'O POSTTOU entende sua marca, encontra ideias e transforma tudo isso em conteúdo pronto para você publicar. Comece pelo seu @, sem cartão de crédito.'
 
 /**
  * Landing comercial pública, renderizada em "/" para visitantes sem
  * sessão (ver ProtectedRoute.tsx). Nenhuma prova social inventada, nenhum
- * claim que o produto atual não sustenta — copy alinhada às Fases
- * 8/9/10/11 realmente implementadas.
+ * claim que o produto atual não sustenta — copy alinhada ao que os Blocos
+ * 8/9/10/10.1 realmente implementaram (Bloco 11: reconstrução da landing).
  */
 export function LandingPage() {
+  React.useEffect(() => {
+    trackEvent('landing_view')
+  }, [])
+
   React.useEffect(() => {
     const previousTitle = document.title
     document.title = TITLE
@@ -48,13 +55,13 @@ export function LandingPage() {
       return l
     }) as HTMLLinkElement
     const previousCanonical = canonical.href
-    canonical.href = window.location.origin + '/'
+    canonical.href = 'https://www.posttou.com/'
 
     const ogTags: [string, string][] = [
       ['og:title', TITLE],
       ['og:description', DESCRIPTION],
       ['og:type', 'website'],
-      ['og:url', window.location.origin + '/'],
+      ['og:url', 'https://www.posttou.com/'],
     ]
     const createdOg: HTMLMetaElement[] = []
     for (const [property, content] of ogTags) {
@@ -82,10 +89,12 @@ export function LandingPage() {
       <main>
         <LandingHero />
         <LandingIndicators />
-        <LandingBenefits />
+        <LandingPain />
         <LandingHowItWorks />
         <LandingFeatures />
         <LandingAudience />
+        <LandingComparison />
+        <LandingBenefits />
         <LandingPricing />
         <LandingFaq />
         <LandingCta />

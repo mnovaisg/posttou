@@ -17,7 +17,10 @@ export function LandingPricing() {
   const plansQuery = useQuery({ queryKey: ['landing-plans'], queryFn: fetchPlans })
 
   React.useEffect(() => {
-    if (plansQuery.data) trackEvent('landing_pricing_viewed')
+    if (plansQuery.data) {
+      trackEvent('landing_pricing_viewed')
+      trackEvent('pricing_viewed')
+    }
   }, [plansQuery.data])
 
   return (
@@ -93,7 +96,10 @@ export function LandingPricing() {
                   className="mt-6"
                   variant={highlighted ? 'primary' : 'outline'}
                   asChild
-                  onClick={() => trackEvent('landing_plan_selected', { planId: plan.id, interval })}
+                  onClick={() => {
+                    trackEvent('landing_plan_selected', { planId: plan.id, interval })
+                    trackEvent('signup_cta_clicked', { placement: 'pricing', planId: plan.id })
+                  }}
                 >
                   <Link to="/cadastro">Começar grátis</Link>
                 </Button>

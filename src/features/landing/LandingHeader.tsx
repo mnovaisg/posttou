@@ -42,8 +42,14 @@ export function LandingHeader() {
           >
             Entrar
           </Link>
-          <Button asChild onClick={() => trackEvent('landing_cta_start_free_click', { placement: 'header' })}>
-            <Link to="/cadastro">Testar grátis</Link>
+          <Button
+            asChild
+            onClick={() => {
+              trackEvent('signup_cta_clicked', { placement: 'header' })
+              trackEvent('landing_cta_start_free_click', { placement: 'header' })
+            }}
+          >
+            <Link to="/cadastro">Começar grátis</Link>
           </Button>
         </div>
 
@@ -76,8 +82,14 @@ export function LandingHeader() {
               <Link to="/entrar" className="text-sm font-medium text-ink-700 dark:text-ink-200">
                 Entrar
               </Link>
-              <Button asChild onClick={() => trackEvent('landing_cta_start_free_click', { placement: 'header_mobile' })}>
-                <Link to="/cadastro">Testar grátis</Link>
+              <Button
+                asChild
+                onClick={() => {
+                  trackEvent('signup_cta_clicked', { placement: 'header_mobile' })
+                  trackEvent('landing_cta_start_free_click', { placement: 'header_mobile' })
+                }}
+              >
+                <Link to="/cadastro">Começar grátis</Link>
               </Button>
             </div>
           </nav>

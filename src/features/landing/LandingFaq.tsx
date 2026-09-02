@@ -1,39 +1,39 @@
 const FAQ_ITEMS = [
   {
+    q: 'Preciso fornecer minha senha do Instagram?',
+    a: 'Não. A conexão com o Instagram, quando utilizada, ocorre pelo fluxo oficial da Meta — o POSTTOU nunca pede nem armazena sua senha.',
+  },
+  {
+    q: 'Preciso conectar meu Instagram para começar?',
+    a: 'Não. Você começa só com seu @: o POSTTOU analisa o que está publicamente disponível e já prepara o DNA da sua marca. Conectar sua conta pelo login oficial da Meta é necessário depois, quando quiser agendar ou publicar direto pela plataforma.',
+  },
+  {
     q: 'O POSTTOU publica sozinho?',
-    a: 'Só se você quiser. No modo assistido, você revisa e aprova cada conteúdo antes de publicar. No Piloto Automático (modo semiautomático), o POSTTOU planeja e gera sozinho — mas pode ser pausado a qualquer momento.',
+    a: 'Por padrão, não. Todo conteúdo criado — inclusive o que o Piloto Automático prepara — fica em revisão antes de ir ao ar. Você sempre decide o que e quando publicar.',
   },
   {
-    q: 'Posso revisar antes de publicar?',
-    a: 'Sim, sempre. Todo conteúdo gerado pode ser revisado e editado — texto e arte — antes de ir ao ar.',
+    q: 'Posso revisar o conteúdo antes de publicar?',
+    a: 'Sim, sempre. Texto e arte podem ser editados livremente antes de ir ao ar.',
   },
   {
-    q: 'Os conteúdos seguem a identidade da minha marca?',
-    a: 'Sim. O POSTTOU usa o DNA da Marca (posicionamento, público, tom de voz, temas) e o DNA Visual para manter consistência, em vez de gerar conteúdo genérico.',
+    q: 'O POSTTOU aprende o estilo da minha marca?',
+    a: 'Sim. O DNA da Marca guarda como sua empresa fala, para quem fala e como deve parecer — comunicação, cores e estilo visual (fotográfico, ilustração ou 3D) — e é usado em toda criação.',
   },
   {
-    q: 'Preciso saber marketing ou design?',
-    a: 'Não. O POSTTOU conduz a criação a partir do que você conta sobre sua marca — você revisa e aprova, não precisa dominar marketing ou design.',
+    q: 'Posso usar minhas próprias fotos?',
+    a: 'Sim. Na Biblioteca da Marca você envia fotos, produtos, pessoas e ambientes reais do seu negócio para reaproveitar nos conteúdos.',
   },
   {
-    q: 'Preciso informar a senha do meu Instagram?',
-    a: 'Não. A conexão com o Instagram é feita pela autenticação oficial da Meta — o POSTTOU nunca pede nem armazena sua senha.',
-  },
-  {
-    q: 'O teste grátis precisa de cartão?',
-    a: 'Não. Você tem 3 dias grátis sem informar nenhum cartão de crédito.',
+    q: 'O que são créditos?',
+    a: 'Cada geração de texto ou imagem por IA consome créditos do seu plano. O saldo fica visível no produto e cada geração é debitada uma única vez, mesmo em caso de nova tentativa.',
   },
   {
     q: 'Posso cancelar quando quiser?',
-    a: 'Sim, o cancelamento pode ser feito a qualquer momento direto nas configurações da sua conta.',
+    a: 'Sim, direto nas configurações da sua conta, a qualquer momento.',
   },
   {
-    q: 'Quantas marcas posso gerenciar?',
-    a: 'Depende do plano — cada plano tem um número de marcas (workspaces) incluído. Veja os detalhes na seção de Planos.',
-  },
-  {
-    q: 'O que acontece quando meu trial termina?',
-    a: 'Para continuar usando o POSTTOU, você escolhe um plano e assina. Nenhuma cobrança é feita automaticamente sem você confirmar um plano.',
+    q: 'Preciso saber usar IA?',
+    a: 'Não. Você só precisa contar sobre sua marca — o POSTTOU conduz o resto, e você sempre revisa antes de publicar.',
   },
 ]
 

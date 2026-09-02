@@ -1,14 +1,20 @@
+import type * as React from 'react'
+import { DnaMockup, RadarMockup, PilotMockup, PerformanceMockup } from '@/features/landing/mockups'
+import { LandingContentCarousel } from '@/features/landing/LandingContentCarousel'
+
 function FeatureRow({
   eyebrow,
   title,
   description,
   points,
+  visual,
   reverse,
 }: {
   eyebrow: string
   title: string
   description: string
   points: string[]
+  visual: React.ReactNode
   reverse?: boolean
 }) {
   return (
@@ -17,15 +23,16 @@ function FeatureRow({
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">{eyebrow}</p>
         <h3 className="mt-2 text-2xl font-semibold text-ink-900 dark:text-ink-50">{title}</h3>
         <p className="mt-3 text-ink-600 dark:text-ink-300">{description}</p>
+        <ul className="mt-4 flex flex-col gap-2">
+          {points.map((p) => (
+            <li key={p} className="flex items-start gap-2 text-sm text-ink-700 dark:text-ink-200">
+              <span className="mt-0.5 text-brand-600 dark:text-brand-400">✓</span>
+              {p}
+            </li>
+          ))}
+        </ul>
       </div>
-      <ul className="flex flex-col gap-3 rounded-2xl border border-ink-100 bg-ink-50 p-6 dark:border-ink-800 dark:bg-ink-900/40">
-        {points.map((p) => (
-          <li key={p} className="flex items-start gap-2 text-sm text-ink-700 dark:text-ink-200">
-            <span className="mt-0.5 text-brand-600 dark:text-brand-400">✓</span>
-            {p}
-          </li>
-        ))}
-      </ul>
+      <div className="mx-auto w-full max-w-sm">{visual}</div>
     </div>
   )
 }
@@ -34,56 +41,53 @@ export function LandingFeatures() {
   return (
     <section id="recursos" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-2xl text-center">
-        <h2 className="text-3xl font-semibold text-ink-900 dark:text-ink-50">IA que primeiro conhece sua marca</h2>
+        <h2 className="text-3xl font-semibold text-ink-900 dark:text-ink-50">Tudo que seu conteúdo precisa. Em um só lugar.</h2>
         <p className="mt-3 text-ink-600 dark:text-ink-300">
-          Antes de criar qualquer conteúdo, o POSTTOU aprende quem é a sua marca.
+          O POSTTOU aprende quem é a sua marca antes de criar qualquer conteúdo por ela.
         </p>
       </div>
 
       <div className="divide-y divide-ink-100 dark:divide-ink-800">
         <FeatureRow
           eyebrow="DNA da Marca"
-          title="Uma IA que aprende sua marca antes de criar"
-          description="O POSTTOU entende posicionamento, público, personalidade, tom de voz e temas — e usa isso em toda criação. São sugestões e inferências para você revisar, nunca fatos definitivos."
-          points={['Posicionamento e público', 'Personalidade e tom de voz', 'Temas e pilares de conteúdo', 'Identidade e direção visual']}
+          title="Uma IA que aprende sua marca antes de criar por ela"
+          description="O POSTTOU aprende como sua empresa fala, para quem fala e como deve parecer — posicionamento, público, tom de voz, cores e estilo visual."
+          points={['Estilo de comunicação e tom de voz', 'Cores e estilo visual (fotográfico, ilustração ou 3D)', 'Biblioteca da Marca com seus próprios materiais']}
+          visual={<DnaMockup />}
         />
 
         <FeatureRow
-          eyebrow="Conteúdo + Arte"
-          title="Do briefing à arte pronta"
-          description="O resultado não é só legenda: ideia, texto e arte seguem o mesmo DNA da marca, prontos para revisão."
-          points={['Ideia → texto → arte', 'Segue o DNA da Marca e o DNA Visual', 'Você edita tudo antes de publicar']}
+          eyebrow="Criação com IA"
+          title="Da ideia ao conteúdo, sem começar de uma tela em branco"
+          description="Não é um chatbot solto: cada conteúdo já nasce com ideia, título, legenda, CTA, hashtags, formato e arte — seguindo o DNA da sua marca."
+          points={['Ideia, hook e legenda prontos', 'Formato e arte já pensados juntos', 'Você edita tudo no Editor antes de publicar']}
+          visual={<LandingContentCarousel />}
           reverse
-        />
-
-        <FeatureRow
-          eyebrow="Piloto Automático"
-          title="Automático quando você quiser. Sob seu controle quando precisar."
-          description="Escolha o nível de automação: revisar cada conteúdo antes de publicar, ou deixar o Piloto planejar e gerar sozinho, sempre pausável."
-          points={['Modo assistido: você revisa cada conteúdo', 'Modo semiautomático: o Piloto planeja e gera sozinho', 'Pausar a qualquer momento']}
         />
 
         <FeatureRow
           eyebrow="Radar Viral"
-          title="Descubra sinais e oportunidades antes de decidir o próximo conteúdo"
-          description="O Radar identifica temas em alta e cruza com o DNA da sua marca para sugerir ângulos relevantes — não é uma previsão de viralização."
-          points={['Sinais de temas em alta', 'Cruzamento com o DNA da sua marca', 'Sugestão de ângulo, não garantia de resultado']}
+          title="Pare de procurar assunto. Deixe as oportunidades chegarem até você"
+          description="Configure os assuntos, hashtags e perfis que fazem sentido para o seu mercado — o Radar cruza sinais reais com o DNA da sua marca para sugerir ângulos."
+          points={['Termos do nicho e hashtags configuráveis', 'Concorrentes que você quer acompanhar', 'Oportunidades cruzadas com o DNA da marca']}
+          visual={<RadarMockup />}
+        />
+
+        <FeatureRow
+          eyebrow="Piloto Automático"
+          title="Seu conteúdo não precisa depender da sua memória"
+          description="Configure sua rotina — dias, horários e diretrizes — e deixe o POSTTOU preparar seus conteúdos automaticamente. Você decide se quer revisar antes de publicar."
+          points={['Agenda semanal com diretriz por horário', 'Usa o Radar quando fizer sentido', 'Sempre pausável, sempre sob seu controle']}
+          visual={<PilotMockup />}
           reverse
         />
 
         <FeatureRow
-          eyebrow="Performance"
-          title="Não basta publicar. É preciso aprender."
-          description="O POSTTOU acompanha o desempenho das publicações e transforma isso em aprendizados e recomendações para as próximas decisões."
+          eyebrow="Desempenho"
+          title="O POSTTOU também aprende com o que acontece depois que você posta"
+          description="Acompanhe os dados reais disponíveis sobre suas publicações — o desempenho ajuda a orientar os próximos conteúdos."
           points={['Aprendizados a partir do que já foi publicado', 'Recomendações de estratégia aplicáveis', 'Sempre com sua aprovação antes de aplicar']}
-        />
-
-        <FeatureRow
-          eyebrow="Controle"
-          title="O piloto é automático. O controle continua sendo seu."
-          description="Automação nunca significa perder o controle da sua marca."
-          points={['Revisar antes de publicar', 'Editar conteúdo e arte livremente', 'Pausar o Piloto Automático quando quiser']}
-          reverse
+          visual={<PerformanceMockup />}
         />
       </div>
     </section>
