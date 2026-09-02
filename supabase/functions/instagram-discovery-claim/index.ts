@@ -158,9 +158,17 @@ function buildContentPreviews(ideas: DiscoveryIdea[], dna: DnaReviewStateLike): 
 
 /**
  * Promove, de forma idempotente, as 3 sugestões pré-cadastro em
- * `contents` (+ 1 `content_pages` cada, sem imagem solicitada). Se já
- * existir qualquer conteúdo vinculado a esta sessão, não promove de
- * novo — proteção no banco, não só no React.
+ * `contents` (+ 1 `content_pages` cada, sem imagem solicitada).
+ *
+ * Bloco 7.1 — corrige race condition real encontrada em teste: duas
+ * chamadas de claim quase simultâneas (mesmo usuário) passavam pela
+ * checagem "já existe algo com este discovery_session_id?" (feita aqui
+ * em JS) ANTES de qualquer INSERT commitar, e cada uma inseria 3
+ * conteúdos — 6 no total. A checagem+insert agora é uma única chamada
+ * a uma função Postgres que faz tudo dentro de UMA transação, com
+ * pg_advisory_xact_lock por sessão: a segunda chamada concorrente
+ * espera o lock e, ao adquiri-lo, já encontra os 3 conteúdos da
+ * primeira — não insere nada. Garantia no banco, não só no React.
  */
 async function promoteContents(
   admin: ReturnType<typeof createClient>,
@@ -173,39 +181,30 @@ async function promoteContents(
     dnaForPreviews: DnaReviewStateLike
   },
 ) {
-  const { data: already } = await admin
-    .from('contents')
-    .select('id')
-    .eq('discovery_session_id', params.sessionId)
-    .limit(1)
-  if (already && already.length > 0) return
-
   const previews = buildContentPreviews(params.ideias ?? [], params.dnaForPreviews)
 
-  for (const preview of previews) {
+  const previewPayload = previews.map((preview) => {
     const format = DEFAULT_FORMAT_BY_TYPE[preview.format]
     const dims = PAGE_DIMENSIONS_BY_FORMAT[format]
-
-    // RPC dedicada (não .from('contents').insert direto): o trigger de
-    // auditoria de INSERT em contents chama log_audit_event, que exige
-    // o marcador posttou.system_actor='discovery_claim_worker' NA MESMA
-    // transação do INSERT — set_config de uma chamada REST anterior não
-    // persiste (mesmo padrão já usado por pilot_create_content).
-    const { error: rpcError } = await admin.rpc('discovery_claim_create_content', {
-      p_workspace_id: params.workspaceId,
-      p_type: preview.format,
-      p_format: format,
-      p_title: preview.title || 'Sugestão do POSTTOU',
-      p_caption: preview.support || null,
-      p_created_by: params.userId,
-      p_discovery_session_id: params.sessionId,
-      p_page_width: dims.width,
-      p_page_height: dims.height,
-    })
-
-    if (rpcError) {
-      console.error('instagram-discovery-claim: falha ao promover sugestão.', rpcError)
+    return {
+      type: preview.format,
+      format,
+      title: preview.title || 'Sugestão do POSTTOU',
+      caption: preview.support || null,
+      page_width: dims.width,
+      page_height: dims.height,
     }
+  })
+
+  const { error: rpcError } = await admin.rpc('discovery_claim_promote_contents', {
+    p_session_id: params.sessionId,
+    p_workspace_id: params.workspaceId,
+    p_created_by: params.userId,
+    p_previews: previewPayload,
+  })
+
+  if (rpcError) {
+    console.error('instagram-discovery-claim: falha ao promover sugestões.', rpcError)
   }
 }
 
