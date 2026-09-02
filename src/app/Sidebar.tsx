@@ -12,9 +12,12 @@ import { fetchOnboardingState } from '@/features/onboarding/api'
 // estado, só lê get_onboarding_state (mesma queryKey do
 // OnboardingWidget/Dashboard, dedupe via React Query). Some sozinho
 // quando a etapa correspondente é concluída ou o onboarding é ocultado.
+// Bloco 7: "/criar" não tem mais item próprio no menu (vive dentro de
+// Meu Conteúdo desde o Bloco 6) — a etapa "criar primeira postagem"
+// aponta o destaque para "/conteudo", de onde os dois caminhos de
+// criação partem.
 const STEP_HINT_BY_PATH: Record<string, string> = {
   '/dna-da-marca': 'Comece aqui',
-  '/criar': 'Próximo passo',
   '/configuracoes': 'Próximo passo',
   '/conteudo': 'Próximo passo',
 }
@@ -28,7 +31,7 @@ function useCurrentOnboardingPath(): string | null {
   })
   if (!data || data.onboarding_dismissed) return null
   if (!data.brand_dna_done) return '/dna-da-marca'
-  if (!data.first_content_done) return '/criar'
+  if (!data.first_content_done) return '/conteudo'
   if (!data.instagram_connected_done) return '/configuracoes'
   if (!data.first_publish_done) return '/conteudo'
   return null
@@ -38,22 +41,6 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const currentStepPath = useCurrentOnboardingPath()
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-      <NavLink
-        to="/"
-        end
-        onClick={onNavigate}
-        className={({ isActive }) =>
-          cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            isActive
-              ? 'bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200'
-              : 'text-ink-600 hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-800',
-          )
-        }
-      >
-        <span className="text-base">📋</span>
-        Dashboard
-      </NavLink>
       {NAV_ITEMS.map((item) => (
         <NavLink
           key={item.path}
