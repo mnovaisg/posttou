@@ -3550,24 +3550,6 @@ export type Database = {
           },
         ]
       }
-      temp_backup_sub: {
-        Row: {
-          id: string | null
-          organization_id: string | null
-          status: Database["public"]["Enums"]["subscription_status"] | null
-        }
-        Insert: {
-          id?: string | null
-          organization_id?: string | null
-          status?: Database["public"]["Enums"]["subscription_status"] | null
-        }
-        Update: {
-          id?: string | null
-          organization_id?: string | null
-          status?: Database["public"]["Enums"]["subscription_status"] | null
-        }
-        Relationships: []
-      }
       visual_dna_generation_runs: {
         Row: {
           credit_cost: number
@@ -5546,6 +5528,14 @@ export type Database = {
           p_asaas_event_id: string
           p_asaas_payment_id: string
           p_organization_id: string
+        }
+        Returns: Json
+      }
+      public_preview_coupon: {
+        Args: {
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_code: string
+          p_plan_id: string
         }
         Returns: Json
       }
