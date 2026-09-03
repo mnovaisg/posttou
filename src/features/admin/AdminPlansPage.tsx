@@ -37,6 +37,13 @@ function centsToReaisInput(cents: number): string {
   return (cents / 100).toFixed(2).replace('.', ',')
 }
 
+// Regra comercial explícita (pedido do usuário): novos valores só valem
+// para novas contratações e futuras mudanças de plano — nunca reajustam
+// silenciosamente quem permanece no plano atual. Mesmo texto no aviso
+// fixo do topo e em toda prévia de confirmação de preço.
+const PRICE_CHANGE_SCOPE_WARNING =
+  'Os novos valores serão aplicados a novas contratações e futuras mudanças de plano. Assinaturas existentes que permanecerem no plano atual continuarão com o valor contratado no Asaas.'
+
 const ROUNDING_LABEL: Record<RoundingRule, string> = {
   exact: 'Exato',
   integer: 'Inteiro',
@@ -327,8 +334,7 @@ export function AdminPlansPage() {
       </div>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-        Alterações aqui afetam apenas <strong>novas contratações</strong>. Assinaturas já ativas na Asaas mantêm o valor combinado no momento da
-        contratação — o POSTTOU nunca reajusta automaticamente uma assinatura existente.
+        {PRICE_CHANGE_SCOPE_WARNING}
       </div>
 
       {error && (
@@ -444,7 +450,8 @@ export function AdminPlansPage() {
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center gap-2 border-t border-ink-100 p-3 dark:border-ink-800">
+                <p className="border-t border-ink-100 px-3 pt-3 text-xs text-amber-800 dark:border-ink-800 dark:text-amber-300">{PRICE_CHANGE_SCOPE_WARNING}</p>
+                <div className="flex items-center gap-2 p-3 pt-2">
                   <input
                     className="flex-1 rounded-lg border border-ink-200 px-2 py-1.5 text-xs dark:border-ink-700 dark:bg-ink-950"
                     placeholder="Nota (opcional)"
@@ -672,6 +679,7 @@ export function AdminPlansPage() {
                               {formatCentsBRL(directPreview.yearly.diffCents)}, {directPreview.yearly.diffPercent.toFixed(1)}%)
                             </p>
                           )}
+                          <p className="mt-2 text-amber-800 dark:text-amber-300">{PRICE_CHANGE_SCOPE_WARNING}</p>
                           <div className="mt-2 flex gap-2">
                             <button
                               type="button"
@@ -763,6 +771,7 @@ export function AdminPlansPage() {
                               Anual: {formatCentsBRL(openPlan.price_yearly_cents)} → <strong>{formatCentsBRL(percentPreview.newYearly)}</strong>
                             </p>
                           )}
+                          <p className="mt-2 text-amber-800 dark:text-amber-300">{PRICE_CHANGE_SCOPE_WARNING}</p>
                           <div className="mt-2 flex gap-2">
                             <button
                               type="button"
