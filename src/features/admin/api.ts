@@ -30,6 +30,18 @@ export interface AdminCoupon {
   updated_at: string
   used_count: number
   derived_status: CouponDerivedStatus
+  show_on_landing: boolean
+  landing_label: string | null
+}
+
+export async function setAdminCouponLandingFeatured(couponId: string, featured: boolean, label: string | null) {
+  const { data, error } = await supabase.rpc('admin_set_coupon_landing_featured_system', {
+    p_coupon_id: couponId,
+    p_featured: featured,
+    p_label: label ?? undefined,
+  })
+  if (error) throw error
+  return data
 }
 
 export async function fetchAdminDashboardMetrics() {

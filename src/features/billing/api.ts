@@ -116,6 +116,24 @@ export async function publicPreviewCoupon(code: string, planId: string, billingI
   return data as unknown as CouponPreview
 }
 
+export interface FeaturedCoupon {
+  code: string
+  landing_label: string | null
+  eligible_plan_ids: string[] | null
+  eligible_billing_intervals: ('monthly' | 'yearly')[] | null
+}
+
+// Anon-callable — retorna só o essencial pra montar o selo (código, rótulo,
+// escopo de elegibilidade). Nunca traz desconto/valor: isso a Landing
+// sempre busca via publicPreviewCoupon, pra nunca hardcodar número nenhum
+// aqui e pra garantir que o selo desaparece sozinho se o cupom deixar de
+// valer pra aquele plano/ciclo específico.
+export async function fetchFeaturedCoupon(): Promise<FeaturedCoupon | null> {
+  const { data, error } = await supabase.rpc('public_featured_coupon_system')
+  if (error) throw error
+  return (data as unknown as FeaturedCoupon | null) ?? null
+}
+
 export const COUPON_REASON_LABEL: Record<string, string> = {
   not_found: 'Cupom não encontrado.',
   invalid_plan: 'Plano inválido.',

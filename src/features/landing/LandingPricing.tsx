@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchPlans, publicPreviewCoupon, COUPON_REASON_LABEL } from '@/features/billing/api'
+import { fetchPlans, fetchFeaturedCoupon, publicPreviewCoupon, COUPON_REASON_LABEL } from '@/features/billing/api'
 import type { CouponPreview } from '@/features/billing/api'
 import { savePendingCoupon } from '@/lib/pendingCoupon'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,37 @@ export function LandingPricing() {
   const [couponStatus, setCouponStatus] = React.useState<Record<string, 'validating' | 'done'>>({})
   const [couponResult, setCouponResult] = React.useState<Record<string, CouponPreview>>({})
 
+  // Selo promocional — dados reais do cupom marcado como "destacar na
+  // Landing" pelo admin. Nunca hardcoda desconto/preço: o rótulo/código vem
+  // do RPC público (public_featured_coupon_system), e o valor do desconto
+  // por card vem do mesmo public_preview_coupon usado no fluxo manual de
+  // "Tem um cupom?" — a mesma autoridade de cálculo, só disparada
+  // automaticamente para os cards elegíveis.
+  const featuredCouponQuery = useQuery({ queryKey: ['landing-featured-coupon'], queryFn: fetchFeaturedCoupon })
+  const featuredCoupon = featuredCouponQuery.data ?? null
+  const [featuredPreview, setFeaturedPreview] = React.useState<Record<string, CouponPreview>>({})
+
+  function isFeaturedEligible(planId: string, forInterval: 'monthly' | 'yearly') {
+    if (!featuredCoupon) return false
+    const planOk = !featuredCoupon.eligible_plan_ids || featuredCoupon.eligible_plan_ids.length === 0 || featuredCoupon.eligible_plan_ids.includes(planId)
+    const intervalOk =
+      !featuredCoupon.eligible_billing_intervals ||
+      featuredCoupon.eligible_billing_intervals.length === 0 ||
+      featuredCoupon.eligible_billing_intervals.includes(forInterval)
+    return planOk && intervalOk
+  }
+
+  React.useEffect(() => {
+    if (!featuredCoupon || !plansQuery.data) return
+    plansQuery.data.forEach((plan) => {
+      if (!isFeaturedEligible(plan.id, interval)) return
+      publicPreviewCoupon(featuredCoupon.code, plan.id, interval)
+        .then((result) => setFeaturedPreview((s) => ({ ...s, [plan.id]: result })))
+        .catch(() => setFeaturedPreview((s) => ({ ...s, [plan.id]: { valid: false, reason: 'not_found' } })))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featuredCoupon, plansQuery.data, interval])
+
   React.useEffect(() => {
     if (plansQuery.data) {
       trackEvent('landing_pricing_viewed')
@@ -62,6 +93,15 @@ export function LandingPricing() {
   function handleApplyCoupon(planId: string) {
     const code = (couponInput[planId] ?? '').trim()
     if (!code) return
+    void runCouponPreview(planId, code, interval)
+  }
+
+  // Clicar no código do selo promocional preenche e aplica o cupom no
+  // campo "Tem um cupom?" daquele card, passando pelo mesmo pipeline de
+  // validação/preservação — nunca um atalho paralelo.
+  function handleUseFeaturedCoupon(planId: string, code: string) {
+    setCouponOpenFor(planId)
+    setCouponInput((s) => ({ ...s, [planId]: code }))
     void runCouponPreview(planId, code, interval)
   }
 
@@ -121,6 +161,21 @@ export function LandingPricing() {
             // checkout (não tocado aqui).
             const monthlyEquivalentCents = Math.round(plan.price_yearly_cents / 12)
             const yearlySavingsCents = plan.price_monthly_cents * 12 - plan.price_yearly_cents
+
+            // Selo só aparece se: cupom destacado existe, é elegível para
+            // este plano/ciclo, a prévia real confirmou validade, e o
+            // usuário não aplicou manualmente outro cupom neste card (pra
+            // não mostrar duas mensagens de desconto conflitantes).
+            const promo = featuredCoupon && isFeaturedEligible(plan.id, interval) ? featuredPreview[plan.id] : undefined
+            // Some ativo se um cupom manual DIFERENTE do destacado foi
+            // aplicado no card — aí o widget de baixo já mostra o desconto
+            // real daquele outro cupom, sem duplicar mensagens.
+            const manualOtherCouponApplied =
+              couponResult[plan.id]?.valid && (couponInput[plan.id] ?? '').trim().toUpperCase() !== featuredCoupon?.code.toUpperCase()
+            const promoActive = !!promo?.valid && !manualOtherCouponApplied
+            const promoPercent =
+              promoActive && promo?.discountType === 'percentage' ? Math.round((promo.discountAmountCents! / promo.originalAmountCents!) * 100) : null
+
             return (
               <div
                 key={plan.id}
@@ -130,32 +185,84 @@ export function LandingPricing() {
                     : 'border-ink-200 bg-white dark:border-ink-700 dark:bg-ink-900'
                 }`}
               >
-                {highlighted && (
-                  <Badge variant="brand" className="mb-3 w-fit">
-                    Mais escolhido
-                  </Badge>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {highlighted && (
+                    <Badge variant="brand" className="mb-3 w-fit">
+                      Mais escolhido
+                    </Badge>
+                  )}
+                  {promoActive && (
+                    <Badge className="mb-3 w-fit border-transparent bg-green-600 text-white">
+                      {promoPercent !== null ? `${promoPercent}% OFF` : `${formatPrecise(promo!.discountAmountCents ?? 0)} OFF`}
+                    </Badge>
+                  )}
+                </div>
                 <h3 className="text-lg font-semibold text-ink-900 dark:text-ink-50">{plan.name}</h3>
 
-                {interval === 'monthly' ? (
-                  <p className="mt-3">
-                    <span className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{formatWhole(plan.price_monthly_cents)}</span>
-                    <span className="text-sm text-ink-500">/mês</span>
-                  </p>
-                ) : (
-                  <>
+                {promoActive && interval === 'monthly' && (
+                  <div className="mt-3">
+                    <p>
+                      <span className="text-sm text-ink-400 line-through">de {formatWhole(promo!.originalAmountCents ?? 0)}/mês</span>
+                    </p>
+                    <p>
+                      <span className="text-3xl font-semibold text-green-700 dark:text-green-400">{formatPrecise(promo!.finalAmountCents ?? 0)}</span>
+                      <span className="text-sm text-ink-500">{promo!.duration === 'first_payment' ? ' no primeiro mês' : '/mês'}</span>
+                    </p>
+                    {promo!.duration === 'first_payment' && (
+                      <p className="mt-1 text-xs text-ink-500">a partir do próximo ciclo: {formatWhole(plan.price_monthly_cents)}/mês</p>
+                    )}
+                  </div>
+                )}
+
+                {promoActive && interval === 'yearly' && (
+                  <div className="mt-3">
+                    <p>
+                      <span className="text-sm text-ink-400 line-through">de {formatWhole(promo!.originalAmountCents ?? 0)}/ano</span>
+                    </p>
+                    <p>
+                      <span className="text-3xl font-semibold text-green-700 dark:text-green-400">{formatPrecise(promo!.finalAmountCents ?? 0)}</span>
+                      <span className="text-sm text-ink-500">{promo!.duration === 'first_payment' ? ' no primeiro ano' : '/ano'}</span>
+                    </p>
+                    {promo!.duration === 'first_payment' && (
+                      <p className="mt-1 text-xs text-ink-500">a partir do próximo ciclo: {formatWhole(plan.price_yearly_cents)}/ano</p>
+                    )}
+                  </div>
+                )}
+
+                {!promoActive &&
+                  (interval === 'monthly' ? (
                     <p className="mt-3">
-                      <span className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{formatPrecise(monthlyEquivalentCents)}</span>
+                      <span className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{formatWhole(plan.price_monthly_cents)}</span>
                       <span className="text-sm text-ink-500">/mês</span>
                     </p>
-                    <p className="mt-1 text-xs text-ink-500">cobrado {formatWhole(plan.price_yearly_cents)} por ano</p>
-                    {yearlySavingsCents > 0 && (
-                      <p className="mt-1 text-xs font-medium text-green-700 dark:text-green-400">
-                        Economize {formatWhole(yearlySavingsCents)}/ano
+                  ) : (
+                    <>
+                      <p className="mt-3">
+                        <span className="text-3xl font-semibold text-ink-900 dark:text-ink-50">{formatPrecise(monthlyEquivalentCents)}</span>
+                        <span className="text-sm text-ink-500">/mês</span>
                       </p>
-                    )}
-                  </>
-                )}
+                      <p className="mt-1 text-xs text-ink-500">cobrado {formatWhole(plan.price_yearly_cents)} por ano</p>
+                      {yearlySavingsCents > 0 && (
+                        <p className="mt-1 text-xs font-medium text-green-700 dark:text-green-400">
+                          Economize {formatWhole(yearlySavingsCents)}/ano
+                        </p>
+                      )}
+                    </>
+                  ))}
+
+                {promoActive &&
+                  !(couponResult[plan.id]?.valid && (couponInput[plan.id] ?? '').trim().toUpperCase() === featuredCoupon!.code.toUpperCase()) && (
+                    <button
+                      type="button"
+                      className="mt-2 w-fit text-xs text-ink-500"
+                      onClick={() => handleUseFeaturedCoupon(plan.id, featuredCoupon!.code)}
+                    >
+                      Use o cupom{' '}
+                      <span className="rounded bg-ink-100 px-1.5 py-0.5 font-mono font-semibold text-ink-900 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-50 dark:hover:bg-ink-700">
+                        {featuredCoupon!.code}
+                      </span>
+                    </button>
+                  )}
 
                 <ul className="mt-5 flex flex-col gap-2 text-sm text-ink-600 dark:text-ink-300">
                   <li>{plan.monthly_content_allowance} conteúdos por mês</li>

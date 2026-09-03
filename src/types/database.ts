@@ -1354,9 +1354,11 @@ export type Database = {
           eligible_plan_ids: string[] | null
           expires_at: string | null
           id: string
+          landing_label: string | null
           max_redemptions: number | null
           max_redemptions_per_organization: number
           metadata: Json
+          show_on_landing: boolean
           starts_at: string | null
           updated_at: string
         }
@@ -1375,9 +1377,11 @@ export type Database = {
           eligible_plan_ids?: string[] | null
           expires_at?: string | null
           id?: string
+          landing_label?: string | null
           max_redemptions?: number | null
           max_redemptions_per_organization?: number
           metadata?: Json
+          show_on_landing?: boolean
           starts_at?: string | null
           updated_at?: string
         }
@@ -1396,9 +1400,11 @@ export type Database = {
           eligible_plan_ids?: string[] | null
           expires_at?: string | null
           id?: string
+          landing_label?: string | null
           max_redemptions?: number | null
           max_redemptions_per_organization?: number
           metadata?: Json
+          show_on_landing?: boolean
           starts_at?: string | null
           updated_at?: string
         }
@@ -4431,9 +4437,11 @@ export type Database = {
           eligible_plan_ids: string[] | null
           expires_at: string | null
           id: string
+          landing_label: string | null
           max_redemptions: number | null
           max_redemptions_per_organization: number
           metadata: Json
+          show_on_landing: boolean
           starts_at: string | null
           updated_at: string
         }
@@ -4537,9 +4545,43 @@ export type Database = {
           eligible_plan_ids: string[] | null
           expires_at: string | null
           id: string
+          landing_label: string | null
           max_redemptions: number | null
           max_redemptions_per_organization: number
           metadata: Json
+          show_on_landing: boolean
+          starts_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "coupons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_coupon_landing_featured_system: {
+        Args: { p_coupon_id: string; p_featured: boolean; p_label?: string }
+        Returns: {
+          active: boolean
+          code: string
+          code_normalized: string | null
+          created_at: string
+          created_by: string | null
+          discount_type: Database["public"]["Enums"]["coupon_discount_type"]
+          discount_value: number
+          duration: Database["public"]["Enums"]["coupon_duration"]
+          eligible_billing_intervals:
+            | Database["public"]["Enums"]["billing_interval"][]
+            | null
+          eligible_plan_ids: string[] | null
+          expires_at: string | null
+          id: string
+          landing_label: string | null
+          max_redemptions: number | null
+          max_redemptions_per_organization: number
+          metadata: Json
+          show_on_landing: boolean
           starts_at: string | null
           updated_at: string
         }
@@ -4597,9 +4639,11 @@ export type Database = {
           eligible_plan_ids: string[] | null
           expires_at: string | null
           id: string
+          landing_label: string | null
           max_redemptions: number | null
           max_redemptions_per_organization: number
           metadata: Json
+          show_on_landing: boolean
           starts_at: string | null
           updated_at: string
         }
@@ -6008,6 +6052,7 @@ export type Database = {
         }
         Returns: Json
       }
+      public_featured_coupon_system: { Args: never; Returns: Json }
       public_preview_coupon: {
         Args: {
           p_billing_interval: Database["public"]["Enums"]["billing_interval"]

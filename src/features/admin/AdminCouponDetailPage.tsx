@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { deleteAdminCoupon, fetchAdminCouponDetail, setAdminCouponActive } from '@/features/admin/api'
+import { deleteAdminCoupon, fetchAdminCouponDetail, setAdminCouponActive, setAdminCouponLandingFeatured } from '@/features/admin/api'
 import { STATUS_LABEL, STATUS_COLOR } from '@/features/admin/statusLabels'
 
 function formatCents(cents: number): string {
@@ -22,6 +22,8 @@ export function AdminCouponDetailPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [confirmingToggle, setConfirmingToggle] = React.useState(false)
   const [confirmingDelete, setConfirmingDelete] = React.useState(false)
+  const [confirmingFeature, setConfirmingFeature] = React.useState(false)
+  const [landingLabel, setLandingLabel] = React.useState('')
 
   const detailQuery = useQuery({ queryKey: ['admin-coupon-detail', id], queryFn: () => fetchAdminCouponDetail(id!), enabled: !!id })
 
@@ -39,6 +41,22 @@ export function AdminCouponDetailPage() {
       await setAdminCouponActive(id!, !detailQuery.data.coupon.active)
       await refresh()
       setConfirmingToggle(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro inesperado.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleToggleFeatured() {
+    if (!detailQuery.data) return
+    setBusy(true)
+    setError(null)
+    try {
+      const nextFeatured = !detailQuery.data.coupon.show_on_landing
+      await setAdminCouponLandingFeatured(id!, nextFeatured, nextFeatured ? (landingLabel.trim() || null) : null)
+      await refresh()
+      setConfirmingFeature(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado.')
     } finally {
@@ -74,11 +92,26 @@ export function AdminCouponDetailPage() {
           <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[coupon.derived_status]}`}>
             {STATUS_LABEL[coupon.derived_status]}
           </span>
+          {coupon.show_on_landing && (
+            <span className="ml-2 mt-1 inline-block rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900 dark:text-brand-200">
+              Destacado na Landing
+            </span>
+          )}
         </div>
         <div className="flex gap-2">
           <Link to={`/admin/cupons/${id}/editar`} className="rounded-lg border border-ink-200 px-3 py-2 text-sm font-medium text-ink-700 dark:border-ink-700 dark:text-ink-200">
             Editar
           </Link>
+          <button
+            className="rounded-lg border border-ink-200 px-3 py-2 text-sm font-medium text-ink-700 disabled:opacity-50 dark:border-ink-700 dark:text-ink-200"
+            disabled={busy}
+            onClick={() => {
+              setLandingLabel(coupon.landing_label ?? '')
+              setConfirmingFeature(true)
+            }}
+          >
+            {coupon.show_on_landing ? 'Remover da Landing' : 'Destacar na Landing'}
+          </button>
           <button
             className="rounded-lg border border-ink-200 px-3 py-2 text-sm font-medium text-ink-700 disabled:opacity-50 dark:border-ink-700 dark:text-ink-200"
             disabled={busy}
@@ -116,6 +149,44 @@ export function AdminCouponDetailPage() {
               Confirmar
             </button>
             <button className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-900 dark:text-amber-200" onClick={() => setConfirmingToggle(false)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmingFeature && (
+        <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-900 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200">
+          {coupon.show_on_landing ? (
+            <p>Remover este cupom do destaque da Landing? Os cards de preço voltam ao layout padrão, sem selo promocional.</p>
+          ) : (
+            <>
+              <p>
+                Este cupom passa a aparecer como selo promocional nos cards de preço elegíveis da Landing (
+                {coupon.eligible_plan_ids?.length ? coupon.eligible_plan_ids.join(', ') : 'todos os planos'},{' '}
+                {coupon.eligible_billing_intervals?.length ? coupon.eligible_billing_intervals.join(' e ') : 'todos os ciclos'}). Só um cupom pode
+                ficar destacado por vez — destacar este substitui automaticamente qualquer outro.
+              </p>
+              <label className="mt-2 block text-xs font-medium text-brand-800 dark:text-brand-200">
+                Rótulo do selo (opcional)
+                <input
+                  className="mt-1 block w-full rounded-lg border border-brand-300 bg-white px-2 py-1.5 text-sm text-ink-900 dark:border-brand-800 dark:bg-ink-900 dark:text-ink-50"
+                  placeholder="Ex.: Oferta de lançamento"
+                  value={landingLabel}
+                  onChange={(e) => setLandingLabel(e.target.value)}
+                  maxLength={80}
+                />
+              </label>
+            </>
+          )}
+          <div className="mt-2 flex gap-2">
+            <button className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50" disabled={busy} onClick={handleToggleFeatured}>
+              Confirmar
+            </button>
+            <button
+              className="rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-900 dark:text-brand-200"
+              onClick={() => setConfirmingFeature(false)}
+            >
               Cancelar
             </button>
           </div>
