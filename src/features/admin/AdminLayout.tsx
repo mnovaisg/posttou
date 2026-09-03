@@ -13,7 +13,7 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-ink-50 dark:bg-ink-950">
       <header className="border-b border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-900">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-6">
             <span className="text-sm font-semibold text-ink-900 dark:text-ink-50">POSTTOU · Admin</span>
             <nav className="flex gap-4">
@@ -36,7 +36,7 @@ export function AdminLayout() {
           </NavLink>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
         <Outlet />
       </main>
     </div>

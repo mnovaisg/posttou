@@ -23,15 +23,66 @@ function formatDateTime(iso: string | null): string {
 
 const PAGE_SIZE = 25
 
-const QUICK_FILTERS: { label: string; apply: (f: AdminLeadFilters) => AdminLeadFilters }[] = [
-  { label: 'Trial não convertido', apply: (f) => ({ ...f, status: 'trial_not_converted' }) },
-  { label: 'Inadimplentes', apply: (f) => ({ ...f, status: 'past_due' }) },
-  { label: 'Expirados por inadimplência', apply: (f) => ({ ...f, status: 'expired_involuntary' }) },
-  { label: 'Cancelados', apply: (f) => ({ ...f, status: 'cancelled' }) },
-  { label: 'Clientes ativos', apply: (f) => ({ ...f, status: 'active_customer' }) },
-  { label: 'Sem atividade há 14 dias', apply: (f) => ({ ...f, inactiveDays: 14 }) },
-  { label: 'Aceita marketing e-mail', apply: (f) => ({ ...f, marketingEmail: true }) },
-  { label: 'Usou cupom', apply: (f) => ({ ...f, couponCode: '%' }) },
+// Sempre lê/escreve direto nos mesmos campos de `filters` — nunca um
+// estado visual paralelo. `isActive` é sempre derivado do filtro real,
+// então o botão nunca pode ficar dessincronizado da query.
+function setFilterField<K extends keyof AdminLeadFilters>(
+  f: AdminLeadFilters,
+  key: K,
+  value: AdminLeadFilters[K] | undefined,
+): AdminLeadFilters {
+  const next = { ...f }
+  if (value === undefined || value === ('' as unknown)) {
+    delete next[key]
+  } else {
+    next[key] = value
+  }
+  return next
+}
+
+function hasActiveFilters(f: AdminLeadFilters): boolean {
+  return Object.values(f).some((v) => v !== undefined && v !== null && v !== '')
+}
+
+interface QuickFilterDef {
+  label: string
+  isActive: (f: AdminLeadFilters) => boolean
+  toggle: (f: AdminLeadFilters) => AdminLeadFilters
+}
+
+// Os 5 primeiros compartilham o campo `status` — por isso já são
+// mutuamente exclusivos entre si (escolher um troca o anterior). Os 3
+// últimos são campos independentes e combinam livremente com status e
+// entre si. Clicar de novo no mesmo filtro ativo sempre remove só ele.
+function statusQuickFilter(label: string, status: CommercialStatus): QuickFilterDef {
+  return {
+    label,
+    isActive: (f) => f.status === status,
+    toggle: (f) => setFilterField(f, 'status', f.status === status ? undefined : status),
+  }
+}
+
+const QUICK_FILTERS: QuickFilterDef[] = [
+  statusQuickFilter('Trial não convertido', 'trial_not_converted'),
+  statusQuickFilter('Inadimplentes', 'past_due'),
+  statusQuickFilter('Expirados por inadimplência', 'expired_involuntary'),
+  statusQuickFilter('Cancelados', 'cancelled'),
+  statusQuickFilter('Clientes ativos', 'active_customer'),
+  {
+    label: 'Sem atividade há 14 dias',
+    isActive: (f) => f.inactiveDays === 14,
+    toggle: (f) => setFilterField(f, 'inactiveDays', f.inactiveDays === 14 ? undefined : 14),
+  },
+  {
+    label: 'Aceita marketing e-mail',
+    isActive: (f) => f.marketingEmail === true,
+    toggle: (f) => setFilterField(f, 'marketingEmail', f.marketingEmail === true ? undefined : true),
+  },
+  {
+    label: 'Usou cupom',
+    isActive: (f) => f.couponCode === '%',
+    toggle: (f) => setFilterField(f, 'couponCode', f.couponCode === '%' ? undefined : '%'),
+  },
 ]
 
 export function AdminLeadsPage() {
@@ -151,17 +202,26 @@ export function AdminLeadsPage() {
 
       {/* Filtros rápidos */}
       <div className="flex flex-wrap gap-2">
-        {QUICK_FILTERS.map((qf) => (
-          <button
-            key={qf.label}
-            type="button"
-            onClick={() => applyFilters(qf.apply({ ...filters }))}
-            className="rounded-full border border-ink-200 px-3 py-1 text-xs font-medium text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800"
-          >
-            {qf.label}
-          </button>
-        ))}
-        {Object.keys(filters).length > 0 && (
+        {QUICK_FILTERS.map((qf) => {
+          const active = qf.isActive(filters)
+          return (
+            <button
+              key={qf.label}
+              type="button"
+              aria-pressed={active}
+              onClick={() => applyFilters(qf.toggle(filters))}
+              className={
+                active
+                  ? 'flex items-center gap-1 rounded-full border border-brand-600 bg-brand-600 px-3 py-1 text-xs font-semibold text-white shadow-sm'
+                  : 'rounded-full border border-ink-200 px-3 py-1 text-xs font-medium text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800'
+              }
+            >
+              {active && <span aria-hidden="true">✓</span>}
+              {qf.label}
+            </button>
+          )
+        })}
+        {hasActiveFilters(filters) && (
           <button type="button" onClick={clearFilters} className="rounded-full border border-red-200 px-3 py-1 text-xs font-medium text-red-600 dark:border-red-900">
             Limpar filtros
           </button>
@@ -268,53 +328,54 @@ export function AdminLeadsPage() {
         ))}
       </div>
 
-      {/* Desktop: tabela */}
+      {/* Desktop: tabela — largura mínima real por coluna; o card rola na
+          horizontal em vez de espremer/cortar dados (testado em 1024/1280/1440px). */}
       <div className="hidden overflow-x-auto rounded-xl border border-ink-200 dark:border-ink-800 sm:block">
-        <table className="w-full text-left text-sm">
+        <table className="w-full min-w-[1360px] table-fixed text-left text-sm">
           <thead className="bg-ink-50 text-xs uppercase tracking-wide text-ink-400 dark:bg-ink-900">
             <tr>
-              <th className="px-4 py-3">Cliente/Lead</th>
-              <th className="px-4 py-3">Contato</th>
-              <th className="px-4 py-3">Marca</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Plano</th>
-              <th className="px-4 py-3">Financeiro</th>
-              <th className="px-4 py-3">Cadastro</th>
-              <th className="px-4 py-3">Última atividade</th>
+              <th className="w-[190px] px-4 py-3">Cliente/Lead</th>
+              <th className="w-[230px] px-4 py-3">Contato</th>
+              <th className="w-[160px] px-4 py-3">Marca</th>
+              <th className="w-[190px] px-4 py-3">Status</th>
+              <th className="w-[140px] px-4 py-3">Plano</th>
+              <th className="w-[170px] px-4 py-3">Financeiro</th>
+              <th className="w-[110px] px-4 py-3">Cadastro</th>
+              <th className="w-[170px] px-4 py-3">Última atividade</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-100 dark:divide-ink-800">
             {items.map((it) => (
               <tr key={it.organization_id} className="hover:bg-ink-50 dark:hover:bg-ink-800/50">
-                <td className="px-4 py-3">
+                <td className="break-words px-4 py-3">
                   <Link to={`/admin/clientes/${it.organization_id}`} className="font-medium text-ink-900 hover:underline dark:text-ink-50">
                     {it.full_name ?? '—'}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-ink-600 dark:text-ink-300">
+                <td className="break-words px-4 py-3 text-ink-600 dark:text-ink-300">
                   <div className="flex flex-col">
                     <span>{it.email}</span>
                     {it.whatsapp && <span className="text-xs text-ink-400">{it.whatsapp}</span>}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-ink-600 dark:text-ink-300">{it.company_name ?? '—'}</td>
+                <td className="break-words px-4 py-3 text-ink-600 dark:text-ink-300">{it.company_name ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${COMMERCIAL_STATUS_COLOR[it.commercial_status]}`}>
+                  <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${COMMERCIAL_STATUS_COLOR[it.commercial_status]}`}>
                     {COMMERCIAL_STATUS_LABEL[it.commercial_status]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-ink-600 dark:text-ink-300">
+                <td className="break-words px-4 py-3 text-ink-600 dark:text-ink-300">
                   {it.plan_name ?? '—'} {it.billing_interval && <span className="text-xs text-ink-400">({it.billing_interval === 'monthly' ? 'mensal' : 'anual'})</span>}
                 </td>
-                <td className="px-4 py-3 text-xs text-ink-500">
+                <td className="break-words px-4 py-3 text-xs text-ink-500">
                   {it.commercial_status === 'past_due' && it.past_due_since
                     ? `Em atraso desde ${formatDate(it.past_due_since)}`
                     : it.commercial_status === 'active_customer'
                       ? 'Em dia'
                       : '—'}
                 </td>
-                <td className="px-4 py-3 text-ink-500">{formatDate(it.created_at)}</td>
-                <td className="px-4 py-3 text-ink-400">{formatDateTime(it.last_activity_at)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-ink-500">{formatDate(it.created_at)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-ink-400">{formatDateTime(it.last_activity_at)}</td>
               </tr>
             ))}
           </tbody>
