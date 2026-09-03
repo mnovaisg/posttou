@@ -2748,6 +2748,81 @@ export type Database = {
           },
         ]
       }
+      plan_change_history: {
+        Row: {
+          admin_user_id: string
+          batch_id: string | null
+          change_type: string
+          created_at: string
+          field: string
+          id: string
+          new_monthly_cents: number | null
+          new_name: string | null
+          new_yearly_cents: number | null
+          note: string | null
+          percent_applied: number | null
+          plan_id: string
+          previous_monthly_cents: number | null
+          previous_name: string | null
+          previous_yearly_cents: number | null
+          restored_from_history_id: string | null
+          rounding_rule: string | null
+        }
+        Insert: {
+          admin_user_id: string
+          batch_id?: string | null
+          change_type: string
+          created_at?: string
+          field: string
+          id?: string
+          new_monthly_cents?: number | null
+          new_name?: string | null
+          new_yearly_cents?: number | null
+          note?: string | null
+          percent_applied?: number | null
+          plan_id: string
+          previous_monthly_cents?: number | null
+          previous_name?: string | null
+          previous_yearly_cents?: number | null
+          restored_from_history_id?: string | null
+          rounding_rule?: string | null
+        }
+        Update: {
+          admin_user_id?: string
+          batch_id?: string | null
+          change_type?: string
+          created_at?: string
+          field?: string
+          id?: string
+          new_monthly_cents?: number | null
+          new_name?: string | null
+          new_yearly_cents?: number | null
+          note?: string | null
+          percent_applied?: number | null
+          plan_id?: string
+          previous_monthly_cents?: number | null
+          previous_name?: string | null
+          previous_yearly_cents?: number | null
+          restored_from_history_id?: string | null
+          rounding_rule?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_change_history_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_history_restored_from_history_id_fkey"
+            columns: ["restored_from_history_id"]
+            isOneToOne: false
+            referencedRelation: "plan_change_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           capabilities: Json
@@ -4387,6 +4462,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_apply_plan_price_changes_system: {
+        Args: {
+          p_change_type: string
+          p_items: Json
+          p_note?: string
+          p_percent_applied?: number
+          p_rounding_rule?: string
+        }
+        Returns: Json
+      }
       admin_complete_lead_follow_up_system: {
         Args: { p_follow_up_id: string }
         Returns: {
@@ -4514,7 +4599,58 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_plan_change_history_system: {
+        Args: { p_cursor?: string; p_limit?: number; p_plan_id?: string }
+        Returns: Json
+      }
+      admin_list_plans_system: { Args: never; Returns: Json }
       admin_recurring_revenue_system: { Args: never; Returns: Json }
+      admin_rename_plan_system: {
+        Args: { p_new_name: string; p_note?: string; p_plan_id: string }
+        Returns: {
+          capabilities: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          max_members: number
+          max_workspaces: number
+          monthly_content_allowance: number
+          name: string
+          price_monthly_cents: number
+          price_yearly_cents: number
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_restore_plan_change_system: {
+        Args: { p_history_id: string; p_note?: string }
+        Returns: {
+          capabilities: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          max_members: number
+          max_workspaces: number
+          monthly_content_allowance: number
+          name: string
+          price_monthly_cents: number
+          price_yearly_cents: number
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_revenue_by_month_system: {
         Args: { p_months?: number }
         Returns: Json

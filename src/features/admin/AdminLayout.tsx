@@ -4,6 +4,7 @@ const NAV = [
   { to: '/admin', label: 'Painel', end: true },
   { to: '/admin/clientes', label: 'Clientes & Leads', end: false },
   { to: '/admin/financeiro', label: 'Financeiro', end: false },
+  { to: '/admin/planos', label: 'Planos & Preços', end: false },
   { to: '/admin/cupons', label: 'Cupons', end: false },
 ]
 
