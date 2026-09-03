@@ -42,6 +42,7 @@ const AdminCouponFormPage = React.lazy(() => import('@/features/admin/AdminCoupo
 const AdminCouponDetailPage = React.lazy(() => import('@/features/admin/AdminCouponDetailPage').then((m) => ({ default: m.AdminCouponDetailPage })))
 const AdminLeadsPage = React.lazy(() => import('@/features/admin/AdminLeadsPage').then((m) => ({ default: m.AdminLeadsPage })))
 const AdminLeadDetailPage = React.lazy(() => import('@/features/admin/AdminLeadDetailPage').then((m) => ({ default: m.AdminLeadDetailPage })))
+const AdminFinancePage = React.lazy(() => import('@/features/admin/AdminFinancePage').then((m) => ({ default: m.AdminFinancePage })))
 
 function RouteFallback() {
   return (
@@ -112,6 +113,14 @@ function App() {
                 element={
                   <React.Suspense fallback={<RouteFallback />}>
                     <AdminLeadDetailPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="financeiro"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminFinancePage />
                   </React.Suspense>
                 }
               />

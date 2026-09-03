@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   COMMERCIAL_STATUS_COLOR,
@@ -86,7 +86,9 @@ const QUICK_FILTERS: QuickFilterDef[] = [
 ]
 
 export function AdminLeadsPage() {
-  const [filters, setFilters] = React.useState<AdminLeadFilters>({})
+  const [searchParams] = useSearchParams()
+  const initialStatus = searchParams.get('status') as CommercialStatus | null
+  const [filters, setFilters] = React.useState<AdminLeadFilters>(initialStatus ? { status: initialStatus } : {})
   const [searchInput, setSearchInput] = React.useState('')
   const [page, setPage] = React.useState(0)
   const [exporting, setExporting] = React.useState(false)

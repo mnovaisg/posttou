@@ -19,6 +19,12 @@
 //     subscriptions.pending_change_payment_id (gravado no momento em que
 //     a cobrança foi criada) E `payment.externalReference` batendo com a
 //     organização — nunca por texto de descrição.
+//
+// Bloco Financeiro: além do processamento de entitlement acima (nunca
+// alterado), toda entrega agora também sincroniza o ledger real de
+// cobranças (billing_charges) via upsert_billing_charge_system —
+// idempotente por asaas_payment_id, nunca duplica, nunca falha o
+// processamento principal se o ledger falhar (best-effort, logado).
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 function json(body: unknown, status = 200) {
@@ -42,6 +48,120 @@ interface AsaasWebhookPayload {
     dateCreated?: string
     paymentDate?: string
     nextDueDate?: string
+    dueDate?: string
+    value?: number
+    status?: string
+  }
+}
+
+const LEDGER_STATUS_BY_EVENT: Record<string, 'pending' | 'paid' | 'overdue' | 'cancelled' | 'refunded'> = {
+  PAYMENT_CREATED: 'pending',
+  PAYMENT_UPDATED: 'pending',
+  PAYMENT_CONFIRMED: 'paid',
+  PAYMENT_RECEIVED: 'paid',
+  PAYMENT_OVERDUE: 'overdue',
+  PAYMENT_DELETED: 'cancelled',
+  PAYMENT_CANCELED: 'cancelled',
+  PAYMENT_REFUNDED: 'refunded',
+  PAYMENT_REFUND_IN_PROGRESS: 'refunded',
+}
+
+// deno-lint-ignore no-explicit-any
+async function syncLedger(admin: any, payload: AsaasWebhookPayload, kind: 'recurring' | 'upgrade') {
+  const p = payload.payment
+  if (!p?.id || p.value === undefined || p.value === null || !p.dueDate) return
+  const ledgerStatus = LEDGER_STATUS_BY_EVENT[payload.event]
+  if (!ledgerStatus) return
+
+  try {
+    let organizationId: string | null = null
+    let subscriptionId: string | null = null
+    let planId: string | null = null
+    let billingInterval: 'monthly' | 'yearly' | null = null
+
+    if (kind === 'recurring' && p.subscription) {
+      const { data: sub } = await admin
+        .from('subscriptions')
+        .select('id, organization_id, plan_id, billing_interval')
+        .eq('asaas_subscription_id', p.subscription)
+        .maybeSingle()
+      if (!sub) return // sem evidência segura de organização — não grava (nunca adivinha).
+      organizationId = sub.organization_id
+      subscriptionId = sub.id
+      planId = sub.plan_id
+      billingInterval = sub.billing_interval
+    } else if (kind === 'upgrade' && p.externalReference) {
+      const { data: sub } = await admin
+        .from('subscriptions')
+        .select('id, organization_id, plan_id, billing_interval')
+        .eq('organization_id', p.externalReference)
+        .maybeSingle()
+      if (!sub) return
+      organizationId = sub.organization_id
+      subscriptionId = sub.id
+      planId = sub.plan_id
+      billingInterval = sub.billing_interval
+    } else {
+      return
+    }
+
+    // Evidência de cupom: (a) esta cobrança específica está em
+    // coupon_redemptions (1ª cobrança ou upgrade) → valores exatos de lá;
+    // (b) senão, se a organização tem cupom recorrente ativo, esta
+    // renovação também é descontada nesse valor (fato conhecido, não
+    // suposição); (c) senão, sem cupom = desconto 0 é fato, não invenção.
+    const finalAmountCents = Math.round(p.value * 100)
+    let originalAmountCents = finalAmountCents
+    let discountAmountCents = 0
+    let couponRedemptionId: string | null = null
+
+    const { data: directRedemption } = await admin
+      .from('coupon_redemptions')
+      .select('id, original_amount_cents, discount_amount_cents')
+      .eq('asaas_payment_id', p.id)
+      .maybeSingle()
+
+    if (directRedemption) {
+      couponRedemptionId = directRedemption.id
+      originalAmountCents = directRedemption.original_amount_cents
+      discountAmountCents = directRedemption.discount_amount_cents
+    } else {
+      const { data: recurringRedemption } = await admin
+        .from('coupon_redemptions')
+        .select('id, coupon_id, coupons!inner(duration)')
+        .eq('organization_id', organizationId)
+        .eq('status', 'applied')
+        .eq('coupons.duration', 'recurring')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (recurringRedemption) {
+        couponRedemptionId = recurringRedemption.id
+        discountAmountCents = 0 // sem preço de tabela confiável neste ponto sem consulta extra; final=original é seguro (não inventa desconto por linha).
+        originalAmountCents = finalAmountCents
+      }
+    }
+
+    await admin.rpc('upsert_billing_charge_system', {
+      p_organization_id: organizationId,
+      p_subscription_id: subscriptionId,
+      p_asaas_payment_id: p.id,
+      p_asaas_subscription_id: p.subscription ?? null,
+      p_plan_id: planId,
+      p_billing_interval: billingInterval,
+      p_kind: kind,
+      p_original_amount_cents: originalAmountCents,
+      p_discount_amount_cents: discountAmountCents,
+      p_final_amount_cents: finalAmountCents,
+      p_coupon_redemption_id: couponRedemptionId,
+      p_due_date: p.dueDate,
+      p_paid_at: ledgerStatus === 'paid' ? (p.paymentDate ?? new Date().toISOString()) : null,
+      p_status: ledgerStatus,
+      p_raw_asaas_status: p.status ?? payload.event,
+      p_source: 'webhook',
+    })
+  } catch (err) {
+    console.error('asaas-webhook: falha ao sincronizar billing_charges (não bloqueia o processamento principal).', err)
   }
 }
 
@@ -69,6 +189,8 @@ Deno.serve(async (req) => {
 
   // ── Caminho 1: ciclo normal de uma subscription recorrente (checkout inicial, renovações) ──
   if (subscriptionId) {
+    await syncLedger(admin, payload, 'recurring')
+
     if (payload.event === 'PAYMENT_CONFIRMED' || payload.event === 'PAYMENT_RECEIVED') {
       const periodStart = payload.payment?.paymentDate ?? payload.payment?.dateCreated ?? new Date().toISOString()
       const periodEnd = payload.payment?.nextDueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -97,11 +219,16 @@ Deno.serve(async (req) => {
       return json({ ok: true, result: data })
     }
 
+    // PAYMENT_CREATED/PAYMENT_UPDATED/PAYMENT_DELETED/PAYMENT_CANCELED/
+    // PAYMENT_REFUNDED etc. — nunca afetam entitlement/crédito, só o
+    // ledger acima (já sincronizado).
     return json({ ok: true, ignored: true, event: payload.event })
   }
 
   // ── Caminho 2: cobrança avulsa de upgrade — sem payment.subscription, identificada por referência estruturada ──
   if (paymentId && externalReference) {
+    await syncLedger(admin, payload, 'upgrade')
+
     if (payload.event === 'PAYMENT_CONFIRMED' || payload.event === 'PAYMENT_RECEIVED') {
       const { data, error } = await admin.rpc('process_asaas_upgrade_payment_confirmed_system', {
         p_asaas_payment_id: paymentId,

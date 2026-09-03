@@ -316,6 +316,107 @@ export type Database = {
           },
         ]
       }
+      billing_charges: {
+        Row: {
+          asaas_payment_id: string
+          asaas_subscription_id: string | null
+          billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          coupon_redemption_id: string | null
+          created_at: string
+          discount_amount_cents: number | null
+          due_date: string
+          final_amount_cents: number
+          id: string
+          kind: string
+          organization_id: string
+          original_amount_cents: number | null
+          paid_at: string | null
+          plan_id: string | null
+          raw_asaas_status: string | null
+          source: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          asaas_payment_id: string
+          asaas_subscription_id?: string | null
+          billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          coupon_redemption_id?: string | null
+          created_at?: string
+          discount_amount_cents?: number | null
+          due_date: string
+          final_amount_cents: number
+          id?: string
+          kind: string
+          organization_id: string
+          original_amount_cents?: number | null
+          paid_at?: string | null
+          plan_id?: string | null
+          raw_asaas_status?: string | null
+          source: string
+          status: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asaas_payment_id?: string
+          asaas_subscription_id?: string | null
+          billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          coupon_redemption_id?: string | null
+          created_at?: string
+          discount_amount_cents?: number | null
+          due_date?: string
+          final_amount_cents?: number
+          id?: string
+          kind?: string
+          organization_id?: string
+          original_amount_cents?: number | null
+          paid_at?: string | null
+          plan_id?: string | null
+          raw_asaas_status?: string | null
+          source?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_charges_coupon_redemption_id_fkey"
+            columns: ["coupon_redemption_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_redemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_charges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_charges_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_charges_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_assets: {
         Row: {
           category: string
@@ -4046,6 +4147,30 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      _admin_org_cycle_charge_cents: {
+        Args: {
+          p_interval: Database["public"]["Enums"]["billing_interval"]
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: number
+      }
+      _admin_org_mrr_cents: {
+        Args: {
+          p_interval: Database["public"]["Enums"]["billing_interval"]
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: number
+      }
+      _admin_projected_charges: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          amount_cents: number
+          charge_month: string
+          organization_id: string
+        }[]
+      }
       _compute_coupon_discount: {
         Args: {
           p_coupon: Database["public"]["Tables"]["coupons"]["Row"]
@@ -4324,6 +4449,14 @@ export type Database = {
         Args: { p_coupon_id: string }
         Returns: undefined
       }
+      admin_discounts_summary_system: {
+        Args: { p_period_end: string; p_period_start: string }
+        Returns: Json
+      }
+      admin_financial_summary_system: {
+        Args: { p_period_end: string; p_period_start: string }
+        Returns: Json
+      }
       admin_get_coupon_detail_system: {
         Args: { p_coupon_id: string }
         Returns: Json
@@ -4333,6 +4466,17 @@ export type Database = {
         Returns: Json
       }
       admin_lead_metrics_system: { Args: never; Returns: Json }
+      admin_list_billing_charges_system: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_period_end?: string
+          p_period_start?: string
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       admin_list_coupons_system: {
         Args: {
           p_limit?: number
@@ -4360,6 +4504,20 @@ export type Database = {
           p_utm_campaign?: string
           p_utm_source?: string
         }
+        Returns: Json
+      }
+      admin_recurring_revenue_system: { Args: never; Returns: Json }
+      admin_revenue_by_month_system: {
+        Args: { p_months?: number }
+        Returns: Json
+      }
+      admin_revenue_by_plan_system: { Args: never; Returns: Json }
+      admin_revenue_lost_system: {
+        Args: { p_period_end: string; p_period_start: string }
+        Returns: Json
+      }
+      admin_revenue_projection_system: {
+        Args: { p_months?: number }
         Returns: Json
       }
       admin_set_coupon_active_system: {
@@ -4406,6 +4564,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_upcoming_receivables_system: {
+        Args: { p_days?: number }
+        Returns: Json
       }
       admin_update_coupon_system: {
         Args: {
@@ -6502,6 +6664,55 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_billing_charge_system: {
+        Args: {
+          p_asaas_payment_id: string
+          p_asaas_subscription_id: string
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_coupon_redemption_id: string
+          p_discount_amount_cents: number
+          p_due_date: string
+          p_final_amount_cents: number
+          p_kind: string
+          p_organization_id: string
+          p_original_amount_cents: number
+          p_paid_at: string
+          p_plan_id: string
+          p_raw_asaas_status: string
+          p_source: string
+          p_status: string
+          p_subscription_id: string
+        }
+        Returns: {
+          asaas_payment_id: string
+          asaas_subscription_id: string | null
+          billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          coupon_redemption_id: string | null
+          created_at: string
+          discount_amount_cents: number | null
+          due_date: string
+          final_amount_cents: number
+          id: string
+          kind: string
+          organization_id: string
+          original_amount_cents: number | null
+          paid_at: string | null
+          plan_id: string | null
+          raw_asaas_status: string | null
+          source: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "billing_charges"
           isOneToOne: true
           isSetofReturn: false
         }
