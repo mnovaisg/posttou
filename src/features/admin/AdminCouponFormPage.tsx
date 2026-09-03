@@ -163,6 +163,10 @@ export function AdminCouponFormPage() {
 
         <div>
           <label className="block text-sm font-medium text-ink-700 dark:text-ink-200">Duração</label>
+          <p className="mt-0.5 text-xs text-ink-400">
+            Define até quando o desconto vale para quem usar o cupom: só na primeira cobrança, ou em todas as cobranças
+            futuras enquanto a assinatura continuar.
+          </p>
           <select
             className="mt-1 w-full rounded-lg border border-ink-200 px-3 py-2 text-sm disabled:opacity-60 dark:border-ink-800 dark:bg-ink-900"
             value={form.duration}
@@ -176,6 +180,10 @@ export function AdminCouponFormPage() {
 
         <div>
           <label className="block text-sm font-medium text-ink-700 dark:text-ink-200">Planos elegíveis (vazio = todos)</label>
+          <p className="mt-0.5 text-xs text-ink-400">
+            Restringe o cupom a um ou mais planos específicos (ex.: só Profissional). Sem nenhum selecionado, o cupom vale
+            para qualquer plano.
+          </p>
           <div className="mt-1 flex flex-wrap gap-2">
             {plansQuery.data?.map((p) => (
               <button
@@ -197,6 +205,10 @@ export function AdminCouponFormPage() {
 
         <div>
           <label className="block text-sm font-medium text-ink-700 dark:text-ink-200">Ciclos elegíveis (vazio = todos)</label>
+          <p className="mt-0.5 text-xs text-ink-400">
+            Restringe o cupom à cobrança Mensal, à Anual, ou às duas. Ex.: marcar só "Anual" faz o cupom funcionar apenas
+            para quem assinar no ciclo anual — útil para promoções que incentivam o plano anual.
+          </p>
           <div className="mt-1 flex gap-2">
             {(['monthly', 'yearly'] as const).map((interval) => (
               <button
@@ -241,6 +253,7 @@ export function AdminCouponFormPage() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-ink-700 dark:text-ink-200">Limite total (vazio = ilimitado)</label>
+            <p className="mt-0.5 text-xs text-ink-400">Quantas vezes este cupom pode ser usado no total, somando todas as organizações.</p>
             <input
               type="number"
               min={1}
@@ -251,6 +264,7 @@ export function AdminCouponFormPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-ink-700 dark:text-ink-200">Limite por organização</label>
+            <p className="mt-0.5 text-xs text-ink-400">Quantas vezes uma mesma organização pode usar este cupom (normalmente 1).</p>
             <input
               type="number"
               min={1}

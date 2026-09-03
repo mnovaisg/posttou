@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { fetchAdminCoupons } from '@/features/admin/api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchAdminCoupons, setAdminCouponActive } from '@/features/admin/api'
 import { STATUS_LABEL, STATUS_COLOR } from '@/features/admin/statusLabels'
 
 function formatDiscount(type: 'percentage' | 'fixed', value: number): string {
@@ -11,6 +11,9 @@ function formatDiscount(type: 'percentage' | 'fixed', value: number): string {
 export function AdminCouponsPage() {
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState('')
+  const [confirmingId, setConfirmingId] = React.useState<string | null>(null)
+  const [busyId, setBusyId] = React.useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const couponsQuery = useQuery({
     queryKey: ['admin-coupons', search, status],
@@ -18,6 +21,19 @@ export function AdminCouponsPage() {
   })
 
   const items = couponsQuery.data?.items ?? []
+
+  async function handleToggleActive(couponId: string, nextActive: boolean) {
+    setBusyId(couponId)
+    try {
+      await setAdminCouponActive(couponId, nextActive)
+      await queryClient.invalidateQueries({ queryKey: ['admin-coupons'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin-coupon-detail', couponId] })
+      await queryClient.invalidateQueries({ queryKey: ['admin-dashboard-metrics'] })
+    } finally {
+      setBusyId(null)
+      setConfirmingId(null)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,24 +74,48 @@ export function AdminCouponsPage() {
       {/* Mobile: cards */}
       <div className="flex flex-col gap-3 sm:hidden">
         {items.map((c) => (
-          <Link
-            key={c.id}
-            to={`/admin/cupons/${c.id}`}
-            className="rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-sm font-semibold text-ink-900 dark:text-ink-50">{c.code}</span>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[c.derived_status]}`}>
-                {STATUS_LABEL[c.derived_status]}
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-ink-600 dark:text-ink-300">
-              {formatDiscount(c.discount_type, c.discount_value)} · {c.duration === 'first_payment' ? '1ª cobrança' : 'recorrente'}
-            </p>
-            <p className="mt-1 text-xs text-ink-400">
-              {c.used_count} uso(s){c.max_redemptions ? ` de ${c.max_redemptions}` : ''}
-            </p>
-          </Link>
+          <div key={c.id} className="rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
+            <Link to={`/admin/cupons/${c.id}`} className="block">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-sm font-semibold text-ink-900 dark:text-ink-50">{c.code}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[c.derived_status]}`}>
+                  {STATUS_LABEL[c.derived_status]}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-ink-600 dark:text-ink-300">
+                {formatDiscount(c.discount_type, c.discount_value)} · {c.duration === 'first_payment' ? '1ª cobrança' : 'recorrente'}
+              </p>
+              <p className="mt-1 text-xs text-ink-400">
+                {c.used_count} uso(s){c.max_redemptions ? ` de ${c.max_redemptions}` : ''}
+              </p>
+            </Link>
+            {confirmingId === c.id ? (
+              <div className="mt-3 flex items-center gap-2 border-t border-ink-100 pt-3 text-xs dark:border-ink-800">
+                <span className="text-ink-500">{c.active ? 'Desativar este cupom?' : 'Reativar este cupom?'}</span>
+                <button
+                  className="ml-auto rounded-lg bg-amber-600 px-2.5 py-1 font-medium text-white disabled:opacity-50"
+                  disabled={busyId === c.id}
+                  onClick={() => handleToggleActive(c.id, !c.active)}
+                >
+                  Confirmar
+                </button>
+                <button
+                  className="rounded-lg border border-ink-200 px-2.5 py-1 font-medium text-ink-600 dark:border-ink-700 dark:text-ink-300"
+                  onClick={() => setConfirmingId(null)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="mt-3 w-full rounded-lg border border-ink-200 py-1.5 text-xs font-medium text-ink-600 dark:border-ink-700 dark:text-ink-300"
+                onClick={() => setConfirmingId(c.id)}
+              >
+                {c.active ? 'Desativar' : 'Ativar'}
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
@@ -89,11 +129,12 @@ export function AdminCouponsPage() {
               <th className="px-4 py-3">Duração</th>
               <th className="px-4 py-3">Usos</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-100 dark:divide-ink-800">
             {items.map((c) => (
-              <tr key={c.id} className="cursor-pointer hover:bg-ink-50 dark:hover:bg-ink-800/50">
+              <tr key={c.id} className="hover:bg-ink-50 dark:hover:bg-ink-800/50">
                 <td className="px-4 py-3">
                   <Link to={`/admin/cupons/${c.id}`} className="font-mono font-medium text-ink-900 hover:underline dark:text-ink-50">
                     {c.code}
@@ -109,6 +150,34 @@ export function AdminCouponsPage() {
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[c.derived_status]}`}>
                     {STATUS_LABEL[c.derived_status]}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {confirmingId === c.id ? (
+                    <div className="flex items-center justify-end gap-2 text-xs">
+                      <span className="text-ink-500">{c.active ? 'Desativar?' : 'Reativar?'}</span>
+                      <button
+                        className="rounded-lg bg-amber-600 px-2.5 py-1 font-medium text-white disabled:opacity-50"
+                        disabled={busyId === c.id}
+                        onClick={() => handleToggleActive(c.id, !c.active)}
+                      >
+                        Confirmar
+                      </button>
+                      <button
+                        className="rounded-lg border border-ink-200 px-2.5 py-1 font-medium text-ink-600 dark:border-ink-700 dark:text-ink-300"
+                        onClick={() => setConfirmingId(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rounded-lg border border-ink-200 px-2.5 py-1 text-xs font-medium text-ink-600 dark:border-ink-700 dark:text-ink-300"
+                      onClick={() => setConfirmingId(c.id)}
+                    >
+                      {c.active ? 'Desativar' : 'Ativar'}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
