@@ -5,11 +5,13 @@ import { TopBar } from '@/app/TopBar'
 import { cn } from '@/lib/utils'
 import { useDiscoveryClaimOnLogin } from '@/features/instagram-discovery/useDiscoveryClaimOnLogin'
 import { usePendingCouponClaim } from '@/features/billing/usePendingCouponClaim'
+import { usePendingAttributionClaim } from '@/features/billing/usePendingAttributionClaim'
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
   useDiscoveryClaimOnLogin()
   usePendingCouponClaim()
+  usePendingAttributionClaim()
 
   return (
     <div className="flex min-h-screen bg-ink-50 dark:bg-ink-950">

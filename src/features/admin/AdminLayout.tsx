@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 const NAV = [
   { to: '/admin', label: 'Painel', end: true },
+  { to: '/admin/clientes', label: 'Clientes & Leads', end: false },
   { to: '/admin/cupons', label: 'Cupons', end: false },
 ]
 

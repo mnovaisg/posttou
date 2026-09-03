@@ -4,7 +4,8 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { supabase } from '@/lib/supabase/client'
 import { ConnectInstagramCard } from '@/features/instagram/ConnectInstagramCard'
-import { exportMyData } from '@/features/settings/api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { exportMyData, fetchMyMarketingConsent, setMyMarketingConsent } from '@/features/settings/api'
 import { getSupportEmail } from '@/lib/support'
 
 function downloadJson(data: unknown, filename: string) {
@@ -22,9 +23,16 @@ export function SettingsHubPage() {
   const { activeWorkspace, activeRole } = useWorkspace()
   const supportEmail = getSupportEmail()
 
+  const queryClient = useQueryClient()
   const [fullName, setFullName] = React.useState('')
+  const [whatsapp, setWhatsapp] = React.useState('')
   const [savingName, setSavingName] = React.useState(false)
   const [nameSaved, setNameSaved] = React.useState(false)
+  const [savingWhatsapp, setSavingWhatsapp] = React.useState(false)
+  const [whatsappSaved, setWhatsappSaved] = React.useState(false)
+
+  const consentQuery = useQuery({ queryKey: ['my-marketing-consent'], queryFn: fetchMyMarketingConsent, enabled: !!user })
+  const [consentBusy, setConsentBusy] = React.useState<'email' | 'whatsapp' | null>(null)
   const [newPassword, setNewPassword] = React.useState('')
   const [passwordStatus, setPasswordStatus] = React.useState<string | null>(null)
   const [exporting, setExporting] = React.useState(false)
@@ -36,10 +44,13 @@ export function SettingsHubPage() {
     if (!user) return
     supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, whatsapp')
       .eq('id', user.id)
       .maybeSingle()
-      .then(({ data }) => setFullName(data?.full_name ?? ''))
+      .then(({ data }) => {
+        setFullName(data?.full_name ?? '')
+        setWhatsapp(data?.whatsapp ?? '')
+      })
   }, [user])
 
   async function handleSaveName() {
@@ -49,6 +60,25 @@ export function SettingsHubPage() {
     await supabase.from('profiles').update({ full_name: fullName }).eq('id', user.id)
     setSavingName(false)
     setNameSaved(true)
+  }
+
+  async function handleSaveWhatsapp() {
+    if (!user) return
+    setSavingWhatsapp(true)
+    setWhatsappSaved(false)
+    await supabase.from('profiles').update({ whatsapp: whatsapp.trim() || null }).eq('id', user.id)
+    setSavingWhatsapp(false)
+    setWhatsappSaved(true)
+  }
+
+  async function handleSetConsent(channel: 'email' | 'whatsapp', optedIn: boolean) {
+    setConsentBusy(channel)
+    try {
+      await setMyMarketingConsent(channel, optedIn)
+      await queryClient.invalidateQueries({ queryKey: ['my-marketing-consent'] })
+    } finally {
+      setConsentBusy(null)
+    }
   }
 
   async function handleChangePassword() {
@@ -120,6 +150,26 @@ export function SettingsHubPage() {
             <p className="text-sm text-ink-700 dark:text-ink-200">{user?.email}</p>
           </div>
           <div>
+            <label className="mb-1 block text-xs font-medium text-ink-500">WhatsApp (opcional)</label>
+            <p className="mb-1.5 text-xs text-ink-400">Só usamos para falar com você sobre sua conta — nunca obrigatório.</p>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 rounded-lg border border-ink-200 px-3 py-2 text-sm dark:border-ink-800 dark:bg-ink-950"
+                placeholder="(11) 91234-5678"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+              />
+              <button
+                className="rounded-lg border border-ink-200 px-3 py-2 text-sm font-medium hover:bg-ink-50 disabled:opacity-50 dark:border-ink-700 dark:hover:bg-ink-800"
+                disabled={savingWhatsapp}
+                onClick={handleSaveWhatsapp}
+              >
+                Salvar
+              </button>
+            </div>
+            {whatsappSaved && <p className="mt-1 text-xs text-brand-600">Salvo.</p>}
+          </div>
+          <div>
             <label className="mb-1 block text-xs font-medium text-ink-500">Trocar senha</label>
             <div className="flex gap-2">
               <input
@@ -177,6 +227,53 @@ export function SettingsHubPage() {
         >
           Ver plano, franquia e cobrança →
         </Link>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Comunicação</h2>
+        <div className="space-y-3 rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
+          <p className="text-xs text-ink-500">
+            Independente do seu status de conta, você decide se quer receber novidades — isso nunca é assumido automaticamente.
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-ink-700 dark:text-ink-200">Novidades por e-mail</span>
+            <div className="flex gap-1.5">
+              <button
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${consentQuery.data?.email === true ? 'bg-brand-600 text-white' : 'border border-ink-200 text-ink-600 dark:border-ink-700 dark:text-ink-300'}`}
+                disabled={consentBusy === 'email'}
+                onClick={() => handleSetConsent('email', true)}
+              >
+                Sim
+              </button>
+              <button
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${consentQuery.data?.email === false ? 'bg-ink-700 text-white' : 'border border-ink-200 text-ink-600 dark:border-ink-700 dark:text-ink-300'}`}
+                disabled={consentBusy === 'email'}
+                onClick={() => handleSetConsent('email', false)}
+              >
+                Não
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-ink-700 dark:text-ink-200">Novidades por WhatsApp</span>
+            <div className="flex gap-1.5">
+              <button
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${consentQuery.data?.whatsapp === true ? 'bg-brand-600 text-white' : 'border border-ink-200 text-ink-600 dark:border-ink-700 dark:text-ink-300'}`}
+                disabled={consentBusy === 'whatsapp'}
+                onClick={() => handleSetConsent('whatsapp', true)}
+              >
+                Sim
+              </button>
+              <button
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${consentQuery.data?.whatsapp === false ? 'bg-ink-700 text-white' : 'border border-ink-200 text-ink-600 dark:border-ink-700 dark:text-ink-300'}`}
+                disabled={consentBusy === 'whatsapp'}
+                onClick={() => handleSetConsent('whatsapp', false)}
+              >
+                Não
+              </button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section>

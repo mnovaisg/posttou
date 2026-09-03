@@ -1708,6 +1708,155 @@ export type Database = {
           },
         ]
       }
+      lead_attribution: {
+        Row: {
+          captured_at: string
+          coupon_code_at_signup: string | null
+          organization_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          captured_at?: string
+          coupon_code_at_signup?: string | null
+          organization_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          captured_at?: string
+          coupon_code_at_signup?: string | null
+          organization_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_attribution_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_follow_ups: {
+        Row: {
+          action_type: string
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          due_at: string | null
+          id: string
+          note: string | null
+          organization_id: string
+          status: string
+        }
+        Insert: {
+          action_type: string
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          due_at?: string | null
+          id?: string
+          note?: string | null
+          organization_id: string
+          status?: string
+        }
+        Update: {
+          action_type?: string
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          due_at?: string | null
+          id?: string
+          note?: string | null
+          organization_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_follow_ups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_notes: {
+        Row: {
+          author_user_id: string
+          body: string
+          created_at: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          author_user_id: string
+          body: string
+          created_at?: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_tags: {
+        Row: {
+          organization_id: string
+          tags: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          organization_id: string
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          organization_id?: string
+          tags?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_acceptances: {
         Row: {
           accepted_at: string
@@ -1756,6 +1905,33 @@ export type Database = {
           id?: string
           is_current?: boolean
           version?: string
+        }
+        Relationships: []
+      }
+      marketing_consents: {
+        Row: {
+          changed_at: string
+          channel: string
+          id: string
+          opted_in: boolean
+          source: string
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          channel: string
+          id?: string
+          opted_in: boolean
+          source: string
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          channel?: string
+          id?: string
+          opted_in?: boolean
+          source?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2644,6 +2820,7 @@ export type Database = {
           trial_started_at: string | null
           trial_status: string
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -2655,6 +2832,7 @@ export type Database = {
           trial_started_at?: string | null
           trial_status?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -2666,6 +2844,7 @@ export type Database = {
           trial_started_at?: string | null
           trial_status?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }
@@ -3854,6 +4033,19 @@ export type Database = {
       }
     }
     Functions: {
+      _admin_lead_base: {
+        Args: never
+        Returns: {
+          commercial_status: string
+          has_voluntary_cancel: boolean
+          organization_created_at: string
+          organization_id: string
+          organization_name: string
+          owner_user_id: string
+          sub: Database["public"]["Tables"]["subscriptions"]["Row"]
+          workspace_id: string
+        }[]
+      }
       _compute_coupon_discount: {
         Args: {
           p_coupon: Database["public"]["Tables"]["coupons"]["Row"]
@@ -3865,6 +4057,13 @@ export type Database = {
         Args: {
           p_coupon: Database["public"]["Tables"]["coupons"]["Row"]
           p_used_count: number
+        }
+        Returns: string
+      }
+      _lead_commercial_status: {
+        Args: {
+          p_has_voluntary_cancel: boolean
+          p_sub: Database["public"]["Tables"]["subscriptions"]["Row"]
         }
         Returns: string
       }
@@ -4015,6 +4214,69 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_add_lead_follow_up_system: {
+        Args: {
+          p_action_type: string
+          p_due_at: string
+          p_note: string
+          p_organization_id: string
+        }
+        Returns: {
+          action_type: string
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          due_at: string | null
+          id: string
+          note: string | null
+          organization_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_add_lead_note_system: {
+        Args: { p_body: string; p_organization_id: string }
+        Returns: {
+          author_user_id: string
+          body: string
+          created_at: string
+          id: string
+          organization_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_notes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_complete_lead_follow_up_system: {
+        Args: { p_follow_up_id: string }
+        Returns: {
+          action_type: string
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          due_at: string | null
+          id: string
+          note: string | null
+          organization_id: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_follow_ups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_create_coupon_system: {
         Args: {
           p_active?: boolean
@@ -4066,12 +4328,37 @@ export type Database = {
         Args: { p_coupon_id: string }
         Returns: Json
       }
+      admin_get_lead_detail_system: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      admin_lead_metrics_system: { Args: never; Returns: Json }
       admin_list_coupons_system: {
         Args: {
           p_limit?: number
           p_offset?: number
           p_search?: string
           p_status?: string
+        }
+        Returns: Json
+      }
+      admin_list_leads_system: {
+        Args: {
+          p_billing_interval?: Database["public"]["Enums"]["billing_interval"]
+          p_coupon_code?: string
+          p_inactive_days?: number
+          p_include_deleted?: boolean
+          p_limit?: number
+          p_marketing_email?: boolean
+          p_marketing_whatsapp?: boolean
+          p_offset?: number
+          p_plan_id?: string
+          p_search?: string
+          p_signup_from?: string
+          p_signup_to?: string
+          p_status?: string
+          p_utm_campaign?: string
+          p_utm_source?: string
         }
         Returns: Json
       }
@@ -4101,6 +4388,21 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "coupons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_lead_tags_system: {
+        Args: { p_organization_id: string; p_tags: string[] }
+        Returns: {
+          organization_id: string
+          tags: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_tags"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -4361,6 +4663,18 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      claim_lead_attribution_system: {
+        Args: {
+          p_coupon_code?: string
+          p_organization_id: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_utm_term?: string
+        }
+        Returns: Json
       }
       claim_performance_snapshots: {
         Args: { p_limit?: number }
@@ -5105,6 +5419,7 @@ export type Database = {
         }[]
       }
       get_invite_preview: { Args: { p_token: string }; Returns: Json }
+      get_my_marketing_consent_system: { Args: never; Returns: Json }
       get_onboarding_state: { Args: { p_workspace_id: string }; Returns: Json }
       get_workspace_entitlements: {
         Args: { p_workspace_id: string }
@@ -5898,6 +6213,23 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_my_marketing_consent_system: {
+        Args: { p_channel: string; p_opted_in: boolean; p_source?: string }
+        Returns: {
+          changed_at: string
+          channel: string
+          id: string
+          opted_in: boolean
+          source: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "marketing_consents"
           isOneToOne: true
           isSetofReturn: false
         }

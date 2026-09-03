@@ -40,6 +40,8 @@ const AdminDashboardPage = React.lazy(() => import('@/features/admin/AdminDashbo
 const AdminCouponsPage = React.lazy(() => import('@/features/admin/AdminCouponsPage').then((m) => ({ default: m.AdminCouponsPage })))
 const AdminCouponFormPage = React.lazy(() => import('@/features/admin/AdminCouponFormPage').then((m) => ({ default: m.AdminCouponFormPage })))
 const AdminCouponDetailPage = React.lazy(() => import('@/features/admin/AdminCouponDetailPage').then((m) => ({ default: m.AdminCouponDetailPage })))
+const AdminLeadsPage = React.lazy(() => import('@/features/admin/AdminLeadsPage').then((m) => ({ default: m.AdminLeadsPage })))
+const AdminLeadDetailPage = React.lazy(() => import('@/features/admin/AdminLeadDetailPage').then((m) => ({ default: m.AdminLeadDetailPage })))
 
 function RouteFallback() {
   return (
@@ -94,6 +96,22 @@ function App() {
                 element={
                   <React.Suspense fallback={<RouteFallback />}>
                     <AdminDashboardPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="clientes"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminLeadsPage />
+                  </React.Suspense>
+                }
+              />
+              <Route
+                path="clientes/:organizationId"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <AdminLeadDetailPage />
                   </React.Suspense>
                 }
               />

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { readDiscoveryToken } from '@/features/instagram-discovery/session-token'
 import { readPendingCoupon } from '@/lib/pendingCoupon'
+import { readPendingAttribution } from '@/lib/pendingAttribution'
 
 export function SignupPage() {
   const { signUp } = useAuth()
@@ -35,6 +36,8 @@ export function SignupPage() {
       return
     }
     setLoading(true)
+    const pendingCoupon = readPendingCoupon()
+    const pendingAttribution = readPendingAttribution()
     const { error } = await signUp(email, password, {
       fullName,
       workspaceName: workspaceName || `${fullName} — Workspace`,
@@ -45,7 +48,11 @@ export function SignupPage() {
       // Mesmo princípio: cupom aplicado na Landing (se houver) viaja
       // dentro da conta, não do navegador — sobrevive à confirmação de
       // e-mail mesmo se abrir em outro dispositivo/aba.
-      pendingCoupon: readPendingCoupon(),
+      pendingCoupon,
+      // UTMs capturados na Landing, mesmo transporte seguro. O cupom de
+      // entrada (se houver) some junto na atribuição, sem precisar de
+      // uma segunda captura separada.
+      pendingAttribution: pendingCoupon ? { ...pendingAttribution, coupon_code: pendingCoupon.code } : pendingAttribution,
     })
     setLoading(false)
     if (error) {

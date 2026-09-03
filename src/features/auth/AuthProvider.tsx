@@ -16,6 +16,7 @@ interface AuthContextValue {
       workspaceName: string
       discoveryToken?: string | null
       pendingCoupon?: { code: string; planId: string; billingInterval: 'monthly' | 'yearly' } | null
+      pendingAttribution?: Record<string, string | undefined> | null
     },
   ) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         workspaceName: string
         discoveryToken?: string | null
         pendingCoupon?: { code: string; planId: string; billingInterval: 'monthly' | 'yearly' } | null
+        pendingAttribution?: Record<string, string | undefined> | null
       },
     ) => {
       const { error } = await supabase.auth.signUp({
@@ -120,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             workspace_name: opts.workspaceName,
             ...(opts.discoveryToken ? { discovery_token: opts.discoveryToken } : {}),
             ...(opts.pendingCoupon ? { pending_coupon: opts.pendingCoupon } : {}),
+            ...(opts.pendingAttribution && Object.keys(opts.pendingAttribution).length > 0 ? { pending_attribution: opts.pendingAttribution } : {}),
           },
         },
       })

@@ -12,6 +12,7 @@ import { LandingFaq } from '@/features/landing/LandingFaq'
 import { LandingCta } from '@/features/landing/LandingCta'
 import { LandingFooter } from '@/features/landing/LandingFooter'
 import { trackEvent } from '@/lib/analytics'
+import { captureAttributionFromLocation } from '@/lib/pendingAttribution'
 
 const TITLE = 'POSTTOU — Seu Instagram trabalhando mesmo quando você não está'
 const DESCRIPTION =
@@ -26,6 +27,7 @@ const DESCRIPTION =
 export function LandingPage() {
   React.useEffect(() => {
     trackEvent('landing_view')
+    captureAttributionFromLocation(window.location.search)
   }, [])
 
   React.useEffect(() => {
