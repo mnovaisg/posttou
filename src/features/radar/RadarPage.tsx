@@ -127,7 +127,8 @@ export function RadarPage() {
 
                 <div className="rounded-lg bg-ink-50 p-3 text-xs text-ink-500 dark:bg-ink-800">
                   <p>
-                    Score viral: {cluster?.viral_score ?? '—'}/100 · Compatibilidade com a marca: {opp.brand_fit_score}/100 · Novidade: {opp.novelty_score}/100
+                    Score viral: {cluster?.viral_score ?? '—'}/100 · Compatibilidade com a marca: {opp.brand_fit_score}/100 · Novidade:{' '}
+                    {typeof opp.novelty_score === 'number' ? Math.round(opp.novelty_score) : opp.novelty_score}/100
                   </p>
                   <p className="mt-1">
                     {cluster?.signal_count ?? 0} sinal(is) considerado(s)

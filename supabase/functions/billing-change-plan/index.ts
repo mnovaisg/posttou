@@ -53,7 +53,11 @@ Deno.serve(async (req) => {
     p_new_billing_interval: body.newBillingInterval,
   })
   if (changeError) {
-    return json({ error: 'request_plan_change_failed', detail: changeError.message }, 400)
+    // Bloco 12.2: request_plan_change usa `hint` do Postgres pra carregar
+    // uma mensagem segura pro usuário em falhas esperadas (ex.: troca de
+    // ciclo bloqueada) — repassamos como `message` pro frontend exibir
+    // direto, sem vazar o texto técnico da exceção.
+    return json({ error: 'request_plan_change_failed', message: changeError.hint ?? undefined, detail: changeError.message }, 400)
   }
 
   if (changeResult.kind === 'downgrade') {

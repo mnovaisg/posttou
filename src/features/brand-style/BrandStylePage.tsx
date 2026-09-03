@@ -54,6 +54,17 @@ export function BrandStylePage() {
 
   const { data: logoUrl } = useBrandAssetUrl(logoPath)
 
+  // Evita perda silenciosa ao fechar a aba ou dar refresh com alterações
+  // não salvas (cores, estilo de imagem/design, traços de voz, logo).
+  React.useEffect(() => {
+    if (!dirty) return
+    function handler(e: BeforeUnloadEvent) {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!visualIdentity) throw new Error('Sem dados para salvar.')
@@ -238,7 +249,12 @@ export function BrandStylePage() {
       </Card>
 
       {canWrite && (
-        <div className="sticky bottom-4 flex justify-end">
+        <div className="sticky bottom-4 flex flex-col items-end gap-1.5">
+          {saveMutation.isError && (
+            <p className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
+              Erro ao salvar. Tente novamente.
+            </p>
+          )}
           <Button onClick={() => saveMutation.mutate()} disabled={!dirty || saveMutation.isPending} size="lg">
             {saveMutation.isPending ? 'Salvando…' : dirty ? 'Salvar alterações' : 'Salvo'}
           </Button>

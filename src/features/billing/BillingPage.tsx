@@ -43,6 +43,7 @@ export function BillingPage() {
   const [couponStatus, setCouponStatus] = React.useState<Record<string, 'validating' | 'done'>>({})
   const [couponResult, setCouponResult] = React.useState<Record<string, CouponPreview>>({})
   const [billingInterval, setBillingInterval] = React.useState<'monthly' | 'yearly'>('monthly')
+  const [confirmingCancel, setConfirmingCancel] = React.useState(false)
 
   const organizationId = activeWorkspace?.organization_id ?? null
   const isOwner = activeRole === 'owner'
@@ -162,14 +163,45 @@ export function BillingPage() {
             </p>
           )}
 
-          {isOwner && (ent.status === 'active' || ent.status === 'past_due') && (
+          {isOwner && (ent.status === 'active' || ent.status === 'past_due') && !confirmingCancel && (
             <button
               className="mt-4 text-sm font-medium text-red-600 hover:underline disabled:opacity-50"
               disabled={busy === 'cancel'}
-              onClick={() => handleAction(() => cancelSubscription(organizationId!), 'cancel')}
+              onClick={() => setConfirmingCancel(true)}
             >
               Cancelar assinatura
             </button>
+          )}
+          {isOwner && (ent.status === 'active' || ent.status === 'past_due') && confirmingCancel && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
+              <p className="text-sm font-medium text-red-900 dark:text-red-200">Cancelar assinatura?</p>
+              <p className="mt-1 text-sm text-red-800 dark:text-red-300">
+                Sua assinatura continuará ativa e você continuará tendo acesso normalmente até o final do período já
+                pago{ent.franchise_period_end && <> — {new Date(ent.franchise_period_end).toLocaleDateString('pt-BR')}</>}.
+                Depois disso, o acesso é encerrado e nenhuma nova cobrança é feita.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-900 hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-900"
+                  disabled={busy === 'cancel'}
+                  onClick={() => setConfirmingCancel(false)}
+                >
+                  Manter assinatura
+                </button>
+                <button
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  disabled={busy === 'cancel'}
+                  onClick={() =>
+                    handleAction(async () => {
+                      await cancelSubscription(organizationId!)
+                      setConfirmingCancel(false)
+                    }, 'cancel')
+                  }
+                >
+                  {busy === 'cancel' ? 'Cancelando…' : 'Confirmar cancelamento'}
+                </button>
+              </div>
+            </div>
           )}
           {ent.status === 'cancel_at_period_end' && (
             <p className="mt-4 text-sm text-ink-500">

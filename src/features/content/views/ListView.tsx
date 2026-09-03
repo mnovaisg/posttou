@@ -93,7 +93,50 @@ export function ListView({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto rounded-xl border border-ink-200 dark:border-ink-700">
+      {/* Mobile: cards — evita tabela horizontal difícil de ler em ~375px */}
+      <div className="flex flex-col gap-2.5 sm:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-xl border border-ink-200 bg-white p-3.5 dark:border-ink-700 dark:bg-ink-900">
+            <div className="flex items-start justify-between gap-2">
+              <Link to={`/conteudo/${row.id}`} className="font-medium text-ink-900 hover:text-brand-600 dark:text-ink-50">
+                {row.title}
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="shrink-0 rounded-md px-2 py-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800">
+                  ⋯
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to={`/conteudo/${row.id}`}>Abrir</Link>
+                  </DropdownMenuItem>
+                  {canWrite && <DropdownMenuItem onSelect={() => duplicateMutation.mutate(row)}>Duplicar</DropdownMenuItem>}
+                  {canWrite && (
+                    <DropdownMenuItem onSelect={() => setConfirmDelete(row)} className="text-danger-500">
+                      Excluir
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500 dark:text-ink-400">
+              <span>
+                {TYPE_ICON[row.type]} {TYPE_LABEL[row.type]}
+              </span>
+              <span>
+                {ORIGIN_ICON[row.origin]} {ORIGIN_LABEL[row.origin]}
+              </span>
+              <StatusBadge status={row.status} />
+            </div>
+            <div className="mt-2 flex flex-col gap-0.5 text-xs text-ink-400">
+              {row.scheduled_at && <span>Agendado: {formatInTimeZone(row.scheduled_at, tz)}</span>}
+              <span>Atualizado: {formatInTimeZone(row.updated_at, tz)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: tabela, preservada */}
+      <div className="hidden overflow-x-auto rounded-xl border border-ink-200 dark:border-ink-700 sm:block">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-ink-50 text-left text-xs font-medium uppercase text-ink-400 dark:bg-ink-800">
             <tr>
