@@ -100,6 +100,22 @@ export async function previewCoupon(organizationId: string, code: string, planId
   return data as unknown as CouponPreview
 }
 
+// Variante pública (Landing, pré-cadastro) — ainda não existe
+// organização, então não dá pra chamar previewCoupon. Mesma
+// infraestrutura de validação/desconto do servidor, mesmo shape de
+// retorno; só não avalia os dois critérios que dependem de organização
+// (isso é revalidado de verdade no checkout, que é sempre a autoridade
+// final — este preview é só prévia).
+export async function publicPreviewCoupon(code: string, planId: string, billingInterval: 'monthly' | 'yearly'): Promise<CouponPreview> {
+  const { data, error } = await supabase.rpc('public_preview_coupon', {
+    p_code: code,
+    p_plan_id: planId,
+    p_billing_interval: billingInterval,
+  })
+  if (error) throw error
+  return data as unknown as CouponPreview
+}
+
 export const COUPON_REASON_LABEL: Record<string, string> = {
   not_found: 'Cupom não encontrado.',
   invalid_plan: 'Plano inválido.',

@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchPlans } from '@/features/billing/api'
+import { fetchPlans, publicPreviewCoupon, COUPON_REASON_LABEL } from '@/features/billing/api'
+import type { CouponPreview } from '@/features/billing/api'
+import { savePendingCoupon } from '@/lib/pendingCoupon'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { trackEvent } from '@/lib/analytics'
@@ -23,12 +25,59 @@ export function LandingPricing() {
   const [interval, setInterval] = React.useState<'monthly' | 'yearly'>('monthly')
   const plansQuery = useQuery({ queryKey: ['landing-plans'], queryFn: fetchPlans })
 
+  // Ajuste cupom na Landing — reaproveita a mesma infraestrutura de
+  // validação do Billing (public_preview_coupon é a mesma lógica de
+  // preview_coupon, só sem exigir organização, que ainda não existe
+  // pré-cadastro). Nunca reserva/consome o cupom aqui: é só prévia,
+  // igual ao Billing — a aplicação de verdade acontece no checkout.
+  const [couponOpenFor, setCouponOpenFor] = React.useState<string | null>(null)
+  const [couponInput, setCouponInput] = React.useState<Record<string, string>>({})
+  const [couponStatus, setCouponStatus] = React.useState<Record<string, 'validating' | 'done'>>({})
+  const [couponResult, setCouponResult] = React.useState<Record<string, CouponPreview>>({})
+
   React.useEffect(() => {
     if (plansQuery.data) {
       trackEvent('landing_pricing_viewed')
       trackEvent('pricing_viewed')
     }
   }, [plansQuery.data])
+
+  async function runCouponPreview(planId: string, code: string, forInterval: 'monthly' | 'yearly') {
+    setCouponStatus((s) => ({ ...s, [planId]: 'validating' }))
+    try {
+      const result = await publicPreviewCoupon(code, planId, forInterval)
+      setCouponResult((r) => ({ ...r, [planId]: result }))
+      if (result.valid) {
+        // Só transporte do código até o cadastro/Billing — nunca
+        // autoridade sobre desconto. Revalidado de verdade lá.
+        savePendingCoupon({ code, planId, billingInterval: forInterval })
+      }
+    } catch {
+      setCouponResult((r) => ({ ...r, [planId]: { valid: false, reason: 'not_found' } }))
+    } finally {
+      setCouponStatus((s) => ({ ...s, [planId]: 'done' }))
+    }
+  }
+
+  function handleApplyCoupon(planId: string) {
+    const code = (couponInput[planId] ?? '').trim()
+    if (!code) return
+    void runCouponPreview(planId, code, interval)
+  }
+
+  // Um cupom validado é específico do ciclo — trocar mensal/anual pode
+  // mudar a elegibilidade (interval_not_eligible), então revalida
+  // qualquer cupom já digitado/aplicado em vez de só descartar o
+  // resultado anterior.
+  function handleIntervalChange(next: 'monthly' | 'yearly') {
+    setInterval(next)
+    Object.entries(couponInput).forEach(([planId, code]) => {
+      const trimmed = code?.trim()
+      if (trimmed && couponResult[planId]) {
+        void runCouponPreview(planId, trimmed, next)
+      }
+    })
+  }
 
   return (
     <section id="planos" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
@@ -40,7 +89,7 @@ export function LandingPricing() {
       <div className="mx-auto mt-8 flex w-fit items-center gap-1 rounded-lg border border-ink-200 p-1 dark:border-ink-700">
         <button
           type="button"
-          onClick={() => setInterval('monthly')}
+          onClick={() => handleIntervalChange('monthly')}
           className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
             interval === 'monthly' ? 'bg-brand-600 text-white' : 'text-ink-600 dark:text-ink-300'
           }`}
@@ -49,7 +98,7 @@ export function LandingPricing() {
         </button>
         <button
           type="button"
-          onClick={() => setInterval('yearly')}
+          onClick={() => handleIntervalChange('yearly')}
           className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
             interval === 'yearly' ? 'bg-brand-600 text-white' : 'text-ink-600 dark:text-ink-300'
           }`}
@@ -120,8 +169,69 @@ export function LandingPricing() {
                   {capabilities.can_use_radar === true && <li>Radar Viral incluso</li>}
                 </ul>
 
+                {(() => {
+                  const applied = couponResult[plan.id]
+                  return (
+                    <div className="mt-4 border-t border-ink-100 pt-4 dark:border-ink-800">
+                      {couponOpenFor !== plan.id && !applied?.valid && (
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
+                          onClick={() => setCouponOpenFor(plan.id)}
+                        >
+                          Tem um cupom?
+                        </button>
+                      )}
+                      {(couponOpenFor === plan.id || applied?.valid) && (
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex gap-1.5">
+                            <input
+                              className="min-w-0 flex-1 rounded-lg border border-ink-200 px-2 py-1.5 text-xs uppercase dark:border-ink-800 dark:bg-ink-950"
+                              placeholder="DIGITE SEU CUPOM"
+                              value={couponInput[plan.id] ?? ''}
+                              disabled={!!applied?.valid}
+                              onChange={(e) => setCouponInput((s) => ({ ...s, [plan.id]: e.target.value }))}
+                            />
+                            {!applied?.valid && (
+                              <button
+                                type="button"
+                                className="shrink-0 rounded-lg border border-ink-200 px-2.5 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-50 disabled:opacity-50 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
+                                disabled={couponStatus[plan.id] === 'validating' || !couponInput[plan.id]?.trim()}
+                                onClick={() => handleApplyCoupon(plan.id)}
+                              >
+                                {couponStatus[plan.id] === 'validating' ? 'Aplicando…' : 'Aplicar'}
+                              </button>
+                            )}
+                          </div>
+                          {applied && !applied.valid && (
+                            <p className="text-xs text-danger-500">{COUPON_REASON_LABEL[applied.reason ?? ''] ?? 'Cupom inválido.'}</p>
+                          )}
+                          {applied?.valid && (
+                            <div className="rounded-lg bg-green-50 p-2 text-xs text-green-900 dark:bg-green-950 dark:text-green-200">
+                              <p className="font-medium">✓ Cupom aplicado</p>
+                              {applied.duration === 'first_payment' ? (
+                                <p className="mt-0.5">
+                                  {applied.discountType === 'percentage'
+                                    ? `${Math.round((applied.discountAmountCents! / applied.originalAmountCents!) * 100)}% de desconto no primeiro pagamento.`
+                                    : `${formatPrecise(applied.discountAmountCents ?? 0)} de desconto no primeiro pagamento.`}
+                                </p>
+                              ) : (
+                                <p className="mt-0.5">
+                                  {applied.discountType === 'percentage'
+                                    ? `${Math.round((applied.discountAmountCents! / applied.originalAmountCents!) * 100)}% de desconto enquanto o cupom estiver válido para a recorrência.`
+                                    : `${formatPrecise(applied.discountAmountCents ?? 0)} de desconto enquanto o cupom estiver válido para a recorrência.`}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
                 <Button
-                  className="mt-6"
+                  className="mt-4"
                   variant={highlighted ? 'primary' : 'outline'}
                   asChild
                   onClick={() => {

@@ -19,6 +19,7 @@ import { KnowYourBrandFlow } from '@/features/brand-dna/KnowYourBrandFlow'
 import { readPendingCreateIdea } from '@/features/instagram-discovery/session-token'
 import { FirstContentFlow } from '@/features/onboarding/FirstContentFlow'
 import { fetchOnboardingState } from '@/features/onboarding/api'
+import { peekPendingInstagramHandle } from '@/lib/pendingInstagramHandle'
 import type { TablesUpdate } from '@/types/database'
 
 const STEPS = [
@@ -53,6 +54,12 @@ export function BrandDnaPage() {
   // Discovery pré-cadastro) — nunca pergunta o @ duas vezes nem reseta
   // progresso de workspace existente.
   const [flowStage, setFlowStage] = React.useState<'know_brand' | 'wizard' | null>(null)
+  // Ajuste UX — DNA manual: na primeira entrada (sem dado salvo e sem @
+  // capturado na landing), mostra duas opções igualmente claras em vez de
+  // ir direto para o pedido de @Instagram. Uma vez escolhido "automático",
+  // não pergunta de novo nesta sessão de tela.
+  const [entryChoiceMade, setEntryChoiceMade] = React.useState(false)
+  const [pendingHandlePeek] = React.useState(() => peekPendingInstagramHandle())
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['brand-profile', activeWorkspace?.id],
@@ -183,6 +190,52 @@ export function BrandDnaPage() {
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  const hasKnownBrandData = !!(profile?.company_name?.trim() || profile?.description?.trim())
+  const needsEntryChoice =
+    flowStage === 'know_brand' && !justCompleted && !hasKnownBrandData && !pendingHandlePeek && !entryChoiceMade
+
+  if (needsEntryChoice) {
+    return (
+      <div className="mx-auto flex max-w-2xl flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900 dark:text-ink-50">DNA da Marca</h1>
+          <p className="text-sm text-ink-500">
+            Vamos conhecer sua marca para criar conteúdos que realmente pareçam feitos por você. Escolha como
+            prefere começar — dá pra editar tudo depois, de qualquer forma.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setEntryChoiceMade(true)}
+            className="flex flex-col items-start gap-2 rounded-2xl border border-ink-200 bg-white p-5 text-left shadow-sm transition-colors hover:border-brand-300 hover:bg-brand-50/40 dark:border-ink-700 dark:bg-ink-900 dark:hover:border-brand-700"
+          >
+            <span className="text-2xl">✨</span>
+            <h2 className="text-base font-semibold text-ink-900 dark:text-ink-50">Criar automaticamente</h2>
+            <p className="text-sm text-ink-500">
+              Informe o @Instagram da marca (opcional) e deixe a IA sugerir um primeiro DNA. Você revisa e ajusta
+              antes de salvar.
+            </p>
+            <span className="mt-1 text-sm font-medium text-brand-600 dark:text-brand-400">Começar →</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFlowStage('wizard')}
+            className="flex flex-col items-start gap-2 rounded-2xl border border-ink-200 bg-white p-5 text-left shadow-sm transition-colors hover:border-brand-300 hover:bg-brand-50/40 dark:border-ink-700 dark:bg-ink-900 dark:hover:border-brand-700"
+          >
+            <span className="text-2xl">📝</span>
+            <h2 className="text-base font-semibold text-ink-900 dark:text-ink-50">Criar manualmente</h2>
+            <p className="text-sm text-ink-500">
+              Prefere preencher você mesmo, passo a passo? Sem precisar de Instagram — você controla cada campo
+              desde o início.
+            </p>
+            <span className="mt-1 text-sm font-medium text-brand-600 dark:text-brand-400">Começar →</span>
+          </button>
+        </div>
       </div>
     )
   }

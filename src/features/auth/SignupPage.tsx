@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { readDiscoveryToken } from '@/features/instagram-discovery/session-token'
+import { readPendingCoupon } from '@/lib/pendingCoupon'
 
 export function SignupPage() {
   const { signUp } = useAuth()
@@ -41,6 +42,10 @@ export function SignupPage() {
       // criada) e enviado para dentro da conta — o claim em si só
       // acontece depois, no primeiro login já autenticado.
       discoveryToken: readDiscoveryToken(),
+      // Mesmo princípio: cupom aplicado na Landing (se houver) viaja
+      // dentro da conta, não do navegador — sobrevive à confirmação de
+      // e-mail mesmo se abrir em outro dispositivo/aba.
+      pendingCoupon: readPendingCoupon(),
     })
     setLoading(false)
     if (error) {

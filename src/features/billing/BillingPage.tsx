@@ -13,6 +13,7 @@ import {
   startCheckout,
 } from '@/features/billing/api'
 import type { CouponPreview } from '@/features/billing/api'
+import { readPendingCoupon } from '@/lib/pendingCoupon'
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: 'Em teste grátis',
@@ -55,6 +56,29 @@ export function BillingPage() {
   })
 
   const plansQuery = useQuery({ queryKey: ['billing-plans'], queryFn: fetchPlans })
+
+  // Ajuste cupom na Landing — pré-preenche e revalida (de verdade, via
+  // previewCoupon com a organização real) o cupom aplicado antes do
+  // cadastro, assim que chegamos aqui com organização e planos
+  // carregados. Consumido uma única vez por montagem da página; se o
+  // cupom não valer mais para este plano/ciclo, o preview real já
+  // reflete isso (reason correto), nunca mostra "aplicado" sem checagem.
+  const pendingCouponAppliedRef = React.useRef(false)
+  React.useEffect(() => {
+    if (pendingCouponAppliedRef.current || !organizationId || !plansQuery.data) return
+    const pending = readPendingCoupon()
+    if (!pending) return
+    pendingCouponAppliedRef.current = true
+    if (!plansQuery.data.some((p) => p.id === pending.planId)) return
+    setBillingInterval(pending.billingInterval)
+    setCouponOpenFor(pending.planId)
+    setCouponInput((s) => ({ ...s, [pending.planId]: pending.code }))
+    setCouponStatus((s) => ({ ...s, [pending.planId]: 'validating' }))
+    previewCoupon(organizationId, pending.code, pending.planId, pending.billingInterval)
+      .then((result) => setCouponResult((r) => ({ ...r, [pending.planId]: result })))
+      .catch(() => setCouponResult((r) => ({ ...r, [pending.planId]: { valid: false, reason: 'not_found' } })))
+      .finally(() => setCouponStatus((s) => ({ ...s, [pending.planId]: 'done' })))
+  }, [organizationId, plansQuery.data])
 
   const workspacesQuery = useQuery({
     queryKey: ['billing-org-workspaces', organizationId],

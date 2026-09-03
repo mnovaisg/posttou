@@ -11,7 +11,12 @@ interface AuthContextValue {
   signUp: (
     email: string,
     password: string,
-    opts: { fullName: string; workspaceName: string; discoveryToken?: string | null },
+    opts: {
+      fullName: string
+      workspaceName: string
+      discoveryToken?: string | null
+      pendingCoupon?: { code: string; planId: string; billingInterval: 'monthly' | 'yearly' } | null
+    },
   ) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   requestPasswordReset: (email: string) => Promise<{ error: string | null }>
@@ -91,21 +96,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (
       email: string,
       password: string,
-      opts: { fullName: string; workspaceName: string; discoveryToken?: string | null },
+      opts: {
+        fullName: string
+        workspaceName: string
+        discoveryToken?: string | null
+        pendingCoupon?: { code: string; planId: string; billingInterval: 'monthly' | 'yearly' } | null
+      },
     ) => {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          // discovery_token viaja em raw_user_meta_data (nunca em URL/query
-          // string) especificamente para sobreviver à confirmação de
-          // e-mail: o link de confirmação quase sempre abre em outra
-          // aba/app, onde sessionStorage já não existe mais. Metadados do
-          // usuário acompanham a conta, não o navegador.
+          // discovery_token e pending_coupon viajam em raw_user_meta_data
+          // (nunca em URL/query string) especificamente para sobreviver à
+          // confirmação de e-mail: o link de confirmação quase sempre abre
+          // em outra aba/app, onde sessionStorage já não existe mais.
+          // Metadados do usuário acompanham a conta, não o navegador.
+          // pending_coupon é só transporte do código — nunca autoridade
+          // sobre desconto (isso é revalidado de verdade quando chega no
+          // Billing e, com força total, no checkout).
           data: {
             full_name: opts.fullName,
             workspace_name: opts.workspaceName,
             ...(opts.discoveryToken ? { discovery_token: opts.discoveryToken } : {}),
+            ...(opts.pendingCoupon ? { pending_coupon: opts.pendingCoupon } : {}),
           },
         },
       })

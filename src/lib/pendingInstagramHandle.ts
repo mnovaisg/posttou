@@ -22,3 +22,8 @@ export function consumePendingInstagramHandle(): string | null {
   if (value) window.localStorage.removeItem(STORAGE_KEY)
   return value
 }
+
+/** Leitura sem consumir — usada só para decidir UI antes do consumo real (que continua sendo o KnowYourBrandFlow). */
+export function peekPendingInstagramHandle(): string | null {
+  return window.localStorage.getItem(STORAGE_KEY)
+}

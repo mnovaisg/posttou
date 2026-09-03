@@ -31,6 +31,19 @@ const KIE_SIZE_BY_FORMAT: Record<string, string> = {
   '9:16': '2:3',
 }
 
+// Bloco 12.3: como o provider nunca entrega 4:5/9:16 nativo, o
+// resultado é depois normalizado (contain, sem cortar) pra proporção
+// final — mas o normalizador precisa colocar uma faixa de preenchimento
+// nas bordas (topo/base pro 4:5, laterais pro 9:16). Esta instrução
+// orienta o modelo a manter o conteúdo essencial fora dessa faixa, pra
+// que a composição já saia naturalmente bem enquadrada quando reduzida
+// (nunca substitui a normalização em si, só reduz o quanto a faixa de
+// preenchimento precisa "inventar").
+const SAFE_AREA_INSTRUCTION_BY_FORMAT: Record<string, string> = {
+  '4:5': 'IMPORTANTE sobre enquadramento: esta imagem será depois ajustada para o formato vertical 4:5, mantendo a composição inteira (nada será cortado). Para o resultado ficar bem enquadrado, mantenha títulos, logo, CTA, textos, rostos e produtos concentrados na área central da composição, evitando elementos essenciais colados na borda superior ou inferior da imagem.',
+  '9:16': 'IMPORTANTE sobre enquadramento: esta imagem será depois ajustada para o formato vertical 9:16 (tipo Stories/Reels), mantendo a composição inteira (nada será cortado). Para o resultado ficar bem enquadrado, mantenha títulos, logo, CTA, textos, rostos e produtos concentrados na área central da composição, evitando elementos essenciais colados na borda esquerda ou direita da imagem.',
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
@@ -130,10 +143,13 @@ Deno.serve(async (req) => {
       .is('removed_at', null)
     const referencesText = referencesToPromptText((referenceRows ?? []) as ReferenceForPrompt[])
 
+    const safeAreaInstruction = typeof format === 'string' ? SAFE_AREA_INSTRUCTION_BY_FORMAT[format] : undefined
+
     const contextBlocks = [
       brandProfile ? `Contexto da marca (use para guiar estilo/identidade visual quando relevante):\n${brandText}` : '',
       visualDnaText,
       referencesText,
+      safeAreaInstruction ?? '',
     ].filter(Boolean)
 
     const fullPrompt = contextBlocks.length

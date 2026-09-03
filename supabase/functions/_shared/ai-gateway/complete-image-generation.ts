@@ -5,6 +5,7 @@
 // URL temporária de terceiro.
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import type { AsyncMediaProvider } from './types.ts'
+import { normalizeImageForFormat } from './normalize-image-format.ts'
 
 export type CompleteResult = { status: 'processing' | 'success' | 'failed' }
 
@@ -35,6 +36,18 @@ export async function completeImageGeneration(admin: SupabaseClient<any>, mediaP
     }
 
     const assetPaths: string[] = []
+    // Bloco 12.3 — metadados não sensíveis da normalização de proporção,
+    // um item por asset, gravados em ai_generations.result_payload.
+    const normalizationMeta: Array<{
+      original_path: string
+      final_path: string
+      original_width: number
+      original_height: number
+      final_width: number
+      final_height: number
+      format: string | null
+      method: string
+    }> = []
     const folder = generation.content_id ? `${generation.workspace_id}/${generation.content_id}` : `${generation.workspace_id}/geracoes-ia`
 
     for (const url of status.resultUrls) {
@@ -43,10 +56,48 @@ export async function completeImageGeneration(admin: SupabaseClient<any>, mediaP
       const bytes = new Uint8Array(await imgRes.arrayBuffer())
       const contentType = imgRes.headers.get('content-type') ?? 'image/png'
       const ext = contentType.includes('jpeg') ? 'jpg' : contentType.includes('webp') ? 'webp' : 'png'
-      const path = `${folder}/${crypto.randomUUID()}.${ext}`
 
-      const { error: uploadError } = await admin.storage.from('content-assets').upload(path, bytes, { contentType, upsert: false })
-      if (!uploadError) assetPaths.push(path)
+      // Original SEMPRE preservado intacto, nunca sobrescrito — mesmo
+      // quando a normalização abaixo entra em ação, esta cópia continua
+      // existindo no Storage para auditoria/reprocessamento futuro.
+      const originalPath = `${folder}/${crypto.randomUUID()}.${ext}`
+      const { error: originalUploadError } = await admin.storage.from('content-assets').upload(originalPath, bytes, { contentType, upsert: false })
+      if (originalUploadError) continue
+
+      let finalPath = originalPath
+      let normResult: Awaited<ReturnType<typeof normalizeImageForFormat>> | null = null
+      try {
+        normResult = await normalizeImageForFormat(bytes, generation.format ?? null)
+      } catch (err) {
+        // Nunca deixa uma falha de normalização derrubar a geração —
+        // volta pro comportamento anterior (usa o arquivo original como
+        // veio do provider) e só registra o erro pra investigação.
+        console.error('completeImageGeneration: falha ao normalizar proporção da imagem, usando original.', err)
+      }
+
+      if (normResult && normResult.method !== 'unchanged') {
+        const normalizedPath = `${folder}/${crypto.randomUUID()}.png`
+        const { error: normalizedUploadError } = await admin.storage
+          .from('content-assets')
+          .upload(normalizedPath, normResult.bytes, { contentType: normResult.contentType, upsert: false })
+        if (!normalizedUploadError) {
+          finalPath = normalizedPath
+        } else {
+          console.error('completeImageGeneration: falha ao subir asset normalizado, usando original.', normalizedUploadError)
+        }
+      }
+
+      assetPaths.push(finalPath)
+      normalizationMeta.push({
+        original_path: originalPath,
+        final_path: finalPath,
+        original_width: normResult?.originalWidth ?? 0,
+        original_height: normResult?.originalHeight ?? 0,
+        final_width: normResult?.finalWidth ?? 0,
+        final_height: normResult?.finalHeight ?? 0,
+        format: generation.format ?? null,
+        method: normResult?.method ?? 'unchanged',
+      })
     }
 
     if (!assetPaths.length) {
@@ -71,7 +122,12 @@ export async function completeImageGeneration(admin: SupabaseClient<any>, mediaP
     // "fantasma" depois. Agora só seguimos se a linha realmente mudou aqui.
     const { data: updatedRows, error: updateError } = await admin
       .from('ai_generations')
-      .update({ status: 'success', result_asset_paths: assetPaths, completed_at: new Date().toISOString() })
+      .update({
+        status: 'success',
+        result_asset_paths: assetPaths,
+        result_payload: { image_normalization: normalizationMeta },
+        completed_at: new Date().toISOString(),
+      })
       .eq('id', generation.id)
       .eq('status', 'processing')
       .select('id')

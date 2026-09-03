@@ -4,10 +4,12 @@ import { SidebarBrand, SidebarNav } from '@/app/Sidebar'
 import { TopBar } from '@/app/TopBar'
 import { cn } from '@/lib/utils'
 import { useDiscoveryClaimOnLogin } from '@/features/instagram-discovery/useDiscoveryClaimOnLogin'
+import { usePendingCouponClaim } from '@/features/billing/usePendingCouponClaim'
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
   useDiscoveryClaimOnLogin()
+  usePendingCouponClaim()
 
   return (
     <div className="flex min-h-screen bg-ink-50 dark:bg-ink-950">

@@ -36,6 +36,13 @@ export interface PilotVisualAssetResult {
 // mapeamento já documentado/testado em ai-generate-image).
 const PILOT_IMAGE_SIZE = '2:3'
 
+// Bloco 12.3 — mesma instrução de área segura usada em ai-generate-image:
+// o resultado 2:3 é depois normalizado (contain, sem cortar) pro 4:5
+// final, com uma faixa de preenchimento no topo/base — orienta o modelo
+// a manter o essencial fora dessa faixa.
+const PILOT_SAFE_AREA_INSTRUCTION =
+  'IMPORTANTE sobre enquadramento: esta imagem será depois ajustada para o formato vertical 4:5, mantendo a composição inteira (nada será cortado). Para o resultado ficar bem enquadrado, mantenha títulos, logo, CTA, textos, rostos e produtos concentrados na área central da composição, evitando elementos essenciais colados na borda superior ou inferior da imagem.'
+
 export async function generatePilotVisualAsset(params: PilotVisualAssetParams): Promise<PilotVisualAssetResult> {
   const { admin, mediaProvider, supabaseUrl, workspaceId, pageId, contentId, contentContext } = params
 
@@ -75,6 +82,7 @@ export async function generatePilotVisualAsset(params: PilotVisualAssetParams): 
     brandProfile ? `Contexto da marca (use para guiar estilo/identidade visual quando relevante):\n${brandText}` : '',
     visualDnaText,
     referencesText,
+    PILOT_SAFE_AREA_INSTRUCTION,
   ].filter(Boolean)
 
   const fullPrompt = [
