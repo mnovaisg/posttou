@@ -155,7 +155,39 @@ export async function changePlan(organizationId: string, newPlanId: string, newB
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.message ?? body.error ?? 'Não foi possível trocar de plano.')
-  return body as { kind: 'upgrade' | 'downgrade'; invoiceUrl?: string | null; appliedAtNextCycle?: boolean }
+  return body as {
+    kind: 'upgrade' | 'downgrade' | 'cycle_change'
+    invoiceUrl?: string | null
+    appliedAtNextCycle?: boolean
+    newPlanId?: string
+    newBillingInterval?: 'monthly' | 'yearly'
+    newPriceCents?: number
+    effectiveAt?: string
+  }
+}
+
+export interface PendingPlanChange {
+  has_pending: boolean
+  kind?: 'downgrade' | 'cycle_change'
+  pending_plan_id?: string
+  pending_plan_name?: string
+  pending_billing_interval?: 'monthly' | 'yearly'
+  pending_price_cents?: number
+  effective_at?: string
+  current_plan_id?: string
+  current_billing_interval?: 'monthly' | 'yearly'
+}
+
+export async function fetchPendingPlanChange(organizationId: string): Promise<PendingPlanChange> {
+  const { data, error } = await supabase.rpc('get_organization_pending_plan_change_system', { p_organization_id: organizationId })
+  if (error) throw error
+  return data as unknown as PendingPlanChange
+}
+
+export async function cancelScheduledPlanChange(organizationId: string) {
+  const { data, error } = await supabase.rpc('cancel_scheduled_plan_change_system', { p_organization_id: organizationId })
+  if (error) throw error
+  return data
 }
 
 export async function cancelSubscription(organizationId: string) {

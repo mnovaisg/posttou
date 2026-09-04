@@ -96,6 +96,21 @@ Deno.serve(async (req) => {
     return json({ kind: 'downgrade', appliedAtNextCycle: true })
   }
 
+  // Mudança de ciclo (mensal<->anual) agendada — preço já foi congelado
+  // e a troca já foi registrada como pendente dentro de
+  // request_plan_change. Nunca cobra, nunca sincroniza a Asaas agora —
+  // isso só acontece na efetivação real, no vencimento do período atual
+  // (billing-cron-dispatcher).
+  if (changeResult.kind === 'cycle_change') {
+    return json({
+      kind: 'cycle_change',
+      newPlanId: changeResult.new_plan_id,
+      newBillingInterval: changeResult.new_billing_interval,
+      newPriceCents: changeResult.new_price_cents,
+      effectiveAt: changeResult.effective_at,
+    })
+  }
+
   // Upgrade: precisa de cobrança da diferença antes de liberar.
   if (!asaasApiKey) {
     return json({ error: 'asaas_not_configured', message: 'ASAAS_API_KEY não configurada. Upgrade não pode gerar cobrança agora.' }, 501)
@@ -130,7 +145,10 @@ Deno.serve(async (req) => {
         const syncRes = await fetch(`${asaasBaseUrl}/subscriptions/${applied.asaas_subscription_id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-          body: JSON.stringify({ value: Number((applied.asaas_sync_target_price_cents / 100).toFixed(2)) }),
+          body: JSON.stringify({
+            value: Number((applied.asaas_sync_target_price_cents / 100).toFixed(2)),
+            cycle: applied.billing_interval === 'monthly' ? 'MONTHLY' : 'YEARLY',
+          }),
         })
         const syncBody = await syncRes.json()
         await admin.rpc('mark_asaas_subscription_sync_result_system', {

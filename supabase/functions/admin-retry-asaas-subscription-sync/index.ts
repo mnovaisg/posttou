@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
   const admin = createClient(supabaseUrl, serviceRoleKey)
   const { data: sub } = await admin
     .from('subscriptions')
-    .select('asaas_subscription_id, asaas_sync_status, asaas_sync_target_price_cents')
+    .select('asaas_subscription_id, asaas_sync_status, asaas_sync_target_price_cents, billing_interval')
     .eq('organization_id', body.organizationId)
     .maybeSingle()
 
@@ -55,7 +55,10 @@ Deno.serve(async (req) => {
     const res = await fetch(`${asaasBaseUrl}/subscriptions/${sub.asaas_subscription_id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-      body: JSON.stringify({ value: Number((sub.asaas_sync_target_price_cents / 100).toFixed(2)) }),
+      body: JSON.stringify({
+        value: Number((sub.asaas_sync_target_price_cents / 100).toFixed(2)),
+        cycle: sub.billing_interval === 'monthly' ? 'MONTHLY' : 'YEARLY',
+      }),
     })
     const resBody = await res.json()
     const { data: marked, error: markError } = await admin.rpc('mark_asaas_subscription_sync_result_system', {

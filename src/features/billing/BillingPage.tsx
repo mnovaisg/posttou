@@ -3,10 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import {
   cancelSubscription,
+  cancelScheduledPlanChange,
   changePlan,
   COUPON_REASON_LABEL,
   createWorkspaceInOrganization,
   fetchOrganizationWorkspaces,
+  fetchPendingPlanChange,
   fetchPlans,
   fetchWorkspaceEntitlements,
   previewCoupon,
@@ -57,6 +59,13 @@ export function BillingPage() {
 
   const plansQuery = useQuery({ queryKey: ['billing-plans'], queryFn: fetchPlans })
 
+  const pendingChangeQuery = useQuery({
+    queryKey: ['billing-pending-change', organizationId],
+    enabled: !!organizationId && isOwner,
+    queryFn: () => fetchPendingPlanChange(organizationId!),
+  })
+  const pendingChange = pendingChangeQuery.data?.has_pending ? pendingChangeQuery.data : null
+
   // Ajuste cupom na Landing — pré-preenche e revalida (de verdade, via
   // previewCoupon com a organização real) o cupom aplicado antes do
   // cadastro, assim que chegamos aqui com organização e planos
@@ -95,6 +104,7 @@ export function BillingPage() {
       await action()
       await queryClient.invalidateQueries({ queryKey: ['billing-entitlements'] })
       await queryClient.invalidateQueries({ queryKey: ['billing-org-workspaces'] })
+      await queryClient.invalidateQueries({ queryKey: ['billing-pending-change'] })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado.')
     } finally {
@@ -250,6 +260,40 @@ export function BillingPage() {
         </div>
       )}
 
+      {isOwner && pendingChange && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-950">
+          <p className="text-sm font-semibold text-brand-900 dark:text-brand-200">Sua mudança está programada</p>
+          <p className="mt-2 text-sm text-brand-800 dark:text-brand-300">
+            {pendingChange.pending_plan_name}
+            <br />
+            {pendingChange.current_billing_interval === 'monthly' ? 'Mensal' : 'Anual'} → {pendingChange.pending_billing_interval === 'monthly' ? 'Mensal' : 'Anual'}
+            <br />
+            Novo valor:{' '}
+            {pendingChange.pending_price_cents !== undefined &&
+              (pendingChange.pending_billing_interval === 'monthly'
+                ? `${formatCents(pendingChange.pending_price_cents)}/mês`
+                : `${formatWhole(pendingChange.pending_price_cents)}/ano`)}
+            <br />
+            Início: {pendingChange.effective_at && new Date(pendingChange.effective_at).toLocaleDateString('pt-BR')}
+          </p>
+          {pendingChange.kind === 'cycle_change' && (
+            <p className="mt-2 text-xs text-brand-700 dark:text-brand-400">
+              Esse valor fica garantido para esta alteração programada — mesmo que o preço do plano mude antes disso, você paga o valor
+              acima. Até {pendingChange.effective_at && new Date(pendingChange.effective_at).toLocaleDateString('pt-BR')}, sua assinatura
+              atual continua normalmente, sem cobrança extra.
+            </p>
+          )}
+          <button
+            type="button"
+            className="mt-3 rounded-lg border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-900 hover:bg-brand-100 disabled:opacity-50 dark:border-brand-800 dark:text-brand-200 dark:hover:bg-brand-900"
+            disabled={busy === 'cancel-scheduled-change'}
+            onClick={() => handleAction(() => cancelScheduledPlanChange(organizationId!), 'cancel-scheduled-change')}
+          >
+            {busy === 'cancel-scheduled-change' ? 'Cancelando…' : 'Cancelar alteração programada'}
+          </button>
+        </div>
+      )}
+
       {isOwner && plansQuery.data && (
         <div>
           <div className="mb-3 flex items-center justify-between">
@@ -277,7 +321,7 @@ export function BillingPage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {plansQuery.data.map((plan) => {
-              const isCurrent = ent?.plan_id === plan.id
+              const isCurrent = ent?.plan_id === plan.id && ent?.billing_interval === billingInterval
               // Apresentação apenas: no anual, mostramos o equivalente mensal
               // (valor anual oficial ÷ 12) — a cobrança real (startCheckout/
               // changePlan) sempre envia billingInterval e o servidor lê o
@@ -316,7 +360,7 @@ export function BillingPage() {
                   </ul>
                   {!isCurrent && (() => {
                     const needsCheckout = !ent?.status || ent.status === 'trialing' || ent.status === 'expired' || ent.status === 'cancelled'
-                    const disabled = busy === `plan-${plan.id}` || (needsCheckout && !cpfCnpj.trim())
+                    const disabled = busy === `plan-${plan.id}` || (needsCheckout && !cpfCnpj.trim()) || (!needsCheckout && !!pendingChange)
                     const applied = couponResult[plan.id]
                     const appliedCode = couponInput[plan.id]?.trim()
                     return (

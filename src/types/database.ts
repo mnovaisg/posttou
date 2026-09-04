@@ -4846,7 +4846,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      apply_scheduled_downgrades_system: { Args: never; Returns: number }
+      apply_scheduled_downgrades_system: { Args: never; Returns: Json }
       apply_strategy_recommendation: {
         Args: { p_recommendation_id: string }
         Returns: {
@@ -4940,6 +4940,46 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "pilot_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cancel_scheduled_plan_change_system: {
+        Args: { p_organization_id: string }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
+          pending_change_payment_id: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -5784,6 +5824,10 @@ export type Database = {
       get_invite_preview: { Args: { p_token: string }; Returns: Json }
       get_my_marketing_consent_system: { Args: never; Returns: Json }
       get_onboarding_state: { Args: { p_workspace_id: string }; Returns: Json }
+      get_organization_pending_plan_change_system: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       get_workspace_entitlements: {
         Args: { p_workspace_id: string }
         Returns: Json

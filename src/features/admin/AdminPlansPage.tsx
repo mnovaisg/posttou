@@ -39,10 +39,12 @@ function centsToReaisInput(cents: number): string {
 
 // Regra comercial explícita (pedido do usuário): novos valores só valem
 // para novas contratações e futuras mudanças de plano — nunca reajustam
-// silenciosamente quem permanece no plano atual. Mesmo texto no aviso
-// fixo do topo e em toda prévia de confirmação de preço.
+// silenciosamente quem permanece no plano atual, nem uma mudança de
+// ciclo (mensal<->anual) já agendada por um cliente (preço congelado no
+// momento da solicitação dele, nunca relido de `plans` depois). Mesmo
+// texto no aviso fixo do topo e em toda prévia de confirmação de preço.
 const PRICE_CHANGE_SCOPE_WARNING =
-  'Os novos valores serão aplicados a novas contratações e futuras mudanças de plano. Assinaturas existentes que permanecerem no plano atual continuarão com o valor contratado no Asaas.'
+  'Os novos preços serão aplicados a novas contratações e novas solicitações de mudança. Alterações de ciclo já programadas mantêm o valor confirmado pelo cliente.'
 
 const ROUNDING_LABEL: Record<RoundingRule, string> = {
   exact: 'Exato',

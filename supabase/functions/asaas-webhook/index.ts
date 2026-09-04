@@ -183,6 +183,7 @@ async function syncAsaasSubscriptionValueIfPending(admin: any, asaasApiKey: stri
   const organizationId = result.organization_id as string | undefined
   const asaasSubscriptionId = result.asaas_subscription_id as string | null | undefined
   const targetPriceCents = result.asaas_sync_target_price_cents as number | null | undefined
+  const billingInterval = result.billing_interval as 'monthly' | 'yearly' | null | undefined
   if (!organizationId || !asaasSubscriptionId || targetPriceCents === null || targetPriceCents === undefined) return
 
   if (!asaasApiKey) {
@@ -196,10 +197,17 @@ async function syncAsaasSubscriptionValueIfPending(admin: any, asaasApiKey: stri
   }
 
   try {
+    // cycle sempre incluído (não só em mudança de ciclo agendada) — é
+    // idempotente reenviar o mesmo cycle que já está lá, e assim um
+    // único PUT sempre deixa value e cycle coerentes com o
+    // billing_interval atual da assinatura no POSTTOU.
     const res = await fetch(`${asaasBaseUrl}/subscriptions/${asaasSubscriptionId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-      body: JSON.stringify({ value: Number((targetPriceCents / 100).toFixed(2)) }),
+      body: JSON.stringify({
+        value: Number((targetPriceCents / 100).toFixed(2)),
+        ...(billingInterval ? { cycle: billingInterval === 'monthly' ? 'MONTHLY' : 'YEARLY' } : {}),
+      }),
     })
     const body = await res.json()
     await admin.rpc('mark_asaas_subscription_sync_result_system', {
