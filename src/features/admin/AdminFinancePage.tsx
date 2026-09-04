@@ -406,27 +406,59 @@ export function AdminFinancePage() {
         </div>
       )}
 
-      {/* Próximos recebimentos */}
+      {/* Próximos recebimentos — separa cobrança real já emitida no Asaas
+          de renovação futura ainda apenas projetada, para nunca misturar
+          os dois conceitos. */}
       {receivablesQuery.data && (
         <div className="rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Próximos recebimentos previstos (60 dias)</h2>
-          {receivablesQuery.data.items.length === 0 ? (
-            <p className="text-sm text-ink-400">Nenhuma cobrança em aberto nos próximos 60 dias (ou o histórico ainda não foi sincronizado).</p>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Próximos recebimentos (60 dias)</h2>
+
+          {receivablesQuery.data.issued.length === 0 && receivablesQuery.data.projected.length === 0 ? (
+            <p className="text-sm text-ink-400">Nenhuma cobrança em aberto ou renovação prevista nos próximos 60 dias.</p>
           ) : (
             <>
-              <div className="flex flex-col gap-1.5">
-                {receivablesQuery.data.items.slice(0, 15).map((it, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-ink-600 dark:text-ink-300">{formatDate(it.due_date)} — {it.organization_name}</span>
-                    <span className="font-medium text-ink-900 dark:text-ink-50">{formatCents(it.amount_cents)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-3 border-t border-ink-100 pt-3 text-xs text-ink-500 dark:border-ink-800">
-                {receivablesQuery.data.by_month.map((m) => (
-                  <span key={m.month}>{monthLabel(m.month)}: <strong className="text-ink-700 dark:text-ink-200">{formatCents(m.cents)}</strong></span>
-                ))}
-              </div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Cobrança já emitida no Asaas</p>
+              {receivablesQuery.data.issued.length === 0 ? (
+                <p className="mt-1 text-xs text-ink-400">Nenhuma.</p>
+              ) : (
+                <div className="mt-1 flex flex-col gap-1.5">
+                  {receivablesQuery.data.issued.slice(0, 15).map((it, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-ink-600 dark:text-ink-300">
+                        {formatDate(it.due_date)} — {it.organization_name}
+                        {it.plan_name && <span className="text-ink-400"> ({it.plan_name})</span>}
+                      </span>
+                      <span className="font-medium text-ink-900 dark:text-ink-50">{formatCents(it.amount_cents)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-ink-400">Renovação futura projetada</p>
+              {receivablesQuery.data.projected.length === 0 ? (
+                <p className="mt-1 text-xs text-ink-400">Nenhuma.</p>
+              ) : (
+                <div className="mt-1 flex flex-col gap-1.5">
+                  {receivablesQuery.data.projected.slice(0, 15).map((it, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-ink-500 dark:text-ink-400">
+                        {formatDate(it.due_date)} — {it.organization_name}
+                        {it.plan_name && <span className="text-ink-400"> ({it.plan_name})</span>}
+                      </span>
+                      <span className="font-medium text-ink-500 dark:text-ink-400">{formatCents(it.amount_cents)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {receivablesQuery.data.by_month.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-3 border-t border-ink-100 pt-3 text-xs text-ink-500 dark:border-ink-800">
+                  <span className="text-ink-400">Emitido por mês:</span>
+                  {receivablesQuery.data.by_month.map((m) => (
+                    <span key={m.month}>{monthLabel(m.month)}: <strong className="text-ink-700 dark:text-ink-200">{formatCents(m.cents)}</strong></span>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

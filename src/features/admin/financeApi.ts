@@ -89,8 +89,22 @@ export async function fetchDiscountsSummary(periodStart: string, periodEnd: stri
   return data as unknown as DiscountsSummary
 }
 
+export interface UpcomingReceivableItem {
+  organization_id: string
+  organization_name: string
+  due_date: string
+  amount_cents: number
+  plan_id: string | null
+  plan_name: string | null
+}
+
 export interface UpcomingReceivables {
-  items: { organization_id: string; organization_name: string; due_date: string; amount_cents: number; status: string }[]
+  // Real: cobrança já emitida no Asaas (billing_charges pendente/vencida).
+  issued: (UpcomingReceivableItem & { status: string })[]
+  // Estimado: renovação futura ainda sem cobrança emitida — calculado a
+  // partir de subscriptions, respeitando mudança de ciclo/plano já
+  // agendada (preço congelado) quando houver.
+  projected: UpcomingReceivableItem[]
   by_month: { month: string; cents: number }[]
 }
 
