@@ -3813,6 +3813,10 @@ export type Database = {
           activated_at: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           cancel_at_period_end: boolean
           created_at: string
@@ -3827,6 +3831,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
           pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
@@ -3839,6 +3844,10 @@ export type Database = {
           activated_at?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
+          asaas_sync_attempted_at?: string | null
+          asaas_sync_last_error?: string | null
+          asaas_sync_status?: string
+          asaas_sync_target_price_cents?: number | null
           billing_interval?: Database["public"]["Enums"]["billing_interval"]
           cancel_at_period_end?: boolean
           created_at?: string
@@ -3853,6 +3862,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind?: string | null
+          pending_change_new_recurring_cents?: number | null
           pending_change_payment_id?: string | null
           pending_change_price_cents?: number | null
           pending_plan_id?: string | null
@@ -3865,6 +3875,10 @@ export type Database = {
           activated_at?: string | null
           asaas_customer_id?: string | null
           asaas_subscription_id?: string | null
+          asaas_sync_attempted_at?: string | null
+          asaas_sync_last_error?: string | null
+          asaas_sync_status?: string
+          asaas_sync_target_price_cents?: number | null
           billing_interval?: Database["public"]["Enums"]["billing_interval"]
           cancel_at_period_end?: boolean
           created_at?: string
@@ -3879,6 +3893,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind?: string | null
+          pending_change_new_recurring_cents?: number | null
           pending_change_payment_id?: string | null
           pending_change_price_cents?: number | null
           pending_plan_id?: string | null
@@ -4559,6 +4574,7 @@ export type Database = {
         Returns: Json
       }
       admin_lead_metrics_system: { Args: never; Returns: Json }
+      admin_list_asaas_sync_issues_system: { Args: never; Returns: Json }
       admin_list_billing_charges_system: {
         Args: {
           p_limit?: number
@@ -4796,6 +4812,10 @@ export type Database = {
           activated_at: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           cancel_at_period_end: boolean
           created_at: string
@@ -4810,6 +4830,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
           pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
@@ -5935,6 +5956,51 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_asaas_subscription_sync_result_system: {
+        Args: {
+          p_error?: string
+          p_organization_id: string
+          p_success: boolean
+          p_target_price_cents: number
+        }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
+          pending_change_payment_id: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       pause_pilot: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -6269,6 +6335,10 @@ export type Database = {
           activated_at: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           cancel_at_period_end: boolean
           created_at: string
@@ -6283,6 +6353,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
           pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
@@ -6386,6 +6457,7 @@ export type Database = {
       }
       request_plan_change: {
         Args: {
+          p_current_recurring_cents_hint?: number
           p_new_billing_interval: Database["public"]["Enums"]["billing_interval"]
           p_new_plan_id: string
           p_organization_id: string
@@ -6531,6 +6603,10 @@ export type Database = {
           activated_at: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           cancel_at_period_end: boolean
           created_at: string
@@ -6545,6 +6621,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
           pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null
@@ -6820,6 +6897,10 @@ export type Database = {
           activated_at: string | null
           asaas_customer_id: string | null
           asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           cancel_at_period_end: boolean
           created_at: string
@@ -6834,6 +6915,7 @@ export type Database = {
             | Database["public"]["Enums"]["billing_interval"]
             | null
           pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
           pending_change_payment_id: string | null
           pending_change_price_cents: number | null
           pending_plan_id: string | null

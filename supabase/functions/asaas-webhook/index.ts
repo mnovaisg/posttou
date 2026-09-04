@@ -165,6 +165,62 @@ async function syncLedger(admin: any, payload: AsaasWebhookPayload, kind: 'recur
   }
 }
 
+// Bloco: sincronização da recorrência Asaas pós-upgrade. Chamado só
+// quando o RPC de confirmação devolve asaas_sync_status='pending' (só
+// acontece quando o motor de pró-rata rodou — mesmo ciclo, status
+// active; trial/troca de ciclo nunca setam isso, de propósito). PUT é
+// idempotente (setar o mesmo value de novo não tem efeito colateral),
+// então é seguro chamar de novo numa reentrega de webhook. Nunca deixa
+// o resultado silencioso: sucesso ou falha, sempre grava via
+// mark_asaas_subscription_sync_result_system (que também loga em
+// audit_logs) — falha aqui NUNCA derruba o processamento principal do
+// webhook (isso já rodou e está correto; só a recorrência Asaas fica
+// pendente, rastreável em admin_list_asaas_sync_issues_system pro
+// retry manual do Admin).
+// deno-lint-ignore no-explicit-any
+async function syncAsaasSubscriptionValueIfPending(admin: any, asaasApiKey: string | undefined, asaasBaseUrl: string, result: Record<string, unknown> | null) {
+  if (!result || result.asaas_sync_status !== 'pending') return
+  const organizationId = result.organization_id as string | undefined
+  const asaasSubscriptionId = result.asaas_subscription_id as string | null | undefined
+  const targetPriceCents = result.asaas_sync_target_price_cents as number | null | undefined
+  if (!organizationId || !asaasSubscriptionId || targetPriceCents === null || targetPriceCents === undefined) return
+
+  if (!asaasApiKey) {
+    await admin.rpc('mark_asaas_subscription_sync_result_system', {
+      p_organization_id: organizationId,
+      p_target_price_cents: targetPriceCents,
+      p_success: false,
+      p_error: 'ASAAS_API_KEY não configurada no momento da sincronização.',
+    })
+    return
+  }
+
+  try {
+    const res = await fetch(`${asaasBaseUrl}/subscriptions/${asaasSubscriptionId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
+      body: JSON.stringify({ value: Number((targetPriceCents / 100).toFixed(2)) }),
+    })
+    const body = await res.json()
+    await admin.rpc('mark_asaas_subscription_sync_result_system', {
+      p_organization_id: organizationId,
+      p_target_price_cents: targetPriceCents,
+      p_success: res.ok,
+      p_error: res.ok ? null : JSON.stringify(body).slice(0, 2000),
+    })
+    if (!res.ok) console.error('asaas-webhook: falha ao sincronizar recorrência Asaas pós-upgrade.', body)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('asaas-webhook: erro de rede ao sincronizar recorrência Asaas pós-upgrade.', message)
+    await admin.rpc('mark_asaas_subscription_sync_result_system', {
+      p_organization_id: organizationId,
+      p_target_price_cents: targetPriceCents,
+      p_success: false,
+      p_error: message,
+    })
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
 
@@ -182,6 +238,9 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(supabaseUrl, serviceRoleKey)
+
+  const asaasApiKey = Deno.env.get('ASAAS_API_KEY')
+  const asaasBaseUrl = Deno.env.get('ASAAS_API_BASE_URL') ?? 'https://sandbox.asaas.com/api/v3'
 
   const subscriptionId = payload.payment?.subscription
   const paymentId = payload.payment?.id
@@ -204,6 +263,7 @@ Deno.serve(async (req) => {
         console.error('asaas-webhook: falha ao processar PAYMENT_CONFIRMED.', error)
         return json({ error: 'processing_failed', detail: error.message }, 500)
       }
+      await syncAsaasSubscriptionValueIfPending(admin, asaasApiKey, asaasBaseUrl, data as Record<string, unknown> | null)
       return json({ ok: true, result: data })
     }
 
@@ -239,6 +299,7 @@ Deno.serve(async (req) => {
         console.error('asaas-webhook: falha ao processar confirmação de upgrade.', error)
         return json({ error: 'processing_failed', detail: error.message }, 500)
       }
+      await syncAsaasSubscriptionValueIfPending(admin, asaasApiKey, asaasBaseUrl, data as Record<string, unknown> | null)
       return json({ ok: true, result: data })
     }
 

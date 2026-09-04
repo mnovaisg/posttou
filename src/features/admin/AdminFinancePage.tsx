@@ -12,6 +12,8 @@ import {
   fetchRevenueLost,
   fetchBillingCharges,
   runBillingBackfill,
+  fetchAsaasSyncIssues,
+  retryAsaasSubscriptionSync,
   CHARGE_STATUS_LABEL,
   CHARGE_STATUS_COLOR,
 } from '@/features/admin/financeApi'
@@ -59,6 +61,8 @@ export function AdminFinancePage() {
   const [backfillBusy, setBackfillBusy] = React.useState(false)
   const [backfillResult, setBackfillResult] = React.useState<BackfillSummary | null>(null)
   const [backfillError, setBackfillError] = React.useState<string | null>(null)
+  const [retryingOrgId, setRetryingOrgId] = React.useState<string | null>(null)
+  const [retryError, setRetryError] = React.useState<string | null>(null)
 
   const period = periodRange(periodKey, customStart, customEnd)
   const isFuturePeriod = new Date(period.start) > new Date()
@@ -71,6 +75,7 @@ export function AdminFinancePage() {
   const discountsQuery = useQuery({ queryKey: ['fin-discounts', period.start, period.end], queryFn: () => fetchDiscountsSummary(period.start, period.end) })
   const receivablesQuery = useQuery({ queryKey: ['fin-receivables'], queryFn: () => fetchUpcomingReceivables(60) })
   const lostQuery = useQuery({ queryKey: ['fin-lost', period.start, period.end], queryFn: () => fetchRevenueLost(period.start, period.end) })
+  const syncIssuesQuery = useQuery({ queryKey: ['fin-asaas-sync-issues'], queryFn: fetchAsaasSyncIssues })
   const chargesQuery = useQuery({
     queryKey: ['fin-charges', chargeStatus, chargeSearch, page],
     queryFn: () => fetchBillingCharges({ status: chargeStatus, search: chargeSearch || undefined }, PAGE_SIZE, page * PAGE_SIZE),
@@ -101,6 +106,19 @@ export function AdminFinancePage() {
       setBackfillError(err instanceof Error ? err.message : 'Erro ao sincronizar.')
     } finally {
       setBackfillBusy(false)
+    }
+  }
+
+  async function handleRetrySync(organizationId: string) {
+    setRetryingOrgId(organizationId)
+    setRetryError(null)
+    try {
+      await retryAsaasSubscriptionSync(organizationId)
+      await queryClient.invalidateQueries({ queryKey: ['fin-asaas-sync-issues'] })
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : 'Erro ao tentar sincronizar novamente.')
+    } finally {
+      setRetryingOrgId(null)
     }
   }
 
@@ -136,6 +154,58 @@ export function AdminFinancePage() {
           {backfillResult.errors.length > 0 && (
             <p className="mt-1 text-xs text-danger-500">{backfillResult.errors.length} erro(s) — veja audit_logs para detalhes.</p>
           )}
+        </div>
+      )}
+
+      {/* Consistência POSTTOU × Asaas: assinaturas onde um upgrade pró-rata
+          foi aplicado localmente mas a recorrência Asaas ainda não foi
+          sincronizada (pending) ou o PUT falhou (failed) — nunca deixado
+          silencioso. */}
+      {(syncIssuesQuery.data?.length ?? 0) > 0 && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
+          <p className="text-sm font-semibold text-red-900 dark:text-red-200">
+            {syncIssuesQuery.data!.length} assinatura(s) com recorrência Asaas fora de sincronia
+          </p>
+          <p className="mt-1 text-xs text-red-800 dark:text-red-300">
+            O plano já mudou no POSTTOU, mas a cobrança recorrente na Asaas ainda não reflete o novo valor.
+          </p>
+          {retryError && <p className="mt-2 text-xs text-danger-500">{retryError}</p>}
+          <div className="mt-3 flex flex-col gap-2">
+            {syncIssuesQuery.data!.map((issue) => (
+              <div
+                key={issue.organization_id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-white p-2 text-xs dark:border-red-900 dark:bg-ink-900"
+              >
+                <div>
+                  <span className="font-medium text-ink-900 dark:text-ink-50">{issue.organization_name}</span>
+                  <span className="ml-2 text-ink-500">
+                    {issue.plan_id} · {issue.billing_interval === 'monthly' ? 'mensal' : 'anual'} · alvo:{' '}
+                    {issue.asaas_sync_target_price_cents !== null ? formatCents(issue.asaas_sync_target_price_cents) : '—'}
+                  </span>
+                  <span
+                    className={`ml-2 rounded-full px-2 py-0.5 font-medium ${
+                      issue.asaas_sync_status === 'failed'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                    }`}
+                  >
+                    {issue.asaas_sync_status === 'failed' ? 'Falhou' : 'Pendente'}
+                  </span>
+                  {issue.asaas_sync_last_error && <p className="mt-1 text-red-600 dark:text-red-400">{issue.asaas_sync_last_error}</p>}
+                </div>
+                {issue.asaas_sync_status === 'failed' && (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg border border-red-300 px-2.5 py-1 font-medium text-red-700 disabled:opacity-50 dark:border-red-800 dark:text-red-300"
+                    disabled={retryingOrgId === issue.organization_id}
+                    onClick={() => handleRetrySync(issue.organization_id)}
+                  >
+                    {retryingOrgId === issue.organization_id ? 'Tentando…' : 'Tentar novamente'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

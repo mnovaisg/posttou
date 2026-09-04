@@ -45,12 +45,44 @@ Deno.serve(async (req) => {
   const body = (await req.json()) as ChangePlanRequest
   if (!body?.organizationId || !body?.newPlanId || !body?.newBillingInterval) return json({ error: 'invalid_body' }, 400)
 
+  const admin = createClient(supabaseUrl, serviceRoleKey)
+
+  // Bloco: pró-rata de upgrade — busca o valor REAL cobrado hoje na
+  // assinatura Asaas (nunca `plans`, porque o cliente pode ser legado
+  // com preço diferente do plano atual na tabela) ANTES de chamar
+  // request_plan_change, pra passar como hint. Se a consulta falhar por
+  // qualquer motivo, segue sem hint — o RPC cai no comportamento antigo
+  // (preço cheio, sem pró-rata, sem sincronização futura), nunca quebra
+  // o fluxo de troca de plano por causa disso.
+  let currentRecurringCentsHint: number | undefined
+  if (asaasApiKey) {
+    const { data: subForHint } = await admin
+      .from('subscriptions')
+      .select('asaas_subscription_id')
+      .eq('organization_id', body.organizationId)
+      .maybeSingle()
+    if (subForHint?.asaas_subscription_id) {
+      try {
+        const hintRes = await fetch(`${asaasBaseUrl}/subscriptions/${subForHint.asaas_subscription_id}`, {
+          headers: { access_token: asaasApiKey },
+        })
+        if (hintRes.ok) {
+          const hintBody = await hintRes.json()
+          if (typeof hintBody.value === 'number') currentRecurringCentsHint = Math.round(hintBody.value * 100)
+        }
+      } catch (err) {
+        console.error('billing-change-plan: falha ao consultar valor atual da assinatura na Asaas (seguindo sem pró-rata).', err)
+      }
+    }
+  }
+
   // request_plan_change já valida is_organization_owner internamente.
   const callerClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } })
   const { data: changeResult, error: changeError } = await callerClient.rpc('request_plan_change', {
     p_organization_id: body.organizationId,
     p_new_plan_id: body.newPlanId,
     p_new_billing_interval: body.newBillingInterval,
+    p_current_recurring_cents_hint: currentRecurringCentsHint ?? undefined,
   })
   if (changeError) {
     // Bloco 12.2: request_plan_change usa `hint` do Postgres pra carregar
@@ -69,14 +101,62 @@ Deno.serve(async (req) => {
     return json({ error: 'asaas_not_configured', message: 'ASAAS_API_KEY não configurada. Upgrade não pode gerar cobrança agora.' }, 501)
   }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey)
   const { data: sub } = await admin.from('subscriptions').select('*').eq('organization_id', body.organizationId).single()
   if (!sub?.asaas_customer_id) {
     return json({ error: 'no_asaas_customer', message: 'Organization ainda não tem cliente Asaas — use billing-create-checkout primeiro.' }, 400)
   }
 
+  // new_price_cents já é o valor certo a cobrar AGORA: pró-rata (diferença
+  // × fração restante do período) quando changeResult.is_prorated=true,
+  // ou o preço cheio do novo plano nos casos ainda não cobertos pelo
+  // motor de pró-rata (trial, troca de ciclo) — comportamento antigo
+  // preservado nesses casos.
+  // Pró-rata pode legitimamente dar zero (ex.: faltam poucos minutos pro
+  // fim do período, ou um cupom recorrente já deixa o novo plano mais
+  // barato que o valor atual travado). Sem cobrança, não há pagamento
+  // pra aguardar — aplica a troca de plano na hora e, se o motor de
+  // pró-rata gerou um alvo de sincronização, já sincroniza a Asaas aqui
+  // mesmo (mesma lógica do webhook, só que síncrona).
+  if (changeResult.new_price_cents <= 0) {
+    const { data: applied, error: applyError } = await admin.rpc('apply_confirmed_plan_change_system', {
+      p_organization_id: body.organizationId,
+    })
+    if (applyError) {
+      console.error('billing-change-plan: falha ao aplicar upgrade sem custo (pró-rata zerado).', applyError)
+      return json({ error: 'internal_error', message: 'Não foi possível concluir a troca de plano. Contate o suporte.' }, 500)
+    }
+    if (applied?.asaas_sync_status === 'pending' && applied.asaas_subscription_id && applied.asaas_sync_target_price_cents != null && asaasApiKey) {
+      try {
+        const syncRes = await fetch(`${asaasBaseUrl}/subscriptions/${applied.asaas_subscription_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
+          body: JSON.stringify({ value: Number((applied.asaas_sync_target_price_cents / 100).toFixed(2)) }),
+        })
+        const syncBody = await syncRes.json()
+        await admin.rpc('mark_asaas_subscription_sync_result_system', {
+          p_organization_id: body.organizationId,
+          p_target_price_cents: applied.asaas_sync_target_price_cents,
+          p_success: syncRes.ok,
+          p_error: syncRes.ok ? undefined : JSON.stringify(syncBody).slice(0, 2000),
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        await admin.rpc('mark_asaas_subscription_sync_result_system', {
+          p_organization_id: body.organizationId,
+          p_target_price_cents: applied.asaas_sync_target_price_cents,
+          p_success: false,
+          p_error: message,
+        })
+      }
+    }
+    return json({ kind: 'upgrade', invoiceUrl: null, awaitingPaymentConfirmation: false, chargedCents: 0 })
+  }
+
   const priceReais = (changeResult.new_price_cents / 100).toFixed(2)
   const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const description = changeResult.is_prorated
+    ? `POSTTOU — Upgrade para plano ${changeResult.new_plan_id} (pró-rata do período em andamento)`
+    : `POSTTOU — Upgrade para plano ${changeResult.new_plan_id}`
 
   const chargeRes = await fetch(`${asaasBaseUrl}/payments`, {
     method: 'POST',
@@ -86,7 +166,7 @@ Deno.serve(async (req) => {
       billingType: 'UNDEFINED',
       value: Number(priceReais),
       dueDate,
-      description: `POSTTOU — Upgrade para plano ${changeResult.new_plan_id}`,
+      description,
       externalReference: body.organizationId,
     }),
   })

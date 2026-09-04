@@ -187,3 +187,39 @@ export async function runBillingBackfill(): Promise<BackfillSummary> {
   if (!res.ok) throw new Error(body.error === 'forbidden' ? 'Acesso negado.' : body.error === 'asaas_not_configured' ? 'Asaas não configurado.' : 'Não foi possível executar a sincronização.')
   return body.summary as BackfillSummary
 }
+
+// Bloco: consistência POSTTOU × Asaas pós-upgrade. Depois que um upgrade
+// pró-rata é confirmado, a recorrência Asaas precisa ser sincronizada
+// com o valor do novo plano — isto lista as organizações onde essa
+// sincronização ainda está pendente ou falhou, pra nunca deixar
+// "POSTTOU = plano novo, Asaas = plano antigo" silencioso.
+export interface AsaasSyncIssue {
+  organization_id: string
+  organization_name: string
+  plan_id: string
+  billing_interval: 'monthly' | 'yearly'
+  asaas_subscription_id: string | null
+  asaas_sync_status: 'pending' | 'failed'
+  asaas_sync_target_price_cents: number | null
+  asaas_sync_last_error: string | null
+  asaas_sync_attempted_at: string | null
+}
+
+export async function fetchAsaasSyncIssues(): Promise<AsaasSyncIssue[]> {
+  const { data, error } = await supabase.rpc('admin_list_asaas_sync_issues_system')
+  if (error) throw error
+  return (data as unknown as AsaasSyncIssue[]) ?? []
+}
+
+export async function retryAsaasSubscriptionSync(organizationId: string): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) throw new Error('Sessão expirada.')
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-retry-asaas-subscription-sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ organizationId }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.detail ? JSON.stringify(body.detail) : body.error === 'not_platform_admin' ? 'Acesso negado.' : 'Não foi possível sincronizar agora.')
+}
