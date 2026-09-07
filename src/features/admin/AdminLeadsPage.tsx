@@ -194,10 +194,7 @@ export function AdminLeadsPage() {
             />
           </div>
           <p className="mt-3 text-xs text-ink-400">
-            MRR bruto: <span className="font-medium text-ink-700 dark:text-ink-200">{formatCents(m.mrr_gross_cents)}</span>
-            {m.mrr_recurring_discount_cents > 0 && (
-              <> · desconto recorrente ativo: −{formatCents(m.mrr_recurring_discount_cents)}</>
-            )}
+            MRR: <span className="font-medium text-ink-700 dark:text-ink-200">{formatCents(m.mrr_cents)}</span>
           </p>
         </div>
       )}

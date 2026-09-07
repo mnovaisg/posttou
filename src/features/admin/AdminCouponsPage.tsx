@@ -1,11 +1,24 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchAdminCoupons, setAdminCouponActive } from '@/features/admin/api'
+import { fetchAdminCoupons, setAdminCouponActive, fetchAdminDashboardMetrics } from '@/features/admin/api'
 import { STATUS_LABEL, STATUS_COLOR } from '@/features/admin/statusLabels'
 
 function formatDiscount(type: 'percentage' | 'fixed', value: number): string {
   return type === 'percentage' ? `${value}%` : (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function formatCents(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-400">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-ink-900 dark:text-ink-50">{value}</p>
+    </div>
+  )
 }
 
 export function AdminCouponsPage() {
@@ -14,6 +27,9 @@ export function AdminCouponsPage() {
   const [confirmingId, setConfirmingId] = React.useState<string | null>(null)
   const [busyId, setBusyId] = React.useState<string | null>(null)
   const queryClient = useQueryClient()
+
+  const metricsQuery = useQuery({ queryKey: ['admin-dashboard-metrics'], queryFn: fetchAdminDashboardMetrics })
+  const m = metricsQuery.data
 
   const couponsQuery = useQuery({
     queryKey: ['admin-coupons', search, status],
@@ -46,6 +62,18 @@ export function AdminCouponsPage() {
           Criar cupom
         </Link>
       </div>
+
+      {metricsQuery.isError && <p className="text-sm text-danger-500">Não foi possível carregar as métricas de cupons.</p>}
+
+      {m && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard label="Cupons ativos" value={String(m.active_coupons)} />
+          <MetricCard label="Cupons expirados" value={String(m.expired_coupons)} />
+          <MetricCard label="Total de utilizações" value={String(m.total_redemptions)} />
+          <MetricCard label="Desconto total concedido" value={formatCents(m.total_discount_granted_cents)} />
+          <MetricCard label="Assinaturas originadas com cupom" value={String(m.subscriptions_originated_with_coupon)} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <input

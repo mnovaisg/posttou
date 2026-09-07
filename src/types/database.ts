@@ -44,6 +44,38 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_revenue_goals: {
+        Row: {
+          created_at: string
+          created_by: string
+          goal_cents: number
+          month: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          goal_cents: number
+          month: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          goal_cents?: number
+          month?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_revenue_goals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_generations: {
         Row: {
           brand_context_snapshot: Json
@@ -4243,6 +4275,14 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      _admin_org_contracted_cents: {
+        Args: {
+          p_interval: Database["public"]["Enums"]["billing_interval"]
+          p_organization_id: string
+          p_plan_id: string
+        }
+        Returns: number
+      }
       _admin_org_cycle_charge_cents: {
         Args: {
           p_interval: Database["public"]["Enums"]["billing_interval"]
@@ -4561,6 +4601,7 @@ export type Database = {
         Args: { p_period_end: string; p_period_start: string }
         Returns: Json
       }
+      admin_executive_dashboard_system: { Args: never; Returns: Json }
       admin_financial_summary_system: {
         Args: { p_period_end: string; p_period_start: string }
         Returns: Json
@@ -4572,6 +4613,22 @@ export type Database = {
       admin_get_lead_detail_system: {
         Args: { p_organization_id: string }
         Returns: Json
+      }
+      admin_get_revenue_goal_system: {
+        Args: { p_month?: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          goal_cents: number
+          month: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "admin_revenue_goals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_lead_metrics_system: { Args: never; Returns: Json }
       admin_list_asaas_sync_issues_system: { Args: never; Returns: Json }
@@ -4755,6 +4812,22 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "lead_tags"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_revenue_goal_system: {
+        Args: { p_goal_cents: number; p_month: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          goal_cents: number
+          month: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "admin_revenue_goals"
           isOneToOne: true
           isSetofReturn: false
         }

@@ -251,8 +251,7 @@ export interface AdminLeadMetrics {
   expired_involuntary: number
   cancelled: number
   trial_to_customer_conversion_pct: number
-  mrr_gross_cents: number
-  mrr_recurring_discount_cents: number
+  mrr_cents: number
   funnel: { signups: number; trials: number; paid_customers: number }
 }
 

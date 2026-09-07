@@ -36,7 +36,7 @@ const RadarPage = React.lazy(() => import('@/features/radar/RadarPage').then((m)
 const PilotPage = React.lazy(() => import('@/features/pilot/PilotPage').then((m) => ({ default: m.PilotPage })))
 const ReportsPage = React.lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const BillingPage = React.lazy(() => import('@/features/billing/BillingPage').then((m) => ({ default: m.BillingPage })))
-const AdminDashboardPage = React.lazy(() => import('@/features/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })))
+const AdminExecutiveDashboardPage = React.lazy(() => import('@/features/admin/AdminExecutiveDashboardPage').then((m) => ({ default: m.AdminExecutiveDashboardPage })))
 const AdminCouponsPage = React.lazy(() => import('@/features/admin/AdminCouponsPage').then((m) => ({ default: m.AdminCouponsPage })))
 const AdminCouponFormPage = React.lazy(() => import('@/features/admin/AdminCouponFormPage').then((m) => ({ default: m.AdminCouponFormPage })))
 const AdminCouponDetailPage = React.lazy(() => import('@/features/admin/AdminCouponDetailPage').then((m) => ({ default: m.AdminCouponDetailPage })))
@@ -97,7 +97,7 @@ function App() {
                 index
                 element={
                   <React.Suspense fallback={<RouteFallback />}>
-                    <AdminDashboardPage />
+                    <AdminExecutiveDashboardPage />
                   </React.Suspense>
                 }
               />
