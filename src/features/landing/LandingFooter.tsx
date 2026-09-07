@@ -39,6 +39,8 @@ export function LandingFooter() {
 
       <p className="mx-auto mt-8 max-w-6xl px-4 text-xs text-ink-400 sm:px-6">
         © {new Date().getFullYear()} POSTTOU. Todos os direitos reservados.
+        <br />
+        TUDO ENCENA PRODUCOES LTDA — CNPJ: 59.382.715/0001-07
       </p>
     </footer>
   )
