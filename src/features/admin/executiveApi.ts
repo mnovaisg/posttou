@@ -24,13 +24,17 @@ export interface ExecutiveDashboard {
     pct: number | null
   }
   revenue_by_month: { month: string; received_cents: number; issued_cents: number }[]
-  funnel: {
+  funil_comercial: {
     signups: number
     trials: number
-    dna_completed: number
-    instagram_connected: number
     paid_customers: number
     monotonic: boolean
+  }
+  ativacao_produto: {
+    denominator_label: string
+    denominator: number
+    dna_completed: { count: number; pct: number | null }
+    instagram_connected: { count: number; pct: number | null }
   }
   revenue_by_plan: {
     plan_id: string

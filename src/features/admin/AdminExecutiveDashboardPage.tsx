@@ -177,27 +177,42 @@ export function AdminExecutiveDashboardPage() {
             </div>
           </div>
 
-          {/* Funil */}
+          {/* Funil comercial */}
           <div className="rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Funil: Cadastro → Trial → DNA → Instagram → Pago</h2>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Funil comercial: Cadastro → Trial → Cliente pago</h2>
             <div className="flex flex-wrap items-center justify-around gap-3">
-              <FunnelStep label="Cadastro" value={d.funnel.signups} pct={null} />
+              <FunnelStep label="Cadastro" value={d.funil_comercial.signups} pct={null} />
               <span className="text-ink-300">→</span>
-              <FunnelStep label="Trial" value={d.funnel.trials} pct={d.funnel.signups > 0 ? Math.round((d.funnel.trials / d.funnel.signups) * 1000) / 10 : null} />
+              <FunnelStep
+                label="Trial"
+                value={d.funil_comercial.trials}
+                pct={d.funil_comercial.signups > 0 ? Math.round((d.funil_comercial.trials / d.funil_comercial.signups) * 1000) / 10 : null}
+              />
               <span className="text-ink-300">→</span>
-              <FunnelStep label="DNA concluído" value={d.funnel.dna_completed} pct={d.funnel.trials > 0 ? Math.round((d.funnel.dna_completed / d.funnel.trials) * 1000) / 10 : null} />
-              <span className="text-ink-300">→</span>
-              <FunnelStep label="Instagram conectado" value={d.funnel.instagram_connected} pct={d.funnel.dna_completed > 0 ? Math.round((d.funnel.instagram_connected / d.funnel.dna_completed) * 1000) / 10 : null} />
-              <span className="text-ink-300">→</span>
-              <FunnelStep label="Cliente pago" value={d.funnel.paid_customers} pct={d.funnel.trials > 0 ? Math.round((d.funnel.paid_customers / d.funnel.trials) * 1000) / 10 : null} />
+              <FunnelStep
+                label="Cliente pago"
+                value={d.funil_comercial.paid_customers}
+                pct={d.funil_comercial.trials > 0 ? Math.round((d.funil_comercial.paid_customers / d.funil_comercial.trials) * 1000) / 10 : null}
+              />
             </div>
-            {!d.funnel.monotonic && (
-              <p className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-400">
-                Aviso: o funil não é estritamente decrescente nesta base de dados — "Instagram conectado" pode ficar abaixo de "Cliente pago" porque conectar o
-                Instagram não é uma etapa obrigatória antes do pagamento no fluxo atual do produto. Isso é um reflexo real da jornada dos clientes, não um erro de
-                cálculo.
+            {!d.funil_comercial.monotonic && (
+              <p className="mt-3 rounded-lg bg-danger-50 p-2 text-xs text-danger-700 dark:bg-danger-950 dark:text-danger-400">
+                Inconsistência de dados: o funil comercial deveria ser sempre decrescente (Cadastro ≥ Trial ≥ Pago). Isso indica um problema real nos dados e
+                precisa ser investigado.
               </p>
             )}
+          </div>
+
+          {/* Ativação do produto */}
+          <div className="rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
+            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-ink-400">Ativação do produto</h2>
+            <p className="mb-3 text-xs text-ink-400">
+              Percentual sobre {d.ativacao_produto.denominator} {d.ativacao_produto.denominator_label} — passos de ativação, não etapas obrigatórias do funil comercial.
+            </p>
+            <div className="flex flex-wrap items-center gap-6">
+              <FunnelStep label="DNA concluído" value={d.ativacao_produto.dna_completed.count} pct={d.ativacao_produto.dna_completed.pct} />
+              <FunnelStep label="Instagram conectado" value={d.ativacao_produto.instagram_connected.count} pct={d.ativacao_produto.instagram_connected.pct} />
+            </div>
           </div>
 
           {/* Distribuição por plano */}
