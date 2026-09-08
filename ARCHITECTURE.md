@@ -229,6 +229,7 @@ META_APP_ID=
 META_APP_SECRET=                  # somente em Edge Functions
 META_REDIRECT_URI=
 INSTAGRAM_TOKEN_ENCRYPTION_KEY=   # criptografia de tokens em repouso
+POSTTOU_APP_URL=                  # somente em Edge Functions — origem canônica (https://www.posttou.com em produção) para onde o callback OAuth do Instagram redireciona; sem isso a função aborta com erro em vez de cair em localhost
 SENTRY_DSN=                       # opcional
 ```
 

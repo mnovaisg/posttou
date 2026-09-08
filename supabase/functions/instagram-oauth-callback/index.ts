@@ -37,9 +37,24 @@ function pathForReturnTo(returnTo: string | null | undefined): string {
 
 Deno.serve(async (req) => {
   const url = new URL(req.url)
-  const appUrl = Deno.env.get('POSTTOU_APP_URL') || 'http://localhost:5173'
-
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+
+  // POSTTOU_APP_URL é obrigatório: é pra onde os 8 branches de resposta
+  // abaixo (sucesso e todos os erros) redirecionam de volta o navegador.
+  // Sem secret configurado, cair silenciosamente em localhost:5173
+  // quebra o fluxo em produção sem deixar rastro (foi exatamente o bug
+  // real que causou ERR_CONNECTION_REFUSED em produção). O fallback pra
+  // localhost só é aceito quando o próprio SUPABASE_URL também é local
+  // (supabase functions serve) — nunca como default incondicional.
+  const configuredAppUrl = Deno.env.get('POSTTOU_APP_URL')
+  const isLocalSupabase = supabaseUrl.includes('localhost') || supabaseUrl.includes('127.0.0.1')
+  const appUrl = configuredAppUrl || (isLocalSupabase ? 'http://localhost:5173' : null)
+
+  if (!appUrl) {
+    console.error('instagram-oauth-callback: POSTTOU_APP_URL não configurado — abortando com segurança, sem redirecionar para lugar nenhum.')
+    return new Response('Erro de configuração do servidor. Tente novamente mais tarde.', { status: 500 })
+  }
+
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(supabaseUrl, serviceRoleKey)
 
