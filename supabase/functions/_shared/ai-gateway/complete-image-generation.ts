@@ -6,6 +6,7 @@
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import type { AsyncMediaProvider } from './types.ts'
 import { normalizeImageForFormat } from './normalize-image-format.ts'
+import { overlayBrandLogo } from './overlay-brand-logo.ts'
 
 export type CompleteResult = { status: 'processing' | 'success' | 'failed' }
 
@@ -75,15 +76,33 @@ export async function completeImageGeneration(admin: SupabaseClient<any>, mediaP
         console.error('completeImageGeneration: falha ao normalizar proporção da imagem, usando original.', err)
       }
 
-      if (normResult && normResult.method !== 'unchanged') {
+      let workingBytes = normResult && normResult.method !== 'unchanged' ? normResult.bytes : bytes
+      let workingChanged = normResult ? normResult.method !== 'unchanged' : false
+
+      // Sobrepõe a logo real só quando a geração está ligada a um post de
+      // verdade (content_id) — nunca no DNA Visual (referências de estilo,
+      // content_id null), que não é conteúdo final publicável.
+      if (generation.content_id) {
+        try {
+          const logoResult = await overlayBrandLogo(workingBytes, generation.workspace_id, admin)
+          if (logoResult.applied) {
+            workingBytes = logoResult.bytes
+            workingChanged = true
+          }
+        } catch (err) {
+          console.error('completeImageGeneration: falha ao sobrepor a logo, seguindo sem ela.', err)
+        }
+      }
+
+      if (workingChanged) {
         const normalizedPath = `${folder}/${crypto.randomUUID()}.png`
         const { error: normalizedUploadError } = await admin.storage
           .from('content-assets')
-          .upload(normalizedPath, normResult.bytes, { contentType: normResult.contentType, upsert: false })
+          .upload(normalizedPath, workingBytes, { contentType: 'image/png', upsert: false })
         if (!normalizedUploadError) {
           finalPath = normalizedPath
         } else {
-          console.error('completeImageGeneration: falha ao subir asset normalizado, usando original.', normalizedUploadError)
+          console.error('completeImageGeneration: falha ao subir asset final, usando original.', normalizedUploadError)
         }
       }
 

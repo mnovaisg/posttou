@@ -17,6 +17,8 @@ import {
   generateWithAi,
   saveAiGenerationAsDraft,
 } from '@/features/ai-generate/api'
+import { getContentPages } from '@/features/content/api'
+import { generateImageWithAi } from '@/features/editor/api'
 import {
   GENERATION_TYPE_DESCRIPTION,
   GENERATION_TYPE_ICON,
@@ -106,9 +108,9 @@ export function AiCreatePage() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!response || !editedResult || !generationType) throw new Error('Nada para salvar.')
-      return saveAiGenerationAsDraft(
+      const content = await saveAiGenerationAsDraft(
         workspaceId,
         response.generationId,
         generationType,
@@ -118,6 +120,34 @@ export function AiCreatePage() {
         radarOpportunityId ?? undefined,
         ['post_unico', 'carrossel', 'reels_roteiro'].includes(generationType!) ? format : undefined,
       )
+
+      // Post único é a única página sem elemento algum ao ser salva (slides
+      // e roteiro já ganham um elemento de texto em saveAiGenerationAsDraft)
+      // — sem disparar a geração de arte aqui, o editor abria com o canvas
+      // vazio. Reaproveita literalmente o mesmo generateImageWithAi já
+      // usado pelo Editor/onboarding, nunca um pipeline novo. Falha aqui
+      // nunca bloqueia a navegação: o usuário ainda pode gerar a arte pelo
+      // botão do editor — mesma degradação graciosa já usada quando a
+      // geração de imagem não está configurada.
+      if (generationType === 'post_unico') {
+        try {
+          const pages = await getContentPages(content.id)
+          const page = pages[0]
+          if (page) {
+            await generateImageWithAi({
+              workspaceId,
+              contentId: content.id,
+              prompt: themeInput,
+              format,
+              pageId: page.id,
+            })
+          }
+        } catch (err) {
+          console.error('Não foi possível iniciar a geração automática da arte.', err)
+        }
+      }
+
+      return content
     },
     onSuccess: (content) => {
       queryClient.invalidateQueries({ queryKey: ['contents'] })

@@ -145,11 +145,23 @@ Deno.serve(async (req) => {
 
     const safeAreaInstruction = typeof format === 'string' ? SAFE_AREA_INSTRUCTION_BY_FORMAT[format] : undefined
 
+    // Achado real: modelos de imagem não renderizam texto exato de forma
+    // confiável — pedir pro modelo "desenhar" o nome/logo da marca produz
+    // erros (ex.: "POSTTOU" saiu "Postcu"). Quando a marca já tem uma logo
+    // real cadastrada, ela é sobreposta depois (completeImageGeneration →
+    // overlayBrandLogo) — então instruímos o modelo a nunca tentar desenhar
+    // o próprio logo/nome como texto e a deixar um canto livre para ela.
+    const hasRealLogo = typeof contentId === 'string' && contentId && !!brandProfile?.logo_path
+    const logoInstruction = hasRealLogo
+      ? 'IMPORTANTE sobre a logo: NÃO desenhe, escreva ou tente reproduzir o nome da marca, logotipo ou qualquer texto de marca na composição — a logo real será sobreposta separadamente depois. Deixe o canto inferior direito visualmente limpo (sem elementos essenciais ali) para a logo real ser posicionada sem conflito.'
+      : ''
+
     const contextBlocks = [
       brandProfile ? `Contexto da marca (use para guiar estilo/identidade visual quando relevante):\n${brandText}` : '',
       visualDnaText,
       referencesText,
       safeAreaInstruction ?? '',
+      logoInstruction,
     ].filter(Boolean)
 
     const fullPrompt = contextBlocks.length
