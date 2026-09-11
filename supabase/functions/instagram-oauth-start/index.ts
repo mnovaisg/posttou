@@ -19,11 +19,16 @@ function json(body: unknown, status = 200) {
 const STATE_TTL_MS = 10 * 60 * 1000 // 10 minutos — tempo de sobra pra completar o consentimento na Meta
 
 // Etapa 4A — allowlist FECHADA de destinos internos pós-callback. Nunca
-// aceita uma URL do cliente: só um destes 3 rótulos, validado aqui e
+// aceita uma URL do cliente: só um destes rótulos, validado aqui e
 // gravado no state (nunca em querystring). Se o cliente mandar qualquer
 // coisa fora disto, cai no default 'settings' — nunca um erro que quebre
-// o fluxo, e nunca o valor bruto do cliente.
-const ALLOWED_RETURN_TO = ['onboarding', 'settings', 'dashboard'] as const
+// o fluxo, e nunca o valor bruto do cliente. 'content_ready' é o único
+// rótulo que carrega um destino dinâmico (content_id), e mesmo assim
+// nunca aceita a URL/path do cliente — só o UUID, validado abaixo como
+// pertencente ao mesmo workspace, e o path final é montado inteiramente
+// no callback a partir desse UUID já validado (nunca interpolação de
+// valor externo bruto).
+const ALLOWED_RETURN_TO = ['onboarding', 'settings', 'dashboard', 'content_ready'] as const
 type ReturnTo = (typeof ALLOWED_RETURN_TO)[number]
 
 function normalizeReturnTo(value: unknown): ReturnTo {
@@ -59,13 +64,31 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => null)
     const workspaceId = (body as Record<string, unknown> | null)?.workspaceId
     if (typeof workspaceId !== 'string' || !workspaceId) return json({ error: 'workspaceId é obrigatório.' }, 400)
-    const returnTo = normalizeReturnTo((body as Record<string, unknown> | null)?.returnTo)
+    let returnTo = normalizeReturnTo((body as Record<string, unknown> | null)?.returnTo)
+    const contentIdInput = (body as Record<string, unknown> | null)?.contentId
 
     const { data: canManage, error: roleError } = await userClient.rpc('has_workspace_role', {
       p_workspace_id: workspaceId,
       p_roles: ['owner', 'admin'],
     })
     if (roleError || !canManage) return json({ error: 'Só owner/admin do workspace pode conectar o Instagram.' }, 403)
+
+    // Só grava content_id (e só usa o destino 'content_ready') quando o
+    // conteúdo informado realmente existe e pertence a este workspace —
+    // nunca confia no valor do cliente sem checar.
+    let contentId: string | null = null
+    if (returnTo === 'content_ready' && typeof contentIdInput === 'string' && contentIdInput) {
+      const { data: contentRow } = await userClient
+        .from('contents')
+        .select('id')
+        .eq('id', contentIdInput)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle()
+      if (contentRow) contentId = contentRow.id
+      else returnTo = 'settings'
+    } else if (returnTo === 'content_ready') {
+      returnTo = 'settings'
+    }
 
     const appId = Deno.env.get('INSTAGRAM_APP_ID')
     if (!appId) {
@@ -85,6 +108,7 @@ Deno.serve(async (req) => {
       workspace_id: workspaceId,
       expires_at: expiresAt,
       return_to: returnTo,
+      content_id: contentId,
     })
     if (insertError) {
       console.error('instagram-oauth-start: falha ao gravar state.', insertError)

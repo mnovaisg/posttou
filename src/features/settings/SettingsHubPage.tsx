@@ -5,7 +5,7 @@ import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { supabase } from '@/lib/supabase/client'
 import { ConnectInstagramCard } from '@/features/instagram/ConnectInstagramCard'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { exportMyData, fetchMyMarketingConsent, setMyMarketingConsent } from '@/features/settings/api'
+import { exportMyData, fetchMyMarketingConsent, setMyMarketingConsent, updateWorkspaceApprovalSetting } from '@/features/settings/api'
 import { getSupportEmail } from '@/lib/support'
 
 function downloadJson(data: unknown, filename: string) {
@@ -22,6 +22,8 @@ export function SettingsHubPage() {
   const { user, updatePassword, signOut } = useAuth()
   const { activeWorkspace, activeRole } = useWorkspace()
   const supportEmail = getSupportEmail()
+  const canManageApproval = activeRole === 'owner' || activeRole === 'admin'
+  const [savingApproval, setSavingApproval] = React.useState(false)
 
   const queryClient = useQueryClient()
   const [fullName, setFullName] = React.useState('')
@@ -78,6 +80,17 @@ export function SettingsHubPage() {
       await queryClient.invalidateQueries({ queryKey: ['my-marketing-consent'] })
     } finally {
       setConsentBusy(null)
+    }
+  }
+
+  async function handleToggleApproval(requireApproval: boolean) {
+    if (!activeWorkspace) return
+    setSavingApproval(true)
+    try {
+      await updateWorkspaceApprovalSetting(activeWorkspace.id, requireApproval)
+      await queryClient.invalidateQueries({ queryKey: ['workspace-memberships'] })
+    } finally {
+      setSavingApproval(false)
     }
   }
 
@@ -201,6 +214,41 @@ export function SettingsHubPage() {
           <Link to="/dna-da-marca" className="mt-2 inline-block text-sm font-medium text-brand-600 hover:underline">
             Ver DNA da Marca
           </Link>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Fluxo de publicação</h2>
+        <div className="rounded-xl border border-ink-200 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-ink-900 dark:text-ink-50">Exigir revisão antes de publicar</p>
+              <p className="mt-1 text-xs text-ink-500">
+                {activeWorkspace?.require_content_approval
+                  ? 'Ativado: todo conteúdo passa por revisão e aprovação antes de poder ser agendado ou publicado.'
+                  : 'Desativado: quem tem permissão pode publicar ou agendar direto, assim que a arte for gerada.'}
+              </p>
+              {!canManageApproval && (
+                <p className="mt-1 text-xs text-ink-400">Só owner/admin pode alterar esta configuração.</p>
+              )}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={activeWorkspace?.require_content_approval ?? true}
+              disabled={!canManageApproval || savingApproval || !activeWorkspace}
+              onClick={() => handleToggleApproval(!(activeWorkspace?.require_content_approval ?? true))}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+                activeWorkspace?.require_content_approval ? 'bg-brand-600' : 'bg-ink-300 dark:bg-ink-700'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                  activeWorkspace?.require_content_approval ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </section>
 

@@ -79,7 +79,23 @@ async function handleSchedule(userClient: any, admin: any, body: Record<string, 
     .maybeSingle()
   if (contentError || !content) return json({ error: 'not_found', message: 'Conteúdo não encontrado.' }, 404)
 
-  if (!['aprovado', 'falhou'].includes(content.status)) {
+  // Workspaces com aprovação desativada (require_content_approval=false)
+  // podem publicar/agendar direto de 'rascunho' — a IA já gerou texto+arte
+  // e o usuário aprovou visualmente na tela de resultado, sem precisar
+  // passar por em_revisao/aprovado. Continua exigindo 'aprovado'/'falhou'
+  // quando a aprovação está ativada (comportamento padrão, inalterado). A
+  // transição em si ainda é validada pelo trigger enforce_content_status_transition,
+  // que também checa esta mesma flag — esta checagem aqui é só a mensagem
+  // de erro amigável antes de tentar.
+  const { data: workspace } = await userClient
+    .from('workspaces')
+    .select('require_content_approval')
+    .eq('id', content.workspace_id)
+    .maybeSingle()
+  const approvalRequired = workspace?.require_content_approval ?? true
+  const allowedSourceStatuses = approvalRequired ? ['aprovado', 'falhou'] : ['aprovado', 'falhou', 'rascunho']
+
+  if (!allowedSourceStatuses.includes(content.status)) {
     return json({ error: 'invalid_state', message: 'Só é possível agendar/publicar conteúdo aprovado (ou tentar de novo um conteúdo que falhou).' }, 409)
   }
   if (content.type === 'reel') {

@@ -4,10 +4,11 @@ import { exportPageToPng } from '@/features/editor/exportPng'
 import type { EditorPage, ImageElementContent } from '@/features/editor/types'
 import type { ContentRow } from '@/features/content/types'
 import { composeInstagramCaption } from '@/features/instagram-publish/caption'
-import { fetchInstagramAccounts } from '@/features/instagram/api'
+import { fetchInstagramAccounts, startInstagramOAuth } from '@/features/instagram/api'
 import type { InstagramAccountRow } from '@/features/instagram/types'
 import { publishNow as callPublishNow, schedulePublication } from '@/features/instagram-publish/api'
 import { getDatePartsInTimeZone, zonedTimeToUtc, formatInTimeZone } from '@/lib/timezone'
+import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -38,8 +39,13 @@ export function SchedulePublishDialog({
   onClose: () => void
   onDone: () => void
 }) {
+  const { hasRole } = useWorkspace()
+  const canManageInstagram = hasRole(['owner', 'admin'])
+
   const [stage, setStage] = React.useState<Stage>('loading')
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+  const [needsInstagramConnection, setNeedsInstagramConnection] = React.useState(false)
+  const [connecting, setConnecting] = React.useState(false)
   const [pages, setPages] = React.useState<EditorPage[]>([])
   const [accounts, setAccounts] = React.useState<InstagramAccountRow[]>([])
   const [selectedAccountId, setSelectedAccountId] = React.useState('')
@@ -66,7 +72,10 @@ export function SchedulePublishDialog({
         setScheduleTime(parts.time)
 
         setStage(loadedAccounts.length === 0 ? 'error' : 'form')
-        if (loadedAccounts.length === 0) setErrorMessage('Nenhuma conta do Instagram conectada e ativa neste workspace.')
+        if (loadedAccounts.length === 0) {
+          setNeedsInstagramConnection(true)
+          setErrorMessage('Nenhuma conta do Instagram conectada e ativa neste workspace.')
+        }
       } catch (err) {
         if (cancelled) return
         setErrorMessage(err instanceof Error ? err.message : 'Não foi possível carregar o conteúdo.')
@@ -77,6 +86,17 @@ export function SchedulePublishDialog({
       cancelled = true
     }
   }, [content.id, workspaceId, timezone])
+
+  async function handleConnectInstagram() {
+    setConnecting(true)
+    try {
+      const authorizeUrl = await startInstagramOAuth(workspaceId, 'content_ready', content.id)
+      window.location.href = authorizeUrl
+    } catch (err) {
+      setConnecting(false)
+      setErrorMessage(err instanceof Error ? err.message : 'Não foi possível iniciar a conexão com o Instagram.')
+    }
+  }
 
   async function handleConfirm() {
     if (!selectedAccountId) {
@@ -154,10 +174,15 @@ export function SchedulePublishDialog({
         {stage === 'error' && (
           <>
             <p className="mt-4 text-sm text-danger-500">{errorMessage}</p>
-            <div className="mt-5 flex justify-end">
-              <Button variant="outline" size="sm" onClick={onClose}>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={onClose}>
                 Fechar
               </Button>
+              {needsInstagramConnection && canManageInstagram && (
+                <Button size="sm" onClick={handleConnectInstagram} disabled={connecting}>
+                  {connecting ? 'Redirecionando…' : 'Conectar Instagram'}
+                </Button>
+              )}
             </div>
           </>
         )}

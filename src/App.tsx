@@ -32,6 +32,7 @@ import { AdminLayout } from '@/features/admin/AdminLayout'
 const VisualDnaPage = React.lazy(() => import('@/features/brand-visual-dna/VisualDnaPage').then((m) => ({ default: m.VisualDnaPage })))
 const BrandStylePage = React.lazy(() => import('@/features/brand-style/BrandStylePage').then((m) => ({ default: m.BrandStylePage })))
 const EditorPage = React.lazy(() => import('@/features/editor/EditorPage').then((m) => ({ default: m.EditorPage })))
+const PostReadyPage = React.lazy(() => import('@/features/content/PostReadyPage').then((m) => ({ default: m.PostReadyPage })))
 const RadarPage = React.lazy(() => import('@/features/radar/RadarPage').then((m) => ({ default: m.RadarPage })))
 const PilotPage = React.lazy(() => import('@/features/pilot/PilotPage').then((m) => ({ default: m.PilotPage })))
 const ReportsPage = React.lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
@@ -196,6 +197,14 @@ function App() {
               />
               <Route path="/conteudo" element={<ContentPage />} />
               <Route path="/conteudo/:id" element={<ContentDetailPage />} />
+              <Route
+                path="/conteudo/:id/pronto"
+                element={
+                  <React.Suspense fallback={<RouteFallback />}>
+                    <PostReadyPage />
+                  </React.Suspense>
+                }
+              />
               <Route
                 path="/conteudo/:id/editor"
                 element={

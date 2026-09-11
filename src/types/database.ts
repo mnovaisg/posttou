@@ -1455,6 +1455,7 @@ export type Database = {
           balance: number
           created_at: string
           id: string
+          is_unlimited: boolean
           updated_at: string
           workspace_id: string
         }
@@ -1462,6 +1463,7 @@ export type Database = {
           balance?: number
           created_at?: string
           id?: string
+          is_unlimited?: boolean
           updated_at?: string
           workspace_id: string
         }
@@ -1469,6 +1471,7 @@ export type Database = {
           balance?: number
           created_at?: string
           id?: string
+          is_unlimited?: boolean
           updated_at?: string
           workspace_id?: string
         }
@@ -1653,6 +1656,7 @@ export type Database = {
       }
       instagram_oauth_states: {
         Row: {
+          content_id: string | null
           created_at: string
           expires_at: string
           id: string
@@ -1663,6 +1667,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          content_id?: string | null
           created_at?: string
           expires_at: string
           id?: string
@@ -1673,6 +1678,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          content_id?: string | null
           created_at?: string
           expires_at?: string
           id?: string
@@ -1683,6 +1689,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "instagram_oauth_states_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "instagram_oauth_states_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -4202,6 +4215,7 @@ export type Database = {
           name: string
           organization_id: string
           owner_id: string
+          require_content_approval: boolean
           slug: string
           timezone: string
           updated_at: string
@@ -4212,6 +4226,7 @@ export type Database = {
           name: string
           organization_id: string
           owner_id: string
+          require_content_approval?: boolean
           slug: string
           timezone?: string
           updated_at?: string
@@ -4222,6 +4237,7 @@ export type Database = {
           name?: string
           organization_id?: string
           owner_id?: string
+          require_content_approval?: boolean
           slug?: string
           timezone?: string
           updated_at?: string
@@ -4320,6 +4336,10 @@ export type Database = {
           p_used_count: number
         }
         Returns: string
+      }
+      _is_internal_subscription: {
+        Args: { p_sub: Database["public"]["Tables"]["subscriptions"]["Row"] }
+        Returns: boolean
       }
       _lead_commercial_status: {
         Args: {
@@ -4630,6 +4650,63 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_grant_internal_subscription_system: {
+        Args: { p_organization_id: string; p_plan_id: string; p_reason: string }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
+          pending_change_payment_id: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_grant_unlimited_credits_system: {
+        Args: { p_reason?: string; p_workspace_id: string }
+        Returns: {
+          balance: number
+          created_at: string
+          id: string
+          is_unlimited: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "credit_accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_lead_metrics_system: { Args: never; Returns: Json }
       admin_list_asaas_sync_issues_system: { Args: never; Returns: Json }
       admin_list_billing_charges_system: {
@@ -4736,6 +4813,63 @@ export type Database = {
       admin_revenue_projection_system: {
         Args: { p_months?: number }
         Returns: Json
+      }
+      admin_revoke_internal_subscription_system: {
+        Args: { p_organization_id: string }
+        Returns: {
+          activated_at: string | null
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
+          asaas_sync_attempted_at: string | null
+          asaas_sync_last_error: string | null
+          asaas_sync_status: string
+          asaas_sync_target_price_cents: number | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          past_due_grace_days: number
+          past_due_since: string | null
+          pending_billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
+          pending_change_kind: string | null
+          pending_change_new_recurring_cents: number | null
+          pending_change_payment_id: string | null
+          pending_change_price_cents: number | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_revoke_unlimited_credits_system: {
+        Args: { p_reason?: string; p_workspace_id: string }
+        Returns: {
+          balance: number
+          created_at: string
+          id: string
+          is_unlimited: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "credit_accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_set_coupon_active_system: {
         Args: { p_active: boolean; p_coupon_id: string }
@@ -5507,6 +5641,7 @@ export type Database = {
           name: string
           organization_id: string
           owner_id: string
+          require_content_approval: boolean
           slug: string
           timezone: string
           updated_at: string
@@ -7048,6 +7183,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_workspace_approval_setting: {
+        Args: { p_require_approval: boolean; p_workspace_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          owner_id: string
+          require_content_approval: boolean
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workspaces"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_billing_charge_system: {
         Args: {
           p_asaas_payment_id: string
@@ -7276,7 +7431,11 @@ export type Database = {
         | "permission_required"
         | "available"
         | "not_supported"
-      instagram_oauth_return_to: "onboarding" | "settings" | "dashboard"
+      instagram_oauth_return_to:
+        | "onboarding"
+        | "settings"
+        | "dashboard"
+        | "content_ready"
       instagram_publication_status:
         | "pending"
         | "processing"
@@ -7534,7 +7693,12 @@ export const Constants = {
         "available",
         "not_supported",
       ],
-      instagram_oauth_return_to: ["onboarding", "settings", "dashboard"],
+      instagram_oauth_return_to: [
+        "onboarding",
+        "settings",
+        "dashboard",
+        "content_ready",
+      ],
       instagram_publication_status: [
         "pending",
         "processing",

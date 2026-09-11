@@ -37,9 +37,19 @@ export async function fetchInstagramAccounts(workspaceId: string): Promise<Insta
 export class InstagramNotConfiguredError extends Error {}
 
 /** Destino interno pra onde o callback do OAuth deve voltar — allowlist fechada, validada de novo no servidor (instagram-oauth-start nunca confia só nisto). */
-export type InstagramOauthReturnTo = 'onboarding' | 'settings' | 'dashboard'
+export type InstagramOauthReturnTo = 'onboarding' | 'settings' | 'dashboard' | 'content_ready'
 
-export async function startInstagramOAuth(workspaceId: string, returnTo: InstagramOauthReturnTo = 'settings'): Promise<string> {
+/**
+ * `contentId` só é usado (e só é persistido no state do servidor) quando
+ * `returnTo` é 'content_ready' — é o que permite o callback devolver o
+ * usuário exatamente para a tela "post pronto" que ele estava tentando
+ * publicar quando percebeu que faltava conectar o Instagram.
+ */
+export async function startInstagramOAuth(
+  workspaceId: string,
+  returnTo: InstagramOauthReturnTo = 'settings',
+  contentId?: string,
+): Promise<string> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) throw new Error('Sessão expirada. Faça login novamente.')
@@ -47,7 +57,7 @@ export async function startInstagramOAuth(workspaceId: string, returnTo: Instagr
   const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/instagram-oauth-start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ workspaceId, returnTo }),
+    body: JSON.stringify({ workspaceId, returnTo, contentId }),
   })
   const body = await res.json()
   if (!res.ok) {

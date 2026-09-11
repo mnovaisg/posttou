@@ -31,7 +31,16 @@ const RETURN_TO_PATH: Record<string, string> = {
   settings: '/configuracoes',
   dashboard: '/',
 }
-function pathForReturnTo(returnTo: string | null | undefined): string {
+// 'content_ready' é o único destino com path dinâmico — mas o único
+// ingrediente dinâmico é um UUID lido do próprio state gravado no
+// servidor (nunca de querystring/cliente), e validado no formato de UUID
+// antes de entrar na URL. Continua não havendo nenhuma interpolação de
+// valor externo bruto.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+function pathForReturnTo(returnTo: string | null | undefined, contentId: string | null | undefined): string {
+  if (returnTo === 'content_ready' && typeof contentId === 'string' && UUID_RE.test(contentId)) {
+    return `/conteudo/${contentId}/pronto`
+  }
   return RETURN_TO_PATH[returnTo ?? ''] ?? '/configuracoes'
 }
 
@@ -86,11 +95,11 @@ Deno.serve(async (req) => {
         .eq('state', state)
         .is('used_at', null)
         .gt('expires_at', new Date().toISOString())
-        .select('user_id, workspace_id, return_to')
+        .select('user_id, workspace_id, return_to, content_id')
         .maybeSingle()
       if (!stateError && data) {
         stateRow = { user_id: data.user_id, workspace_id: data.workspace_id }
-        returnPath = pathForReturnTo(data.return_to)
+        returnPath = pathForReturnTo(data.return_to, data.content_id)
       }
     }
 

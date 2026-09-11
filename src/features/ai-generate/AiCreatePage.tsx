@@ -152,7 +152,16 @@ export function AiCreatePage() {
     onSuccess: (content) => {
       queryClient.invalidateQueries({ queryKey: ['contents'] })
       queryClient.invalidateQueries({ queryKey: ['content-summary'] })
-      navigate(`/conteudo/${content.id}/editor`)
+      // Post único já tem arte sendo gerada automaticamente (acima) — vai
+      // direto pra tela "post pronto" (Criar → Post pronto → Publicar ou
+      // Editar), nunca mais para o Editor automaticamente. Os demais tipos
+      // (carrossel, roteiro, legenda, ideias) não têm arte automática e
+      // continuam indo pro Editor, como antes.
+      if (generationType === 'post_unico') {
+        navigate(`/conteudo/${content.id}/pronto`)
+      } else {
+        navigate(`/conteudo/${content.id}/editor`)
+      }
     },
   })
 
