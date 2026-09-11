@@ -82,6 +82,21 @@ export function BrandStylePage() {
     },
   })
 
+  // Upload de logo salva sozinho, sem esperar o botão "Salvar alterações"
+  // lá embaixo — uma logo trocada e não persistida ficava só no estado
+  // local (a pré-visualização mudava, dando a impressão de já ter salvo),
+  // enquanto brand_profiles.logo_path no banco continuava apontando pro
+  // arquivo antigo — exatamente o que overlayBrandLogo usa pra compor a
+  // logo real em cada arte gerada. Resultado real visto em produção:
+  // posts novos saindo com a logo antiga mesmo após trocar aqui.
+  const logoSaveMutation = useMutation({
+    mutationFn: (path: string) => updateBrandProfile(workspaceId, { logo_path: path || null }),
+    onSuccess: (row) => {
+      queryClient.setQueryData(['brand-profile', workspaceId], row)
+      queryClient.invalidateQueries({ queryKey: ['onboarding-state', workspaceId] })
+    },
+  })
+
   const [uploadingLogo, setUploadingLogo] = React.useState(false)
   const logoInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -91,7 +106,7 @@ export function BrandStylePage() {
     try {
       const path = await uploadBrandAsset(workspaceId, 'logo', file)
       setLogoPath(path)
-      setDirty(true)
+      await logoSaveMutation.mutateAsync(path)
     } finally {
       setUploadingLogo(false)
     }
@@ -165,10 +180,13 @@ export function BrandStylePage() {
                   e.target.value = ''
                 }}
               />
-              <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+              <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} loading={uploadingLogo}>
                 {uploadingLogo ? 'Enviando…' : logoPath ? 'Trocar logo' : 'Enviar logo'}
               </Button>
               <p className="text-xs text-ink-400">PNG, JPEG, WebP ou SVG.</p>
+              {logoSaveMutation.isError && (
+                <p className="text-xs text-danger-500">Falha ao salvar a logo. Tente enviar de novo.</p>
+              )}
             </div>
           )}
         </CardContent>

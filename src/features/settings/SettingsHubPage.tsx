@@ -211,9 +211,14 @@ export function SettingsHubPage() {
         <div className="rounded-xl border border-ink-200 bg-white p-4 text-sm dark:border-ink-800 dark:bg-ink-900">
           <p className="text-ink-700 dark:text-ink-200">Marca ativa: <strong>{activeWorkspace?.name}</strong></p>
           <p className="mt-1 text-xs text-ink-500">Papel: {activeRole}</p>
-          <Link to="/dna-da-marca" className="mt-2 inline-block text-sm font-medium text-brand-600 hover:underline">
-            Ver DNA da Marca
-          </Link>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <Link to="/dna-da-marca" className="text-sm font-medium text-brand-600 hover:underline">
+              Ver DNA da Marca
+            </Link>
+            <Link to="/dna-da-marca/estilo" className="text-sm font-medium text-brand-600 hover:underline">
+              Estilo da Marca (cores, logo, referências)
+            </Link>
+          </div>
         </div>
       </section>
 
