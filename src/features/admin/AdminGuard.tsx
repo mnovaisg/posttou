@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { checkIsPlatformAdmin } from '@/features/admin/api'
+import { Spinner } from '@/components/ui/spinner'
 
 // Autorização real está 100% no servidor (is_platform_admin, checado de
 // novo dentro de cada RPC admin_*_system). Este guard é só UX — impede o
@@ -29,8 +30,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   if (authLoading || status === 'checking') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-ink-50 dark:bg-ink-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-ink-50 text-brand-600 dark:bg-ink-950">
+        <Spinner size="lg" />
       </div>
     )
   }

@@ -358,7 +358,8 @@ export function AiCreatePage() {
 
                 <Button
                   type="button"
-                  disabled={!themeInput.trim() || generateMutation.isPending || insufficientCredits}
+                  disabled={!themeInput.trim() || insufficientCredits}
+                  loading={generateMutation.isPending}
                   onClick={() => generateMutation.mutate()}
                 >
                   {generateMutation.isPending
@@ -486,7 +487,7 @@ export function AiCreatePage() {
               </p>
             )}
 
-            <Button type="button" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button type="button" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
               {saveMutation.isPending ? 'Salvando…' : 'Salvar como rascunho'}
             </Button>
           </CardContent>

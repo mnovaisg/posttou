@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
@@ -174,7 +175,7 @@ export function KnowYourBrandFlow({
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+          <Spinner size="lg" className="text-brand-600" />
           <p className="text-sm text-ink-600 dark:text-ink-300">
             {saving ? 'Salvando...' : pendingHandle ? `Conhecendo a @${pendingHandle}...` : 'Conhecendo sua marca...'}
           </p>

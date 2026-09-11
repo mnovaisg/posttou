@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { generateWithAi, AiNotConfiguredError as TextNotConfiguredError, saveAiGenerationAsDraft } from '@/features/ai-generate/api'
@@ -391,7 +392,7 @@ export function FirstContentFlow({
 
           {!ideas && (
             <div className="mt-8 flex flex-col items-center gap-3 py-6">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+              <Spinner size="lg" className="text-brand-600" />
               <p className="text-sm text-ink-500">Pensando em ideias para sua marca...</p>
             </div>
           )}
@@ -432,7 +433,7 @@ export function FirstContentFlow({
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+          <Spinner size="lg" className="text-brand-600" />
           <p className="text-sm text-ink-600 dark:text-ink-300">Criando seu primeiro conteúdo...</p>
         </CardContent>
       </Card>
@@ -443,7 +444,7 @@ export function FirstContentFlow({
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+          <Spinner size="lg" className="text-brand-600" />
           <p className="text-sm text-ink-600 dark:text-ink-300">Estamos finalizando sua arte...</p>
           <p className="text-xs text-ink-400">
             Isso pode levar alguns minutos. Você pode continuar usando o POSTTOU e voltar depois — nada será perdido.
@@ -498,7 +499,7 @@ export function FirstContentFlow({
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+          <Spinner size="lg" className="text-brand-600" />
           <p className="text-sm text-ink-600 dark:text-ink-300">Interpretando sua direção visual...</p>
         </CardContent>
       </Card>

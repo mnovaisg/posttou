@@ -8,6 +8,7 @@ import type { RadarConfidence, RadarOpportunityWithCluster } from '@/features/ra
 import { TYPE_ICON, TYPE_LABEL } from '@/features/content/types'
 import type { ContentType } from '@/features/content/types'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { RadarConfig } from '@/features/radar/RadarConfig'
@@ -85,7 +86,12 @@ export function RadarPage() {
         </p>
       )}
 
-      {opportunitiesQuery.isLoading && <p className="text-sm text-ink-500">Carregando oportunidades…</p>}
+      {opportunitiesQuery.isLoading && (
+        <p className="flex items-center gap-2 text-sm text-ink-500">
+          <Spinner size="xs" />
+          Carregando oportunidades…
+        </p>
+      )}
 
       {!opportunitiesQuery.isLoading && opportunities.length === 0 && (
         <Card>

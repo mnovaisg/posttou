@@ -197,7 +197,7 @@ export function ListView({
       </div>
 
       {hasNextPage && (
-        <Button variant="outline" size="sm" onClick={() => fetchNextPage()} disabled={isFetchingNextPage} className="self-center">
+        <Button variant="outline" size="sm" onClick={() => fetchNextPage()} loading={isFetchingNextPage} className="self-center">
           {isFetchingNextPage ? 'Carregando…' : `Carregar mais (${rows.length}/${total})`}
         </Button>
       )}

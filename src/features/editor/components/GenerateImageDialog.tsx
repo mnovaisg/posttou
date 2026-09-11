@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { AiNotConfiguredError, checkImageGeneration, generateImageWithAi } from '@/features/editor/api'
@@ -93,12 +94,18 @@ export function GenerateImageDialog({
               placeholder="Ex.: Foto de produto minimalista, fundo neutro, luz suave, estilo editorial."
             />
             {error && <p className="text-sm text-danger-500">{error}</p>}
-            {phase === 'processing' && <p className="text-sm text-ink-500">Gerando… isso pode levar até 1-2 minutos.</p>}
+            {phase === 'processing' && (
+              <div className="flex items-center gap-2 text-sm text-ink-500">
+                <Spinner size="sm" className="text-brand-600" />
+                Gerando… isso pode levar até 1-2 minutos.
+              </div>
+            )}
 
             <Button
               type="button"
               onClick={handleGenerate}
-              disabled={!prompt.trim() || phase === 'starting' || phase === 'processing'}
+              disabled={!prompt.trim()}
+              loading={phase === 'starting' || phase === 'processing'}
             >
               {phase === 'starting' || phase === 'processing' ? 'Gerando…' : `Gerar${creditCost != null ? ` (${creditCost} créditos)` : ''}`}
             </Button>

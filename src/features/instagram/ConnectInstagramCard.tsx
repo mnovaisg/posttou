@@ -12,6 +12,7 @@ import {
   startInstagramOAuth,
 } from '@/features/instagram/api'
 import { INSTAGRAM_ERROR_MESSAGES } from '@/features/instagram/types'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -70,7 +71,7 @@ export function ConnectInstagramCard() {
     return (
       <Card>
         <CardHeader><CardTitle>Instagram</CardTitle></CardHeader>
-        <CardContent><p className="text-sm text-ink-400">Carregando…</p></CardContent>
+        <CardContent><p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p></CardContent>
       </Card>
     )
   }

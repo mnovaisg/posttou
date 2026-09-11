@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Spinner } from '@/components/ui/spinner'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPlans, fetchFeaturedCoupon, publicPreviewCoupon, COUPON_REASON_LABEL } from '@/features/billing/api'
@@ -147,7 +148,12 @@ export function LandingPricing() {
         </button>
       </div>
 
-      {plansQuery.isLoading && <p className="mt-10 text-center text-sm text-ink-400">Carregando planos…</p>}
+      {plansQuery.isLoading && (
+        <p className="mt-10 flex items-center justify-center gap-2 text-center text-sm text-ink-400">
+          <Spinner size="xs" />
+          Carregando planos…
+        </p>
+      )}
       {plansQuery.isError && <p className="mt-10 text-center text-sm text-danger-500">Não foi possível carregar os planos agora.</p>}
 
       {plansQuery.data && (

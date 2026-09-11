@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TagInput } from '@/features/brand-dna/components/TagInput'
 import { SchedulePublishDialog } from '@/features/instagram-publish/SchedulePublishDialog'
@@ -197,7 +198,7 @@ export function ContentDetailPage() {
         <div className="flex items-center gap-2">
           <StatusBadge status={content.status} />
           {canEdit && (
-            <Button variant="outline" size="sm" onClick={() => duplicateMutation.mutate()} disabled={duplicateMutation.isPending}>
+            <Button variant="outline" size="sm" onClick={() => duplicateMutation.mutate()} loading={duplicateMutation.isPending}>
               Duplicar
             </Button>
           )}
@@ -256,7 +257,7 @@ export function ContentDetailPage() {
           </div>
 
           {canEdit && dirty && (
-            <Button size="sm" className="self-start" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button size="sm" className="self-start" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
               {saveMutation.isPending ? 'Salvando…' : 'Salvar alterações'}
             </Button>
           )}
@@ -299,7 +300,7 @@ export function ContentDetailPage() {
                   </>
                 ) : page.visual_asset_status === 'generating' || page.visual_asset_status === 'pending' ? (
                   <div className="flex flex-col items-center gap-1">
-                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+                    <Spinner size="xs" className="text-brand-600" />
                     <span>{idx + 1}</span>
                   </div>
                 ) : page.visual_asset_status === 'failed' ? (
@@ -336,7 +337,7 @@ export function ContentDetailPage() {
 
         {content.status === 'publicando' && (
           <p className="mb-4 flex items-center gap-2 text-sm text-ink-600 dark:text-ink-300">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+            <Spinner size="xs" className="text-brand-600" />
             Publicando no Instagram… ({activePublication ? PUBLICATION_STATUS_LABEL[activePublication.status] : 'processando'})
           </p>
         )}
@@ -416,7 +417,8 @@ export function ContentDetailPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => cancelPublicationMutation.mutate()}
-                disabled={cancelPublicationMutation.isPending || !!activePublication?.claimed_at}
+                loading={cancelPublicationMutation.isPending}
+                disabled={!!activePublication?.claimed_at}
               >
                 Cancelar agendamento
               </Button>
@@ -462,7 +464,8 @@ export function ContentDetailPage() {
               <Button
                 variant="danger"
                 size="sm"
-                disabled={!rejectReason.trim() || transitionMutation.isPending}
+                disabled={!rejectReason.trim()}
+                loading={transitionMutation.isPending}
                 onClick={() => transitionMutation.mutate({ status: 'rejeitado', extra: { rejection_reason: rejectReason } })}
               >
                 Rejeitar
@@ -508,7 +511,8 @@ export function ContentDetailPage() {
               </Button>
               <Button
                 size="sm"
-                disabled={!rescheduleDate || !rescheduleTime || reschedulePublicationMutation.isPending}
+                disabled={!rescheduleDate || !rescheduleTime}
+                loading={reschedulePublicationMutation.isPending}
                 onClick={confirmReschedule}
               >
                 Confirmar novo horário
@@ -529,7 +533,7 @@ export function ContentDetailPage() {
               <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
                 Cancelar
               </Button>
-              <Button variant="danger" size="sm" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate()}>
+              <Button variant="danger" size="sm" loading={deleteMutation.isPending} onClick={() => deleteMutation.mutate()}>
                 {deleteMutation.isPending ? 'Excluindo…' : 'Excluir'}
               </Button>
             </div>

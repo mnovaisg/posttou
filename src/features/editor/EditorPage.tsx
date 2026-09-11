@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   getContent,
   getContentAssetSignedUrl,
@@ -477,7 +478,12 @@ export function EditorPage() {
   const selectedElement = activePage?.elements.find((el) => el.id === selectedId) ?? null
 
   if (isLoading || !activePage) {
-    return <div className="p-6 text-sm text-ink-400">Carregando editor…</div>
+    return (
+      <div className="flex items-center gap-2 p-6 text-sm text-ink-400">
+        <Spinner size="xs" />
+        Carregando editor…
+      </div>
+    )
   }
 
   return (
@@ -494,7 +500,7 @@ export function EditorPage() {
           <Button size="sm" variant="outline" onClick={handleExportPage}>Exportar PNG</Button>
           {pages.length > 1 && <Button size="sm" variant="outline" onClick={handleExportAll}>Exportar tudo</Button>}
           {canEdit && (
-            <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saving || !dirty}>
+            <Button size="sm" onClick={() => saveMutation.mutate()} disabled={!dirty} loading={saving}>
               {saving ? 'Salvando…' : dirty ? 'Salvar' : 'Salvo'}
             </Button>
           )}
@@ -507,14 +513,17 @@ export function EditorPage() {
         <div className="flex items-center justify-between gap-3 bg-red-50 px-4 py-1.5 text-xs text-danger-600 dark:bg-red-950 dark:text-danger-300">
           <span>Arte não gerada — a geração automática desta página falhou.</span>
           {canEdit && (
-            <Button size="sm" variant="outline" disabled={retryingVisualAsset} onClick={() => handleRetryVisualAsset(activePage.id)}>
+            <Button size="sm" variant="outline" loading={retryingVisualAsset} onClick={() => handleRetryVisualAsset(activePage.id)}>
               {retryingVisualAsset ? 'Tentando…' : 'Tentar gerar arte novamente'}
             </Button>
           )}
         </div>
       )}
       {(activePage?.visual_asset_status === 'pending' || activePage?.visual_asset_status === 'generating') && (
-        <p className="bg-brand-50 px-4 py-1 text-xs text-brand-700 dark:bg-brand-950 dark:text-brand-300">Gerando arte automaticamente…</p>
+        <p className="flex items-center gap-2 bg-brand-50 px-4 py-1 text-xs text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+          <Spinner size="xs" />
+          Gerando arte automaticamente…
+        </p>
       )}
 
       <div className="flex flex-1 overflow-hidden">

@@ -10,6 +10,7 @@ import {
 } from '@/features/admin/api'
 import type { AdminLeadFilters, CommercialStatus } from '@/features/admin/api'
 import { fetchPlans } from '@/features/billing/api'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -303,7 +304,7 @@ export function AdminLeadsPage() {
         </div>
       </div>
 
-      {listQuery.isLoading && <p className="text-sm text-ink-400">Carregando…</p>}
+      {listQuery.isLoading && <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>}
       {listQuery.isError && <p className="text-sm text-danger-500">Não foi possível carregar a lista.</p>}
 
       {/* Mobile: cards */}

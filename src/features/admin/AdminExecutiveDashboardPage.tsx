@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchExecutiveDashboard, setRevenueGoal } from '@/features/admin/executiveApi'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -72,7 +73,7 @@ export function AdminExecutiveDashboardPage() {
         <p className="mt-1 text-sm text-ink-500">Visão geral do negócio — todos os números vêm das mesmas fontes já usadas em Financeiro e Clientes &amp; Leads.</p>
       </div>
 
-      {dashboardQuery.isLoading && <p className="text-sm text-ink-400">Carregando…</p>}
+      {dashboardQuery.isLoading && <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>}
       {dashboardQuery.isError && <p className="text-sm text-danger-500">Não foi possível carregar o dashboard.</p>}
 
       {d && (

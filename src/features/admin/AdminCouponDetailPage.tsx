@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { deleteAdminCoupon, fetchAdminCouponDetail, setAdminCouponActive, setAdminCouponLandingFeatured } from '@/features/admin/api'
 import { STATUS_LABEL, STATUS_COLOR } from '@/features/admin/statusLabels'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -78,7 +79,7 @@ export function AdminCouponDetailPage() {
     }
   }
 
-  if (detailQuery.isLoading) return <p className="text-sm text-ink-400">Carregando…</p>
+  if (detailQuery.isLoading) return <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>
   if (detailQuery.isError || !detailQuery.data) return <p className="text-sm text-danger-500">Cupom não encontrado.</p>
 
   const { coupon, redemptions } = detailQuery.data

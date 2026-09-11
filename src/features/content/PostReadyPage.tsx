@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
-import { getContent, getContentPages, getContentPageThumbnails } from '@/features/content/api'
+import { getContent, getContentPages, getContentPageThumbnails, transitionStatus } from '@/features/content/api'
 import { retryPilotVisualAsset } from '@/features/pilot/api'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { SchedulePublishDialog } from '@/features/instagram-publish/SchedulePublishDialog'
 
 /**
@@ -22,10 +23,26 @@ export function PostReadyPage() {
   const tz = activeWorkspace?.timezone ?? 'America/Sao_Paulo'
   const canSchedule = hasRole(['owner', 'admin', 'editor'])
   const canPublishNow = hasRole(['owner', 'admin'])
+  // Workspace com aprovação ativada (padrão) — sem esse flag desligado
+  // explicitamente, o backend sempre rejeita agendar/publicar direto de
+  // rascunho (enforce_content_status_transition). Nesse caso, clicar em
+  // "Publicar" aqui deve mandar para revisão (rascunho -> em_revisao),
+  // nunca tentar o publish direto e cair num erro sem saída.
+  const requireApproval = activeWorkspace?.require_content_approval ?? true
 
   const [retrying, setRetrying] = React.useState(false)
   const [publishDialog, setPublishDialog] = React.useState<'schedule' | 'publish_now' | null>(null)
   const [showPublishChoice, setShowPublishChoice] = React.useState(false)
+
+  const submitForReviewMutation = useMutation({
+    mutationFn: () => transitionStatus(id!, 'em_revisao'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content', id] })
+      queryClient.invalidateQueries({ queryKey: ['contents'] })
+      queryClient.invalidateQueries({ queryKey: ['content-summary'] })
+      navigate(`/conteudo/${id}`)
+    },
+  })
 
   const { data: content } = useQuery({ queryKey: ['content', id], enabled: !!id, queryFn: () => getContent(id!) })
 
@@ -63,7 +80,12 @@ export function PostReadyPage() {
   }
 
   if (!content || !page) {
-    return <div className="p-6 text-sm text-ink-400">Carregando…</div>
+    return (
+      <div className="flex items-center gap-2 p-6 text-sm text-ink-400">
+        <Spinner size="xs" />
+        Carregando…
+      </div>
+    )
   }
 
   const isGenerating = page.visual_asset_status === 'pending' || page.visual_asset_status === 'generating'
@@ -85,13 +107,13 @@ export function PostReadyPage() {
             <div className="flex flex-col items-center gap-3 p-6 text-center">
               <span className="text-3xl" aria-hidden>⚠️</span>
               <p className="text-sm text-danger-500">Não conseguimos gerar a arte automaticamente.</p>
-              <Button size="sm" variant="outline" disabled={retrying} onClick={handleRetry}>
+              <Button size="sm" variant="outline" loading={retrying} onClick={handleRetry}>
                 {retrying ? 'Tentando…' : 'Tentar gerar arte novamente'}
               </Button>
             </div>
           ) : isGenerating ? (
             <div className="flex flex-col items-center gap-3 p-6 text-center">
-              <span className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+              <Spinner size="lg" className="text-brand-600" />
               <p className="text-sm font-medium text-brand-700 dark:text-brand-300">Gerando sua arte com IA…</p>
               <p className="text-xs text-ink-400">Isso pode levar até 1-2 minutos.</p>
             </div>
@@ -109,8 +131,25 @@ export function PostReadyPage() {
           {content.cta && <p className="text-sm font-medium text-ink-700 dark:text-ink-200">{content.cta}</p>}
         </div>
 
+        {submitForReviewMutation.isError && (
+          <p className="mt-4 text-sm text-danger-500">
+            {submitForReviewMutation.error instanceof Error ? submitForReviewMutation.error.message : 'Não foi possível enviar para revisão.'}
+          </p>
+        )}
+
         <div className="mt-6 flex flex-col gap-2">
-          {showPublishChoice ? (
+          {requireApproval ? (
+            canPublishAtAll && (
+              <>
+                <Button size="lg" disabled={!isReady} loading={submitForReviewMutation.isPending} onClick={() => submitForReviewMutation.mutate()}>
+                  Enviar para revisão
+                </Button>
+                <p className="text-center text-xs text-ink-400">
+                  Este workspace exige revisão antes de publicar. Depois de aprovado, você agenda ou publica normalmente.
+                </p>
+              </>
+            )
+          ) : showPublishChoice ? (
             <div className="flex gap-2">
               {canPublishNow && (
                 <Button className="flex-1" disabled={!isReady} onClick={() => setPublishDialog('publish_now')}>

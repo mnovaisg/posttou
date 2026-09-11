@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
+import { Spinner } from '@/components/ui/spinner'
 import {
   cancelSubscription,
   cancelScheduledPlanChange,
@@ -136,7 +137,12 @@ export function BillingPage() {
   }
 
   if (!activeWorkspace || entitlementsQuery.isLoading) {
-    return <div className="p-6 text-sm text-ink-500">Carregando plano...</div>
+    return (
+      <div className="flex items-center gap-2 p-6 text-sm text-ink-500">
+        <Spinner size="xs" />
+        Carregando plano...
+      </div>
+    )
   }
 
   return (

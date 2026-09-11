@@ -11,6 +11,7 @@ import {
   fetchAdminLeadDetail,
   setAdminLeadTags,
 } from '@/features/admin/api'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatCents(cents: number | null): string {
   if (cents === null) return '—'
@@ -116,7 +117,7 @@ export function AdminLeadDetailPage() {
     }
   }
 
-  if (detailQuery.isLoading) return <p className="text-sm text-ink-400">Carregando…</p>
+  if (detailQuery.isLoading) return <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>
   if (detailQuery.isError || !detailQuery.data) return <p className="text-sm text-danger-500">Lead não encontrado.</p>
 
   const d = detailQuery.data

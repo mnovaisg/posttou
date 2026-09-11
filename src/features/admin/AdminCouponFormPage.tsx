@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchPlans } from '@/features/billing/api'
 import { createAdminCoupon, fetchAdminCouponDetail, updateAdminCoupon } from '@/features/admin/api'
 import type { CouponFormInput } from '@/features/admin/api'
+import { Spinner } from '@/components/ui/spinner'
 
 function toDateTimeLocal(iso: string | null): string {
   if (!iso) return ''
@@ -101,7 +102,7 @@ export function AdminCouponFormPage() {
     })
   }
 
-  if (isEdit && detailQuery.isLoading) return <p className="text-sm text-ink-400">Carregando…</p>
+  if (isEdit && detailQuery.isLoading) return <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>
 
   return (
     <div className="mx-auto max-w-xl">

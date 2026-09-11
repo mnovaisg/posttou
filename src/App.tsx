@@ -25,6 +25,7 @@ import { PrivacyPolicyPage } from '@/features/legal/PrivacyPolicyPage'
 import { TermsOfServicePage } from '@/features/legal/TermsOfServicePage'
 import { AdminGuard } from '@/features/admin/AdminGuard'
 import { AdminLayout } from '@/features/admin/AdminLayout'
+import { Spinner } from '@/components/ui/spinner'
 
 // Fase 14C — code-splitting das rotas mais pesadas (Editor, Performance,
 // Radar, Piloto, Billing, DNA Visual). Cada uma vira seu próprio chunk,
@@ -48,8 +49,8 @@ const AdminPlansPage = React.lazy(() => import('@/features/admin/AdminPlansPage'
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+    <div className="flex min-h-[50vh] items-center justify-center text-brand-600">
+      <Spinner size="lg" />
     </div>
   )
 }

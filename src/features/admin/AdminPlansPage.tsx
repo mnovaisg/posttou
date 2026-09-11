@@ -13,6 +13,7 @@ import {
   type RoundingRule,
   type PlanChangeHistoryRow,
 } from '@/features/admin/plansApi'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -345,7 +346,7 @@ export function AdminPlansPage() {
         </div>
       )}
 
-      {plansQuery.isLoading && <p className="text-sm text-ink-400">Carregando…</p>}
+      {plansQuery.isLoading && <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>}
       {plansQuery.isError && <p className="text-sm text-danger-500">Não foi possível carregar os planos.</p>}
 
       {/* Ajuste em massa */}
@@ -805,7 +806,7 @@ export function AdminPlansPage() {
       {/* Histórico */}
       <div>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Histórico de alterações</h2>
-        {historyQuery.isLoading && <p className="text-sm text-ink-400">Carregando…</p>}
+        {historyQuery.isLoading && <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>}
         <div className="flex flex-col gap-2">
           {historyQuery.data?.map((h: PlanChangeHistoryRow) => (
             <div key={h.id} className="rounded-lg border border-ink-200 bg-white p-3 text-xs dark:border-ink-800 dark:bg-ink-900">

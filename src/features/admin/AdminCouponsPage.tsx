@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminCoupons, setAdminCouponActive, fetchAdminDashboardMetrics } from '@/features/admin/api'
 import { STATUS_LABEL, STATUS_COLOR } from '@/features/admin/statusLabels'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatDiscount(type: 'percentage' | 'fixed', value: number): string {
   return type === 'percentage' ? `${value}%` : (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -96,7 +97,7 @@ export function AdminCouponsPage() {
         </select>
       </div>
 
-      {couponsQuery.isLoading && <p className="text-sm text-ink-400">Carregando…</p>}
+      {couponsQuery.isLoading && <p className="flex items-center gap-2 text-sm text-ink-400"><Spinner size="xs" />Carregando…</p>}
       {couponsQuery.isError && <p className="text-sm text-danger-500">Não foi possível carregar os cupons.</p>}
 
       {/* Mobile: cards */}

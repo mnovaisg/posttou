@@ -10,6 +10,7 @@ import { publishNow as callPublishNow, schedulePublication } from '@/features/in
 import { getDatePartsInTimeZone, zonedTimeToUtc, formatInTimeZone } from '@/lib/timezone'
 import { useWorkspace } from '@/features/workspace/WorkspaceProvider'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -169,7 +170,12 @@ export function SchedulePublishDialog({
           {publishNowMode ? 'Publicar agora' : 'Agendar publicação'}
         </h3>
 
-        {stage === 'loading' && <p className="mt-4 text-sm text-ink-500">Carregando…</p>}
+        {stage === 'loading' && (
+          <p className="mt-4 flex items-center gap-2 text-sm text-ink-500">
+            <Spinner size="xs" />
+            Carregando…
+          </p>
+        )}
 
         {stage === 'error' && (
           <>
@@ -179,7 +185,7 @@ export function SchedulePublishDialog({
                 Fechar
               </Button>
               {needsInstagramConnection && canManageInstagram && (
-                <Button size="sm" onClick={handleConnectInstagram} disabled={connecting}>
+                <Button size="sm" onClick={handleConnectInstagram} loading={connecting}>
                   {connecting ? 'Redirecionando…' : 'Conectar Instagram'}
                 </Button>
               )}
@@ -189,7 +195,7 @@ export function SchedulePublishDialog({
 
         {stage === 'rendering' && (
           <div className="mt-6 flex flex-col items-center gap-3 py-6 text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+            <Spinner size="lg" className="text-brand-600" />
             <p className="text-sm text-ink-600 dark:text-ink-300">{progressLabel}</p>
           </div>
         )}

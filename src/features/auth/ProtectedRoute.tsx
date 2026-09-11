@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { LandingPage } from '@/features/landing/LandingPage'
+import { Spinner } from '@/components/ui/spinner'
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
@@ -9,8 +10,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-ink-50 dark:bg-ink-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-ink-50 text-brand-600 dark:bg-ink-950">
+        <Spinner size="lg" />
       </div>
     )
   }
