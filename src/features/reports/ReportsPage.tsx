@@ -22,6 +22,15 @@ const TONE_CLASS: Record<string, string> = {
 const ORIGIN_LABEL: Record<string, string> = { manual: 'Manual', ia: 'Criado com IA', radar: 'Radar', autopilot: 'Piloto Automático' }
 const FORMAT_LABEL: Record<string, string> = { post: 'Post', carrossel: 'Carrossel', reel: 'Reel' }
 
+const APPLY_RECOMMENDATION_ERROR_MESSAGES: Record<string, string> = {
+  recommendation_stale: 'Sua estratégia mudou desde que esta recomendação foi criada. Gere uma nova recomendação.',
+  recommendation_expired: 'Esta recomendação expirou. Gere uma nova recomendação.',
+}
+
+const EXPLAIN_ERROR_MESSAGES: Record<string, string> = {
+  subscription_required: 'Sua assinatura precisa estar ativa para gerar explicações com IA.',
+}
+
 export function ReportsPage() {
   const { activeWorkspace } = useWorkspace()
   const queryClient = useQueryClient()
@@ -39,7 +48,7 @@ export function ReportsPage() {
       setApplyError(null)
       queryClient.invalidateQueries({ queryKey: ['strategy-recommendations', workspaceId] })
     },
-    onError: (err: Error) => setApplyError(err.message.includes('recommendation_stale') ? 'Sua estratégia mudou desde que esta recomendação foi criada. Gere uma nova recomendação.' : err.message),
+    onError: (err: Error) => setApplyError(APPLY_RECOMMENDATION_ERROR_MESSAGES[err.message] ?? err.message),
   })
   const dismissRecMutation = useMutation({
     mutationFn: (id: string) => dismissRecommendation(id),
@@ -76,7 +85,7 @@ export function ReportsPage() {
       setExplanation({ title: result.title, description: result.description })
       setExplainError(null)
     },
-    onError: (err: Error) => setExplainError(err.message),
+    onError: (err: Error) => setExplainError(EXPLAIN_ERROR_MESSAGES[err.message] ?? err.message),
   })
 
   const feedbackMutation = useMutation({
