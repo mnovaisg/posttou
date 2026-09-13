@@ -6,6 +6,7 @@
 // devolve os bytes exatamente como vieram, sem custo extra.
 import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { bilinearResize } from './bilinear-resize.ts'
 
 export interface OverlayLogoResult {
   bytes: Uint8Array
@@ -41,13 +42,13 @@ export async function overlayBrandLogo(bytes: Uint8Array, workspaceId: string, a
     const targetLogoWidth = Math.max(24, Math.round(base.width * LOGO_WIDTH_RATIO))
     const logoScale = targetLogoWidth / logo.width
     const targetLogoHeight = Math.max(24, Math.round(logo.height * logoScale))
-    logo.resize(targetLogoWidth, targetLogoHeight)
+    const resizedLogo = bilinearResize(logo, targetLogoWidth, targetLogoHeight)
 
     const padding = Math.round(base.width * PADDING_RATIO)
     const offsetX = Math.max(0, base.width - targetLogoWidth - padding)
     const offsetY = Math.max(0, base.height - targetLogoHeight - padding)
 
-    base.composite(logo, offsetX, offsetY)
+    base.composite(resizedLogo, offsetX, offsetY)
     const outBytes = await base.encode(2)
 
     return { bytes: outBytes, applied: true }

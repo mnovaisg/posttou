@@ -19,6 +19,7 @@
 // arredondamento), não reprocessa nada — devolve os bytes originais como
 // vieram, sem custo extra.
 import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
+import { bilinearResize } from './bilinear-resize.ts'
 
 export interface NormalizeResult {
   bytes: Uint8Array
@@ -131,8 +132,10 @@ export async function normalizeImageForFormat(bytes: Uint8Array, format: string 
   const canvas = new Image(target.width, target.height)
   canvas.composite(bg, 0, 0)
 
+  // Bilinear em vez do resize nearest-neighbor padrão da lib — nearest
+  // deixa bordas de texto/título visivelmente serrilhadas.
   const fgSize = containSize(srcW, srcH, target.width, target.height)
-  const fg = img.clone().resize(fgSize.width, fgSize.height)
+  const fg = bilinearResize(img, fgSize.width, fgSize.height)
   const offsetX = Math.round((target.width - fgSize.width) / 2)
   const offsetY = Math.round((target.height - fgSize.height) / 2)
   canvas.composite(fg, offsetX, offsetY)
