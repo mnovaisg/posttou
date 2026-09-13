@@ -1,0 +1,16 @@
+-- Bug real encontrado no Gate 2 (Release Candidate, 2026-09-01): a migration
+-- recovery_retry_timeout_backoff (20260829001634) criou a sobrecarga de 4
+-- parâmetros de claim_stuck_image_generations (com p_retry_timeout_minutes)
+-- mas nunca concedeu EXECUTE para service_role nela — grants em Postgres
+-- são por assinatura, não por nome, então o grant original
+-- (grant_claim_stuck_image_generations_service_role, 20260824152746) só
+-- vale para a sobrecarga antiga de 3 parâmetros. Resultado: todo tick do
+-- cron de ai-recovery-check-images falhava com "permission denied for
+-- function claim_stuck_image_generations", deixando a rede de segurança
+-- de gerações de imagem travadas permanentemente inoperante.
+--
+-- Correção mínima: só concede EXECUTE na sobrecarga de 4 parâmetros para
+-- service_role, espelhando exatamente o grant que já existe na de 3.
+-- Não mexe em timeout/retry/tentativas/refund/custos, não concede nada a
+-- anon/authenticated.
+grant execute on function public.claim_stuck_image_generations(integer, integer, integer, integer) to service_role;
